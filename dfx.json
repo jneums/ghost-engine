@@ -1,0 +1,37 @@
+{
+  "canisters": {
+    "ghost-engine-backend": {
+      "main": "src/ghost-engine-backend/main.mo",
+      "type": "motoko"
+    },
+    "ghost-engine-frontend": {
+      "dependencies": [
+        "ghost-engine-backend"
+      ],
+      "source": [
+        "src/ghost-engine-frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "ghost-engine-frontend"
+    },
+    "internet_identity": {
+      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+      "frontend": {},
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      },
+      "type": "custom",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
