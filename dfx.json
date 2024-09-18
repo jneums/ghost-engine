@@ -5,12 +5,8 @@
       "type": "motoko"
     },
     "ghost-engine-frontend": {
-      "dependencies": [
-        "ghost-engine-backend"
-      ],
-      "source": [
-        "src/ghost-engine-frontend/dist"
-      ],
+      "dependencies": ["ghost-engine-backend"],
+      "source": ["src/ghost-engine-frontend/dist"],
       "type": "assets",
       "workspace": "ghost-engine-frontend"
     },
@@ -29,7 +25,7 @@
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",
