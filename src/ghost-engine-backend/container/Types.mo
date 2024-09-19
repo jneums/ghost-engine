@@ -2,10 +2,12 @@ import Map "mo:stable-hash-map/Map/Map";
 import Components "../components";
 
 module {
+  /// Title must match the class name of the corresponding component
+  /// on the frontend.
   public type ComponentType = Text;
   public type Component = {
-    title : Text;
-    data : Components.Data;
+    componentType : ComponentType;
+    componentData : Components.Data;
   };
 
   public type Container = Map.Map<ComponentType, Component>;

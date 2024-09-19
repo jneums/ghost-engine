@@ -15,8 +15,8 @@ module {
       ctx,
       entity,
       {
-        title = "player";
-        data = #Player({
+        componentType = "Player";
+        componentData = #Player({
           principal = args.principal;
           position = { x = 0; y = 0; z = 0 };
         });

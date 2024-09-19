@@ -66,9 +66,9 @@ export class ECSManager {
     this.entityRegistration(entity);
   }
 
-  public removeComponent(entity: Entity, componentClass: Function): void {
+  public removeComponent(entity: Entity, componentType: string): void {
     const container = this.getContainer(entity);
-    container.deleteComponent(componentClass);
+    container.deleteComponent(componentType);
     this.entityRegistration(entity);
   }
 

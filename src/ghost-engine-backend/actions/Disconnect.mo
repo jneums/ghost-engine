@@ -13,7 +13,7 @@ module {
     ECS.Manager.removeComponent(
       ctx,
       Principal.toText(args.principal),
-      "player",
+      "Player",
     );
   };
 

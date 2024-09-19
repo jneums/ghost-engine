@@ -9,23 +9,23 @@ module {
   };
 
   func add(container : T.Container, component : T.Component) : () {
-    Map.set(container, Map.thash, component.title, component);
+    Map.set(container, Map.thash, component.componentType, component);
   };
 
-  func get(container : T.Container, title : Text) : ?T.Component {
-    Map.get(container, Map.thash, title);
+  func get(container : T.Container, componentType : Text) : ?T.Component {
+    Map.get(container, Map.thash, componentType);
   };
 
-  func has(container : T.Container, title : T.ComponentType) : Bool {
-    Map.has(container, Map.thash, title);
+  func has(container : T.Container, componentType : T.ComponentType) : Bool {
+    Map.has(container, Map.thash, componentType);
   };
 
-  func hasAll(container : T.Container, titles : [T.ComponentType]) : Bool {
+  func hasAll(container : T.Container, componentTypes : [T.ComponentType]) : Bool {
     Map.every<T.ComponentType, T.Component>(
       container,
       func(k : T.ComponentType, v : T.Component) {
         let res = Array.find(
-          titles,
+          componentTypes,
           func(c : T.ComponentType) : Bool {
             c == k;
           },
@@ -36,8 +36,8 @@ module {
     );
   };
 
-  func delete(container : T.Container, title : T.ComponentType) : () {
-    Map.delete(container, Map.thash, title);
+  func delete(container : T.Container, componentType : T.ComponentType) : () {
+    Map.delete(container, Map.thash, componentType);
   };
 
   public let Manager : T.API = {

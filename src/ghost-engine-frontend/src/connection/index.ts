@@ -4,7 +4,7 @@ import { match, P } from 'ts-pattern';
 import { ghost_engine_backend } from '../declarations/ghost-engine-backend';
 import { _SERVICE } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
 import { ECSManager } from '../ecs';
-import { getComponent, getComponentType } from '../components';
+import { getComponent } from '../components';
 
 export class Connection {
   private ws: IcWebSocket<typeof ghost_engine_backend> | null = null;
@@ -24,21 +24,17 @@ export class Connection {
 
     // Handle component updates from the server
     this.ws.onmessage = async (event) => {
+      console.log(event.data);
       match(event.data)
         .with({ Insert: P.select() }, (action) => {
-          console.log('Inserting component:', action);
-          const component = getComponent(action.component.data);
+          const component = getComponent(action.component.componentData);
           this.ecs.addComponent(action.entityId, component);
         })
         .with({ Delete: P.select() }, (action) => {
-          console.log('Deleting component:', action);
-          const componentType = getComponentType(action.componentType);
-          if (componentType) {
-            this.ecs.removeComponent(action.entityId, componentType);
-          }
+          this.ecs.removeComponent(action.entityId, action.componentType);
         })
         .otherwise(() => {
-          console.log('Unknown message:', event.data);
+          console.log('Unknown message!');
         });
     };
 

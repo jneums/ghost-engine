@@ -19,14 +19,6 @@ export class Velocity implements Component {
   constructor(public x: number, public y: number, public z: number) {}
 }
 
-export function getComponentType(componentType: string) {
-  return match(componentType)
-    .with('player', () => Player)
-    .with('position', () => Position)
-    .with('velocity', () => Velocity)
-    .otherwise(() => {});
-}
-
 export function getComponent(data: Data) {
   return match(data)
     .with({ Player: P.select() }, (player) => {

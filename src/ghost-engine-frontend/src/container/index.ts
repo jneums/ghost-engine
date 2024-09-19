@@ -20,32 +20,32 @@ import { Component, ComponentClass } from '../ecs';
  * the Components that can't change them.
  */
 export class Container {
-  private map = new Map<Function, Component>();
+  private map = new Map<string, Component>();
 
   public addComponent(component: Component): void {
-    this.map.set(component.constructor, component);
+    this.map.set(component.constructor.name, component);
   }
 
   public getComponent<T extends Component>(
     componentClass: ComponentClass<T>,
   ): T {
-    return this.map.get(componentClass) as T;
+    return this.map.get(componentClass.name) as T;
   }
 
   public hasComponent(componentClass: Function): boolean {
-    return this.map.has(componentClass);
+    return this.map.has(componentClass.name);
   }
 
   public hasAllComponents(componentClasses: Iterable<Function>): boolean {
     for (let cls of componentClasses) {
-      if (!this.map.has(cls)) {
+      if (!this.map.has(cls.name)) {
         return false;
       }
     }
     return true;
   }
 
-  public deleteComponent(componentClass: Function): void {
-    this.map.delete(componentClass);
+  public deleteComponent(componentType: string): void {
+    this.map.delete(componentType);
   }
 }
