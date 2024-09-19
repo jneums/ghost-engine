@@ -1,88 +1,102 @@
 import IcWebSocketCdk "mo:ic-websocket-cdk";
 import IcWebSocketCdkState "mo:ic-websocket-cdk/State";
 import IcWebSocketCdkTypes "mo:ic-websocket-cdk/Types";
-import Text "mo:base/Text";
 import Debug "mo:base/Debug";
 import Timer "mo:base/Timer";
-import { Systems; ECSManager } "./ecs";
+import Time "mo:base/Time";
+import ECS "ecs";
+import Actions "actions";
+import { PingSystem } "systems/Ping";
+import { MovementSystem } "systems/Movement";
+import Messages "messages";
 
 actor {
-  private stable var systems = ECSManager.State.Systems.new();
-  private stable var entities = ECSManager.State.Entities.new();
+  // ECS state
+  private stable var lastTick : Time.Time = Time.now();
+  private stable var entityCounter : Nat = 0;
+  private stable var containers = ECS.State.Containers.new();
+  private var systemEntities = ECS.State.SystemEntities.new();
+  private var systems = ECS.State.SystemRegistry.new();
 
-  func buildCtx() : ECSManager.Types.Context {
-    {
-      systems = systems;
-      entities = entities;
-    };
+  // WebSocket state
+  let params = IcWebSocketCdkTypes.WsInitParams(null, null);
+  let wsState = IcWebSocketCdkState.IcWebSocketState(params);
+
+  func _nextEntityId() : Nat {
+    entityCounter += 1;
+    entityCounter;
   };
+
+  /// Mutable context that holds all the ECS data
+  let ctx : ECS.Types.Context and Messages.Types.Context = {
+    containers = containers;
+    systemEntities = systemEntities;
+    systems = systems;
+    nextEntityId = _nextEntityId;
+    wsState = wsState;
+  };
+
+  /// Register systems
+  ECS.Manager.addSystem(ctx, PingSystem);
+  ECS.Manager.addSystem(ctx, MovementSystem);
+
+  // Add sample entity and components
+  let entity = ECS.Manager.addEntity(ctx);
+  ECS.Manager.addComponent(
+    ctx,
+    entity,
+    {
+      title = "position";
+      data = #Position({ x = 0; y = 0; z = 0 });
+    },
+  );
+  ECS.Manager.addComponent(
+    ctx,
+    entity,
+    {
+      title = "velocity";
+      data = #Velocity({ x = 1; y = 0; z = 0 });
+    },
+  );
 
   /// System loop that updates all the systems in the ECS
   func gameLoop() : async () {
-    let ctx = buildCtx();
-    Systems.API.update(ctx, ECSManager.API, 1000);
+    lastTick := ECS.Manager.update(ctx, lastTick);
+  };
+  let gameTick = #nanoseconds(1_000_000_000 / 60);
+  ignore Timer.recurringTimer<system>(gameTick, gameLoop);
+
+  /// WebSocket setup
+  func onOpen(args : IcWebSocketCdk.OnOpenCallbackArgs) : async () {
+    let action : Actions.Action = #Connect({
+      principal = args.client_principal;
+    });
+    Actions.handleAction(ctx, action);
   };
 
-  ignore Timer.recurringTimer<system>(#seconds(1), gameLoop);
-
-  type AppMessage = {
-    message : Text;
-  };
-
-  /// A custom function to send the message to the client
-  func send_app_message(client_principal : IcWebSocketCdk.ClientPrincipal, msg : AppMessage) : async () {
-    Debug.print("Sending message: " # debug_show (msg));
-
-    // here we call the send from the CDK!!
-    switch (await IcWebSocketCdk.send(ws_state, client_principal, to_candid (msg))) {
-      case (#Err(err)) {
-        Debug.print("Could not send message:" # debug_show (#Err(err)));
-      };
-      case (_) {};
-    };
-  };
-
-  func on_open(args : IcWebSocketCdk.OnOpenCallbackArgs) : async () {
-    let message : AppMessage = {
-      message = "Ping";
-    };
-    await send_app_message(args.client_principal, message);
-  };
-
-  /// The custom logic is just a ping-pong message exchange between frontend and canister.
-  /// Note that the message from the WebSocket is serialized in CBOR, so we have to deserialize it first
-
-  func on_message(args : IcWebSocketCdk.OnMessageCallbackArgs) : async () {
-    let app_msg : ?AppMessage = from_candid (args.message);
-    let new_msg : AppMessage = switch (app_msg) {
-      case (?msg) {
-        { message = Text.concat(msg.message, " ping") };
+  func onMessage(args : IcWebSocketCdk.OnMessageCallbackArgs) : async () {
+    let message : ?Actions.Action = from_candid (args.message);
+    switch (message) {
+      case (?action) {
+        Actions.handleAction(ctx, action);
       };
       case (null) {
         Debug.print("Could not deserialize message");
-        return;
       };
     };
-
-    Debug.print("Received message: " # debug_show (new_msg));
-
-    await send_app_message(args.client_principal, new_msg);
   };
 
-  func on_close(args : IcWebSocketCdk.OnCloseCallbackArgs) : async () {
+  func onClose(args : IcWebSocketCdk.OnCloseCallbackArgs) : async () {
     Debug.print("Client " # debug_show (args.client_principal) # " disconnected");
   };
 
-  let params = IcWebSocketCdkTypes.WsInitParams(null, null);
-  let ws_state = IcWebSocketCdkState.IcWebSocketState(params);
-
   let handlers = IcWebSocketCdkTypes.WsHandlers(
-    ?on_open,
-    ?on_message,
-    ?on_close,
+    ?onOpen,
+    ?onMessage,
+    ?onClose,
   );
 
-  let ws = IcWebSocketCdk.IcWebSocket(ws_state, params, handlers);
+  let ws = IcWebSocketCdk.IcWebSocket(wsState, params, handlers);
 
   // method called by the WS Gateway after receiving FirstMessage from the client
   public shared ({ caller }) func ws_open(args : IcWebSocketCdk.CanisterWsOpenArguments) : async IcWebSocketCdk.CanisterWsOpenResult {
@@ -95,7 +109,7 @@ actor {
   };
 
   // method called by the frontend SDK to send a message to the canister
-  public shared ({ caller }) func ws_message(args : IcWebSocketCdk.CanisterWsMessageArguments, msg : ?AppMessage) : async IcWebSocketCdk.CanisterWsMessageResult {
+  public shared ({ caller }) func ws_message(args : IcWebSocketCdk.CanisterWsMessageArguments, msg : ?Actions.Action) : async IcWebSocketCdk.CanisterWsMessageResult {
     await ws.ws_message(caller, args, msg);
   };
 

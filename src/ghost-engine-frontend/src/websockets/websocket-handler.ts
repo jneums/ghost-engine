@@ -19,12 +19,12 @@ export class WebSocketHandler {
     };
 
     this.ws.onmessage = async (event) => {
-      console.log('Received message:', event.data.message);
+      console.log('Received message:', event.data);
 
-      const messageToSend = {
-        message: 'pong',
-      };
-      this.ws?.send(messageToSend);
+      // const messageToSend = {
+      //   message: 'pong',
+      // };
+      // this.ws?.send(messageToSend);
     };
 
     this.ws.onclose = () => {

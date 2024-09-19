@@ -48,7 +48,7 @@ export abstract class System {
 }
 
 /**
- * This type is so functions like the ComponentContainer's get(...) will
+ * This type is so functions like the Container's get(...) will
  * automatically tell TypeScript the type of the Component returned. In
  * other words, we can say get(Position) and TypeScript will know that an
  * instance of Position was returned. This is amazingly helpful.
@@ -74,7 +74,7 @@ export type ComponentClass<T extends Component> = new (...args: any[]) => T;
  * Entities! We'll fix this later by only returning callers a view onto
  * the Components that can't change them.
  */
-export class ComponentContainer {
+export class Container {
   private map = new Map<Function, Component>();
 
   public add(component: Component): void {
@@ -111,7 +111,7 @@ export class ComponentContainer {
  */
 export class ECSManager {
   // Main state
-  private entities = new Map<Entity, ComponentContainer>();
+  private entities = new Map<Entity, Container>();
   private systems = new Map<System, Set<Entity>>();
 
   // Bookkeeping for entities.
@@ -123,7 +123,7 @@ export class ECSManager {
   public addEntity(): Entity {
     let entity = this.nextEntityID;
     this.nextEntityID++;
-    this.entities.set(entity, new ComponentContainer());
+    this.entities.set(entity, new Container());
     return entity;
   }
 
@@ -144,7 +144,7 @@ export class ECSManager {
     this.entityRegistration(entity);
   }
 
-  public getContainer(entity: Entity): ComponentContainer | undefined {
+  public getContainer(entity: Entity): Container | undefined {
     return this.entities.get(entity);
   }
 
