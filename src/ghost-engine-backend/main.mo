@@ -1,15 +1,17 @@
-import IcWebSocketCdk "mo:ic-websocket-cdk";
-import IcWebSocketCdkState "mo:ic-websocket-cdk/State";
-import IcWebSocketCdkTypes "mo:ic-websocket-cdk/Types";
 import Debug "mo:base/Debug";
 import Timer "mo:base/Timer";
 import Time "mo:base/Time";
+import Nat "mo:base/Nat";
+import Iter "mo:base/Iter";
+import Vector "mo:vector";
+import Map "mo:stable-hash-map/Map/Map";
+import IcWebSocketCdk "mo:ic-websocket-cdk";
+import IcWebSocketCdkState "mo:ic-websocket-cdk/State";
+import IcWebSocketCdkTypes "mo:ic-websocket-cdk/Types";
 import ECS "ecs";
 import Actions "actions";
-import { PingSystem } "systems/Ping";
 import { MovementSystem } "systems/Movement";
 import Messages "messages";
-import Disconnect "actions/Disconnect";
 
 actor {
   // ECS state
@@ -18,51 +20,45 @@ actor {
   private stable var containers = ECS.State.Containers.new();
   private var systemEntities = ECS.State.SystemEntities.new();
   private var systems = ECS.State.SystemRegistry.new();
+  private var updated = ECS.State.Updated.new();
+  private var clients = Map.new<Principal, Time.Time>(Map.phash);
 
   // WebSocket state
   let params = IcWebSocketCdkTypes.WsInitParams(null, null);
   let wsState = IcWebSocketCdkState.IcWebSocketState(params);
-
-  func _nextEntityId() : Nat {
-    entityCounter += 1;
-    entityCounter;
-  };
 
   /// Context is mutable and shared between all the systems
   let ctx : ECS.Types.Context and Messages.Types.Context = {
     containers = containers;
     systemEntities = systemEntities;
     systems = systems;
-    nextEntityId = _nextEntityId;
+    updated = updated;
     wsState = wsState;
+
+    /// Incrementing entity counter for ids.
+    /// Text instead of Nat to allow for creating and accessing entities deterministically.
+    nextEntityId = func() : ECS.Types.EntityId {
+      entityCounter += 1;
+      Nat.toText(entityCounter);
+    };
   };
 
   /// Register systems here
-  ECS.Manager.addSystem(ctx, PingSystem);
   ECS.Manager.addSystem(ctx, MovementSystem);
-
-  // Add sample entity and components
-  let entity = ECS.Manager.addEntity(ctx);
-  ECS.Manager.addComponent(
-    ctx,
-    entity,
-    {
-      title = "position";
-      data = #Position({ x = 0; y = 0; z = 0 });
-    },
-  );
-  ECS.Manager.addComponent(
-    ctx,
-    entity,
-    {
-      title = "velocity";
-      data = #Velocity({ x = 1; y = 0; z = 0 });
-    },
-  );
 
   /// Game loop runs all the systems
   func gameLoop() : async () {
     lastTick := ECS.Manager.update(ctx, lastTick);
+
+    /// Iterate through all updates and send them to clients
+    for ((client, lastUpdate) in Map.entries(clients)) {
+      for (update in Iter.fromArray(Vector.toArray(updated))) {
+        ignore Messages.Client.send(ctx, client, update);
+      };
+    };
+
+    /// Clear the updated vector
+    Vector.clear(updated);
   };
   let gameTick = #nanoseconds(1_000_000_000 / 60);
   ignore Timer.recurringTimer<system>(gameTick, gameLoop);
@@ -71,6 +67,7 @@ actor {
 
   /// Trigger a connection action when a client connects
   func onOpen(args : IcWebSocketCdk.OnOpenCallbackArgs) : async () {
+    Map.set(clients, Map.phash, args.client_principal, Time.now());
     let action : Actions.Action = #Connect({
       principal = args.client_principal;
     });
@@ -92,6 +89,7 @@ actor {
 
   /// Trigger a disconnection action when a client disconnects
   func onClose(args : IcWebSocketCdk.OnCloseCallbackArgs) : async () {
+    Map.delete(clients, Map.phash, args.client_principal);
     let action : Actions.Action = #Disconnect({
       principal = args.client_principal;
     });

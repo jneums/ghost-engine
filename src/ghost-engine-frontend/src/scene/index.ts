@@ -1,32 +1,29 @@
 import * as THREE from 'three';
-import { MapControls } from 'three/addons/controls/MapControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Stats from 'three/addons/libs/stats.module.js';
 
 export class SceneManager {
   private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
+  private camera: THREE.OrthographicCamera;
   private renderer: THREE.WebGLRenderer;
-  private controls: MapControls;
+  private controls: OrbitControls;
   private stats: Stats;
-  private animationId: number | null = null;
 
   constructor(private map: HTMLElement) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('lightblue');
 
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000,
-    );
-    this.camera.position.set(-100, 200, 100);
+    this.camera = new THREE.OrthographicCamera();
+    this.camera.position.set(0, 100, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
-    this.controls = new MapControls(this.camera, this.renderer.domElement);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.target.set(0, 0, 0); // view direction perpendicular to XY-plane
+    this.controls.enableRotate = false;
+    this.controls.enableZoom = true; // optional
 
     this.stats = new Stats();
     document.body.appendChild(this.stats.dom);
@@ -52,32 +49,17 @@ export class SceneManager {
   }
 
   private onWindowResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  public start() {
-    if (this.animationId === null) {
-      this.animationId = requestAnimationFrame(this.animate.bind(this));
-    }
-  }
-
-  public pause() {
-    if (this.animationId !== null) {
-      cancelAnimationFrame(this.animationId);
-      this.animationId = null;
-    }
-  }
-
-  private animate() {
-    this.render();
-    this.stats.update();
-    this.animationId = requestAnimationFrame(this.animate.bind(this));
   }
 
   private render() {
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  public update(deltaTime: number) {
+    this.render();
+    this.stats.update();
   }
 }

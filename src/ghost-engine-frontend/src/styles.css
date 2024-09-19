@@ -3,9 +3,7 @@ body {
   margin: 0px;
 }
 
-#menu {
-  z-index: 10001;
-  position: relative;
+#btn-container {
   background-color: #f8f8f8;
   height: 100vh;
   width: 100vw;
