@@ -9,6 +9,7 @@ import Actions "actions";
 import { PingSystem } "systems/Ping";
 import { MovementSystem } "systems/Movement";
 import Messages "messages";
+import Disconnect "actions/Disconnect";
 
 actor {
   // ECS state
@@ -27,7 +28,7 @@ actor {
     entityCounter;
   };
 
-  /// Mutable context that holds all the ECS data
+  /// Context is mutable and shared between all the systems
   let ctx : ECS.Types.Context and Messages.Types.Context = {
     containers = containers;
     systemEntities = systemEntities;
@@ -36,7 +37,7 @@ actor {
     wsState = wsState;
   };
 
-  /// Register systems
+  /// Register systems here
   ECS.Manager.addSystem(ctx, PingSystem);
   ECS.Manager.addSystem(ctx, MovementSystem);
 
@@ -59,7 +60,7 @@ actor {
     },
   );
 
-  /// System loop that updates all the systems in the ECS
+  /// Game loop runs all the systems
   func gameLoop() : async () {
     lastTick := ECS.Manager.update(ctx, lastTick);
   };
@@ -67,6 +68,8 @@ actor {
   ignore Timer.recurringTimer<system>(gameTick, gameLoop);
 
   /// WebSocket setup
+
+  /// Trigger a connection action when a client connects
   func onOpen(args : IcWebSocketCdk.OnOpenCallbackArgs) : async () {
     let action : Actions.Action = #Connect({
       principal = args.client_principal;
@@ -74,6 +77,7 @@ actor {
     Actions.handleAction(ctx, action);
   };
 
+  /// Deserialize the action and handle it
   func onMessage(args : IcWebSocketCdk.OnMessageCallbackArgs) : async () {
     let message : ?Actions.Action = from_candid (args.message);
     switch (message) {
@@ -86,8 +90,12 @@ actor {
     };
   };
 
+  /// Trigger a disconnection action when a client disconnects
   func onClose(args : IcWebSocketCdk.OnCloseCallbackArgs) : async () {
-    Debug.print("Client " # debug_show (args.client_principal) # " disconnected");
+    let action : Actions.Action = #Disconnect({
+      principal = args.client_principal;
+    });
+    Actions.handleAction(ctx, action);
   };
 
   let handlers = IcWebSocketCdkTypes.WsHandlers(
@@ -95,7 +103,6 @@ actor {
     ?onMessage,
     ?onClose,
   );
-
   let ws = IcWebSocketCdk.IcWebSocket(wsState, params, handlers);
 
   // method called by the WS Gateway after receiving FirstMessage from the client

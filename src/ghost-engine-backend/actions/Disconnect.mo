@@ -1,15 +1,14 @@
 import T "Types";
-import Shared "../shared";
+import Debug "mo:base/Debug";
+import Principal "mo:base/Principal";
 
 module {
   public type Args = {
-    entity : Text;
-    position : Shared.Types.Vector3;
+    principal : Principal;
   };
 
   func handle(ctx : T.Context, args : Args) {
-    let entity = args.entity;
-    let position = args.position;
+    Debug.print("\nPlayer disconnected: " # debug_show (args.principal));
   };
 
   public let Handler : T.ActionHandler<T.Context, Args> = {

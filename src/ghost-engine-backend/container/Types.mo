@@ -2,11 +2,10 @@ import Map "mo:stable-hash-map/Map/Map";
 import Components "../components";
 
 module {
-
   public type ComponentType = Text;
   public type Component = {
     title : Text;
-    data : Components.Types.Data;
+    data : Components.Data;
   };
 
   public type Container = Map.Map<ComponentType, Component>;

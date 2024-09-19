@@ -1,6 +1,6 @@
 import Map "mo:stable-hash-map";
 import Time "mo:base/Time";
-import ContainerTypes "../container/Types";
+import Container "../container";
 
 module {
   public type Context = {
@@ -11,7 +11,7 @@ module {
   };
 
   public type EntityId = Nat;
-  public type Containers = Map.Map<EntityId, ContainerTypes.Container>;
+  public type Containers = Map.Map<EntityId, Container.Types.Container>;
   public type SystemEntities = Map.Map<SystemType, [EntityId]>;
   public type SystemRegistry = Map.Map<SystemType, System>;
   public type ComponentType = Text;
@@ -28,9 +28,9 @@ module {
     addEntity : (Context) -> EntityId;
     removeEntity : (Context, EntityId) -> ();
     // Component API
-    addComponent : (Context, EntityId, ContainerTypes.Component) -> ();
-    getContainer : (Context, EntityId) -> ContainerTypes.Container;
-    removeComponent : (Context, EntityId, ContainerTypes.ComponentType) -> ();
+    addComponent : (Context, EntityId, Container.Types.Component) -> ();
+    getContainer : (Context, EntityId) -> Container.Types.Container;
+    removeComponent : (Context, EntityId, Container.Types.ComponentType) -> ();
     // System API
     addSystem : (Context, System) -> ();
     update : (Context, Time.Time) -> Time.Time;
