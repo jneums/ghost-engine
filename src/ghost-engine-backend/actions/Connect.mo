@@ -1,30 +1,50 @@
-import ECS "../ecs";
+import ECS "mo:geecs";
 import T "Types";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
+import Player "../utils/Player";
+import Components "../components";
 
 module {
   public type Args = {
     principal : Principal;
   };
 
-  func handle(ctx : T.Context, args : Args) {
+  func handle(ctx : T.Context<Components.Component>, args : Args) {
     Debug.print("\nPlayer connected: " # debug_show (args.principal));
-    let entity = ECS.Manager.addEntity(ctx, Principal.toText(args.principal));
-    ECS.Manager.addComponent(
+
+    /// Check if the player already has entityId
+    let entityId = Player.findPlayersEntityId(ctx, args.principal);
+    let entity = switch (entityId) {
+      case (?exists) {
+        exists;
+      };
+      case (null) {
+        // Create new entity and add principal component
+        let newId = ECS.World.addEntity(ctx);
+        ECS.World.addComponent(
+          ctx,
+          newId,
+          "PrincipalComponent",
+          #PrincipalComponent({
+            principal = args.principal;
+          }),
+        );
+        newId;
+      };
+    };
+
+    ECS.World.addComponent(
       ctx,
       entity,
-      {
-        componentType = "Player";
-        componentData = #Player({
-          principal = args.principal;
-          position = { x = 0; y = 0; z = 0 };
-        });
-      },
+      "PositionComponent",
+      #PositionComponent({
+        position = { x = 0; y = 0; z = 0 };
+      }),
     );
   };
 
-  public let Handler : T.ActionHandler<T.Context, Args> = {
+  public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {
     handle = handle;
   };
 };

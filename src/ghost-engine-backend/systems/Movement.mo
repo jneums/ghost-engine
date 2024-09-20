@@ -1,13 +1,12 @@
-import ECS "../ecs";
-import Container "../container";
+import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Debug "mo:base/Debug";
+import Components "../components";
 
 module {
-  func update(ctx : ECS.Types.Context, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : () {
-    let container = ECS.Manager.getContainer(ctx, entityId);
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : () {
 
-    switch (Container.Manager.getComponent(container, "position")) {
+    switch (ECS.World.getComponent(ctx, entityId, "Position")) {
       case (?position) {
         // Debug.print("\nEntity: " # debug_show (entityId) # "\nPosition: " # debug_show (position) # "\nTime Delta: " # debug_show (deltaTime));
       };
@@ -17,9 +16,9 @@ module {
     };
   };
 
-  public let MovementSystem : ECS.Types.System = {
-    systemType = "movement";
-    components = ["position", "velocity"];
+  public let MovementSystem : ECS.Types.System<Components.Component> = {
+    systemType = "MovementSystem";
+    archetype = ["PositionComponent", "VelocityComponent"];
     update = update;
   };
 };

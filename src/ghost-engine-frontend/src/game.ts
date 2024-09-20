@@ -7,7 +7,7 @@ import {
 } from './declarations/ghost-engine-backend';
 import { SignIdentity } from '@dfinity/agent';
 import { Connection } from './connection';
-import { ECSManager } from './ecs';
+import { World } from './ecs';
 import { MovementSystem } from './systems/movement';
 
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL;
@@ -15,13 +15,13 @@ const IC_URL = import.meta.env.VITE_IC_URL;
 
 export class Game {
   private authHandler: AuthHandler;
-  private ecs: ECSManager;
+  private ecs: World;
   private scene: SceneManager;
   private lastTick = Date.now();
 
   constructor() {
     this.authHandler = new AuthHandler();
-    this.ecs = new ECSManager();
+    this.ecs = new World();
     this.scene = new SceneManager(document.getElementById('game')!);
 
     this.initialize();

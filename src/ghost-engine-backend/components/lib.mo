@@ -1,19 +1,39 @@
-import Shared "../shared";
+import Math "../math";
 
 module {
-  /// Define new component data types here
-  public type Position = Shared.Types.Vector3;
-  public type Velocity = Shared.Types.Vector3;
-
-  public type Player = {
+  public type PrincipalComponent = {
     principal : Principal;
-    position : Shared.Types.Vector3;
   };
 
-  /// Register component data types here
-  public type Data = {
-    #Position : Shared.Types.Vector3;
-    #Velocity : Shared.Types.Vector3;
-    #Player : Player;
+  public type PositionComponent = {
+    position : Math.Types.Vector3;
+  };
+
+  public type VelocityComponent = {
+    velocity : Math.Types.Vector3;
+  };
+
+  public type TransformComponent = {
+    position : Math.Types.Vector3;
+    rotation : Math.Types.Quaternion;
+    scale : Math.Types.Vector3;
+  };
+
+  public type MeshComponent = {
+    mesh : Text;
+  };
+
+  public type MaterialComponent = {
+    material : Text;
+  };
+  /// Define new component data types here...
+
+  /// Register component data types here...
+  public type Component = {
+    #PrincipalComponent : PrincipalComponent;
+    #PositionComponent : PositionComponent;
+    #VelocityComponent : VelocityComponent;
+    #MeshComponent : MeshComponent;
+    #MaterialComponent : MaterialComponent;
   };
 };

@@ -1,7 +1,7 @@
-import ECS "../ecs";
+import ECS "mo:geecs";
 
 module {
-  public type Context = ECS.Types.Context;
+  public type Context<T> = ECS.Types.Context<T>;
 
   public type ActionHandler<C, T> = {
     handle : (C, T) -> ();

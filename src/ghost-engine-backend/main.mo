@@ -2,25 +2,25 @@ import Debug "mo:base/Debug";
 import Timer "mo:base/Timer";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
-import Iter "mo:base/Iter";
 import Vector "mo:vector";
 import Map "mo:stable-hash-map/Map/Map";
 import IcWebSocketCdk "mo:ic-websocket-cdk";
 import IcWebSocketCdkState "mo:ic-websocket-cdk/State";
 import IcWebSocketCdkTypes "mo:ic-websocket-cdk/Types";
-import ECS "ecs";
+import ECS "mo:geecs";
 import Actions "actions";
-import { MovementSystem } "systems/Movement";
 import Messages "messages";
+import { MovementSystem } "systems/Movement";
+import Components "components";
 
 actor {
   // ECS state
   private stable var lastTick : Time.Time = Time.now();
   private stable var entityCounter : Nat = 0;
-  private stable var containers = ECS.State.Containers.new();
-  private var systemEntities = ECS.State.SystemEntities.new();
-  private var systems = ECS.State.SystemRegistry.new();
-  private var updated = ECS.State.Updated.new();
+  private stable var entities = ECS.State.Entities.new<Components.Component>();
+  private var registeredSystems = ECS.State.SystemRegistry.new<Components.Component>();
+  private var systemsEntities = ECS.State.SystemsEntities.new();
+  private var updatedComponents = ECS.State.UpdatedComponents.new<Components.Component>();
   private var clients = Map.new<Principal, Time.Time>(Map.phash);
 
   // WebSocket state
@@ -28,38 +28,44 @@ actor {
   let wsState = IcWebSocketCdkState.IcWebSocketState(params);
 
   /// Context is mutable and shared between all the systems
-  let ctx : ECS.Types.Context and Messages.Types.Context = {
-    containers = containers;
-    systemEntities = systemEntities;
-    systems = systems;
-    updated = updated;
+  let ctx : ECS.Types.Context<Components.Component> and Messages.Types.Context = {
+    entities = entities;
+    systemsEntities = systemsEntities;
+    registeredSystems = registeredSystems;
+    updatedComponents = updatedComponents;
     wsState = wsState;
 
     /// Incrementing entity counter for ids.
-    /// Text instead of Nat to allow for creating and accessing entities deterministically.
-    nextEntityId = func() : ECS.Types.EntityId {
+    nextEntityId = func() : Nat {
       entityCounter += 1;
-      Nat.toText(entityCounter);
+      entityCounter;
     };
   };
 
   /// Register systems here
-  ECS.Manager.addSystem(ctx, MovementSystem);
+  ECS.World.addSystem(ctx, MovementSystem);
 
   /// Game loop runs all the systems
   func gameLoop() : async () {
-    lastTick := ECS.Manager.update(ctx, lastTick);
+    /// Process all the systems
+    let thisTick = ECS.World.update(ctx, lastTick);
+    let deltaTime = thisTick - lastTick;
+    lastTick := thisTick;
 
-    /// Iterate through all updates and send them to clients
+    /// Iterate through the players and send them the updates
+    let updates = #Updates(Vector.toArray(updatedComponents));
+
+    Debug.print("\n[" # debug_show (deltaTime) # "] " # "Sending " # debug_show (Vector.size(updatedComponents)) # " updates");
+    if (Vector.size(updatedComponents) < 1) return;
+
     for ((client, lastUpdate) in Map.entries(clients)) {
-      for (update in Iter.fromArray(Vector.toArray(updated))) {
-        ignore Messages.Client.send(ctx, client, update);
-      };
+      ignore Messages.Client.send(ctx, client, updates);
     };
 
-    /// Clear the updated vector
-    Vector.clear(updated);
+    /// Clear the updatedComponents vector
+    Vector.clear(updatedComponents);
   };
+
   let gameTick = #nanoseconds(1_000_000_000 / 60);
   ignore Timer.recurringTimer<system>(gameTick, gameLoop);
 

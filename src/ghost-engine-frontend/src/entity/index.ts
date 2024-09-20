@@ -1,7 +1,7 @@
 import { Component, ComponentClass } from '../ecs';
 
 /**
- * This custom container is so that calling code can provide the
+ * This custom entity is so that calling code can provide the
  * Component *instance* when adding (e.g., add(new Position(...))), and
  * provide the Component *class* otherwise (e.g., get(Position),
  * has(Position), delete(Position)).
@@ -19,7 +19,7 @@ import { Component, ComponentClass } from '../ecs';
  * Entities! We'll fix this later by only returning callers a view onto
  * the Components that can't change them.
  */
-export class Container {
+export class Entity {
   private map = new Map<string, Component>();
 
   public addComponent(component: Component): void {

@@ -1,11 +1,11 @@
-import { Container } from '../container';
+import { Entity } from '../entity';
 import { System } from '../systems';
 
 /**
  * An entity is just an ID. This is used to look up its associated
  * Components.
  */
-export type Entity = string;
+export type EntityId = number;
 
 /**
  * A Component is a bundle of state. Each instance of a Component is
@@ -16,7 +16,7 @@ export type Entity = string;
 export abstract class Component {}
 
 /**
- * This type is so functions like the Container's get(...) will
+ * This type is so functions like the Entity's get(...) will
  * automatically tell TypeScript the type of the Component returned. In
  * other words, we can say get(Position) and TypeScript will know that an
  * instance of Position was returned. This is amazingly helpful.
@@ -24,27 +24,27 @@ export abstract class Component {}
 export type ComponentClass<T extends Component> = new (...args: any[]) => T;
 
 /**
- * The ECSManager is the main driver; it's the backbone of the engine that
+ * The World is the main driver; it's the backbone of the engine that
  * coordinates Entities, Components, and Systems. You could have a single
  * one for your game, or make a different one for every level, or have
  * multiple for different purposes.
  */
-export class ECSManager {
+export class World {
   // Main state
-  private entities = new Map<Entity, Container>();
-  private systems = new Map<System, Set<Entity>>();
+  private entities = new Map<EntityId, Entity>();
+  private systems = new Map<System, Set<EntityId>>();
 
   // Bookkeeping for entities.
-  private entitiesToDestroy = new Array<Entity>();
+  private entitiesToDestroy = new Array<EntityId>();
 
   // API: Entities
 
-  public getContainer(entity: Entity): Container {
-    if (this.entities.has(entity)) {
-      return this.entities.get(entity)!;
+  public getEntity(entityId: EntityId): Entity {
+    if (this.entities.has(entityId)) {
+      return this.entities.get(entityId)!;
     } else {
-      this.entities.set(entity, new Container());
-      return this.entities.get(entity)!;
+      this.entities.set(entityId, new Entity());
+      return this.entities.get(entityId)!;
     }
   }
 
@@ -54,22 +54,22 @@ export class ECSManager {
    * Entity is removed mid-`update()`, with some Systems seeing it and
    * others not.
    */
-  public removeEntity(entity: Entity): void {
-    this.entitiesToDestroy.push(entity);
+  public removeEntity(entityId: EntityId): void {
+    this.entitiesToDestroy.push(entityId);
   }
 
   // API: Components
 
-  public addComponent(entity: Entity, component: Component): void {
-    const container = this.getContainer(entity);
-    container.addComponent(component);
-    this.entityRegistration(entity);
+  public addComponent(entityId: EntityId, component: Component): void {
+    const entity = this.getEntity(entityId);
+    entity.addComponent(component);
+    this.entityRegistration(entityId);
   }
 
-  public removeComponent(entity: Entity, componentType: string): void {
-    const container = this.getContainer(entity);
-    container.deleteComponent(componentType);
-    this.entityRegistration(entity);
+  public removeComponent(entityId: EntityId, componentType: string): void {
+    const entity = this.getEntity(entityId);
+    entity.deleteComponent(componentType);
+    this.entityRegistration(entityId);
   }
 
   // API: Systems
@@ -91,8 +91,8 @@ export class ECSManager {
 
     // Save system and set who it should track immediately.
     this.systems.set(system, new Set());
-    for (let entity of this.entities.keys()) {
-      this.entityRegistrationWithSystem(entity, system);
+    for (let entityId of this.entities.keys()) {
+      this.entityRegistrationWithSystem(entityId, system);
     }
   }
 
@@ -129,28 +129,31 @@ export class ECSManager {
 
   // Private methods for doing internal state checks and mutations.
 
-  private destroyEntity(entity: Entity): void {
-    this.entities.delete(entity);
+  private destroyEntity(entityId: EntityId): void {
+    this.entities.delete(entityId);
     for (let entities of this.systems.values()) {
-      entities.delete(entity); // no-op if doesn't have it
+      entities.delete(entityId); // no-op if doesn't have it
     }
   }
 
-  private entityRegistration(entity: Entity): void {
+  private entityRegistration(entityId: EntityId): void {
     for (let system of this.systems.keys()) {
-      this.entityRegistrationWithSystem(entity, system);
+      this.entityRegistrationWithSystem(entityId, system);
     }
   }
 
-  private entityRegistrationWithSystem(entity: Entity, system: System): void {
-    let have = this.entities.get(entity);
+  private entityRegistrationWithSystem(
+    entityId: EntityId,
+    system: System,
+  ): void {
+    let have = this.entities.get(entityId);
     let need = system.componentsRequired;
     if (have?.hasAllComponents(need)) {
       // should be in system
-      this.systems.get(system)?.add(entity); // no-op if in
+      this.systems.get(system)?.add(entityId); // no-op if in
     } else {
       // should not be in system
-      this.systems.get(system)?.delete(entity); // no-op if out
+      this.systems.get(system)?.delete(entityId); // no-op if out
     }
   }
 }

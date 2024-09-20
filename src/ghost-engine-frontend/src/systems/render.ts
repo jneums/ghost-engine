@@ -1,8 +1,8 @@
 import { System } from '.';
 import { PositionComponent, VelocityComponent } from '../components';
-import { World, EntityId } from '../ecs';
+import { EntityId, World } from '../ecs';
 
-export class MovementSystem implements System {
+export class RenderSystem implements System {
   public componentsRequired = new Set([PositionComponent, VelocityComponent]);
   public ecs: World | null = null;
 
