@@ -10,7 +10,7 @@ import IcWebSocketCdkTypes "mo:ic-websocket-cdk/Types";
 import ECS "mo:geecs";
 import Actions "actions";
 import Messages "messages";
-import { MovementSystem } "systems/Movement";
+import { MovementSystem } "systems/MovementSystem";
 import Components "components";
 
 actor {
@@ -27,7 +27,7 @@ actor {
   let params = IcWebSocketCdkTypes.WsInitParams(null, null);
   let wsState = IcWebSocketCdkState.IcWebSocketState(params);
 
-  /// Context is mutable and shared between all the systems
+  // Context is mutable and shared between all the systems
   let ctx : ECS.Types.Context<Components.Component> and Messages.Types.Context = {
     entities = entities;
     systemsEntities = systemsEntities;
@@ -35,24 +35,24 @@ actor {
     updatedComponents = updatedComponents;
     wsState = wsState;
 
-    /// Incrementing entity counter for ids.
+    // Incrementing entity counter for ids.
     nextEntityId = func() : Nat {
       entityCounter += 1;
       entityCounter;
     };
   };
 
-  /// Register systems here
+  // Register systems here
   ECS.World.addSystem(ctx, MovementSystem);
 
-  /// Game loop runs all the systems
+  // Game loop runs all the systems
   func gameLoop() : async () {
-    /// Process all the systems
+    // Process all the systems
     let thisTick = ECS.World.update(ctx, lastTick);
     let deltaTime = thisTick - lastTick;
     lastTick := thisTick;
 
-    /// Iterate through the players and send them the updates
+    // Iterate through the players and send them the updates
     let updates = #Updates(Vector.toArray(updatedComponents));
 
     Debug.print("\n[" # debug_show (deltaTime) # "] " # "Sending " # debug_show (Vector.size(updatedComponents)) # " updates");
@@ -62,16 +62,16 @@ actor {
       ignore Messages.Client.send(ctx, client, updates);
     };
 
-    /// Clear the updatedComponents vector
+    // Clear the updatedComponents vector
     Vector.clear(updatedComponents);
   };
 
   let gameTick = #nanoseconds(1_000_000_000 / 60);
   ignore Timer.recurringTimer<system>(gameTick, gameLoop);
 
-  /// WebSocket setup
+  // WebSocket setup
 
-  /// Trigger a connection action when a client connects
+  // Trigger a connection action when a client connects
   func onOpen(args : IcWebSocketCdk.OnOpenCallbackArgs) : async () {
     Map.set(clients, Map.phash, args.client_principal, Time.now());
     let action : Actions.Action = #Connect({
@@ -80,7 +80,7 @@ actor {
     Actions.handleAction(ctx, action);
   };
 
-  /// Deserialize the action and handle it
+  // Deserialize the action and handle it
   func onMessage(args : IcWebSocketCdk.OnMessageCallbackArgs) : async () {
     let message : ?Actions.Action = from_candid (args.message);
     switch (message) {
@@ -93,7 +93,7 @@ actor {
     };
   };
 
-  /// Trigger a disconnection action when a client disconnects
+  // Trigger a disconnection action when a client disconnects
   func onClose(args : IcWebSocketCdk.OnCloseCallbackArgs) : async () {
     Map.delete(clients, Map.phash, args.client_principal);
     let action : Actions.Action = #Disconnect({

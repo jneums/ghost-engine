@@ -23,13 +23,15 @@ export class TransformComponent {
   ) {}
 }
 
-export class MeshComponent {
-  constructor(public mesh: THREE.Mesh) {}
-}
-
-export class MaterialComponent {
-  constructor(public material: THREE.Material) {}
-}
+export const Archetype = {
+  Player: new Set([PrincipalComponent, TransformComponent]),
+  MovingPlayer: new Set([
+    PrincipalComponent,
+    TransformComponent,
+    VelocityComponent,
+  ]),
+  StaticObject: new Set([TransformComponent]),
+};
 
 export function createComponentClass(data: Component) {
   return match(data)
@@ -54,11 +56,24 @@ export function createComponentClass(data: Component) {
         ),
       );
     })
-    .with({ MeshComponent: P.select() }, ({ mesh }) => {
-      return new THREE.Mesh();
-    })
-    .with({ MaterialComponent: P.select() }, ({ material }) => {
-      return new THREE.Material();
-    })
+    .with(
+      { TransformComponent: P.select() },
+      ({ position, rotation, scale }) => {
+        return new TransformComponent(
+          new THREE.Vector3(
+            Number(position.x),
+            Number(position.y),
+            Number(position.z),
+          ),
+          new THREE.Quaternion(
+            Number(rotation.x),
+            Number(rotation.y),
+            Number(rotation.z),
+            Number(rotation.w),
+          ),
+          new THREE.Vector3(Number(scale.x), Number(scale.y), Number(scale.z)),
+        );
+      },
+    )
     .exhaustive();
 }

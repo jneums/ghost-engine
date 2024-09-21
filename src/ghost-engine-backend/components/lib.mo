@@ -18,22 +18,13 @@ module {
     rotation : Math.Types.Quaternion;
     scale : Math.Types.Vector3;
   };
+  // Define new component data types here...
 
-  public type MeshComponent = {
-    mesh : Text;
-  };
-
-  public type MaterialComponent = {
-    material : Text;
-  };
-  /// Define new component data types here...
-
-  /// Register component data types here...
+  // Register component data types here...
   public type Component = {
     #PrincipalComponent : PrincipalComponent;
     #PositionComponent : PositionComponent;
     #VelocityComponent : VelocityComponent;
-    #MeshComponent : MeshComponent;
-    #MaterialComponent : MaterialComponent;
+    #TransformComponent : TransformComponent;
   };
 };

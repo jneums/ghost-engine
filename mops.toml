@@ -3,4 +3,7 @@ base = "0.11.2"
 ic-websocket-cdk = "0.4.0"
 stable-hash-map = "0.0.1"
 vector = "0.4.1"
-geecs = "0.1.0"
+geecs = "0.1.1"
+
+[dev-dependencies]
+test = "2.0.0"

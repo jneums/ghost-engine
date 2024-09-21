@@ -8,7 +8,7 @@ import {
 import { SignIdentity } from '@dfinity/agent';
 import { Connection } from './connection';
 import { World } from './ecs';
-import { MovementSystem } from './systems/movement';
+import { RenderPlayers } from './systems/render-players';
 
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL;
 const IC_URL = import.meta.env.VITE_IC_URL;
@@ -29,7 +29,6 @@ export class Game {
 
   private async initialize() {
     await this.authHandler.initialize();
-    this.ecs.addSystem(new MovementSystem());
     this.setupEventListeners();
   }
 
@@ -55,6 +54,13 @@ export class Game {
   private async connect() {
     // Login using Internet Identity
     const identity = await this.authHandler.login();
+    const principal = this.authHandler.getPrincipal();
+    if (!principal) {
+      throw new Error('Principal not found');
+    }
+
+    // Add the RenderPlayers to the ECS
+    this.ecs.addSystem(new RenderPlayers(this.scene.scene, principal));
 
     // Connect to the game server over Connection
     const wsConfig = createWsConfig({

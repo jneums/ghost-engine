@@ -3,8 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Stats from 'three/addons/libs/stats.module.js';
 
 export class SceneManager {
-  private scene: THREE.Scene;
-  private camera: THREE.OrthographicCamera;
+  public scene: THREE.Scene;
+  private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
   private stats: Stats;
@@ -13,17 +13,24 @@ export class SceneManager {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('lightblue');
 
-    this.camera = new THREE.OrthographicCamera();
-    this.camera.position.set(0, 100, 0);
+    this.camera = new THREE.PerspectiveCamera(
+      70,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100,
+    );
+    this.camera.position.z = 2;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 0, 0); // view direction perpendicular to XY-plane
-    this.controls.enableRotate = false;
-    this.controls.enableZoom = true; // optional
+    this.controls.target.set(0, 0, 0);
+    this.controls.mouseButtons = {
+      MIDDLE: THREE.MOUSE.PAN,
+      RIGHT: THREE.MOUSE.ROTATE,
+    };
 
     this.stats = new Stats();
     document.body.appendChild(this.stats.dom);
@@ -48,8 +55,10 @@ export class SceneManager {
     this.scene.add(axesHelper);
   }
 
-  private onWindowResize() {
+  private onWindowResize(): void {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 

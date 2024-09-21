@@ -1,12 +1,18 @@
 import { AuthClient } from '@dfinity/auth-client';
 import { SignIdentity } from '@dfinity/agent';
+import { Principal } from '@dfinity/principal';
 
 export class AuthHandler {
   private authClient: AuthClient | null = null;
   private identity: SignIdentity | null = null;
+  private principal: Principal | null = null;
 
   public async initialize() {
     this.authClient = await AuthClient.create();
+  }
+
+  public getPrincipal() {
+    return this.principal;
   }
 
   public async login(): Promise<SignIdentity> {
@@ -28,6 +34,7 @@ export class AuthHandler {
             return;
           }
           this.identity = identity as SignIdentity;
+          this.principal = this.identity.getPrincipal();
           resolve(this.identity);
         },
         onError: (error) => {
