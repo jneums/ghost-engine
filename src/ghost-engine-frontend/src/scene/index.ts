@@ -62,13 +62,9 @@ export class SceneManager {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  private render() {
+  public update(deltaTime: number) {
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
-  }
-
-  public update(deltaTime: number) {
-    this.render();
     this.stats.update();
   }
 }
