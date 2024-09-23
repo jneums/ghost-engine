@@ -23,16 +23,6 @@ export class TransformComponent {
   ) {}
 }
 
-export const Archetype = {
-  Player: new Set([PrincipalComponent, TransformComponent]),
-  MovingPlayer: new Set([
-    PrincipalComponent,
-    TransformComponent,
-    VelocityComponent,
-  ]),
-  StaticObject: new Set([TransformComponent]),
-};
-
 export function createComponentClass(data: Component) {
   return match(data)
     .with({ PrincipalComponent: P.select() }, ({ principal }) => {

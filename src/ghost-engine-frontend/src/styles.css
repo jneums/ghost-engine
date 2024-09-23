@@ -3,7 +3,7 @@ body {
   margin: 0px;
 }
 
-#btn-entity {
+#btn-container {
   background-color: #f8f8f8;
   height: 100vh;
   width: 100vw;
@@ -13,4 +13,13 @@ body {
   align-items: center;
   transition: transform 0.3s ease-in-out;
   margin: auto;
+}
+
+#game,
+#ui {
+  position: absolute;
+}
+
+#game {
+  z-index: -1;
 }

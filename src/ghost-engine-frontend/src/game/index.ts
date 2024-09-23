@@ -1,27 +1,27 @@
+import { SignIdentity } from '@dfinity/agent';
 import { createWsConfig } from 'ic-websocket-js';
-import { AuthHandler } from './auth/auth-handler';
-import { SceneManager } from './scene';
+import { AuthHandler } from '../auth';
+import { SceneManager } from '../scene';
 import {
   canisterId,
   ghost_engine_backend,
-} from './declarations/ghost-engine-backend';
-import { SignIdentity } from '@dfinity/agent';
-import { Connection } from './connection';
-import { World } from './ecs';
-import { RenderPlayers } from './systems/render-players';
+} from '../declarations/ghost-engine-backend';
+import { Connection } from '../connection';
+import { World } from '../ecs';
+import { RenderPlayers } from '../systems/render-players';
 
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL;
 const IC_URL = import.meta.env.VITE_IC_URL;
 
 export class Game {
+  public world: World;
   private authHandler: AuthHandler;
-  private ecs: World;
   private scene: SceneManager;
   private lastTick = Date.now();
 
   constructor() {
     this.authHandler = new AuthHandler();
-    this.ecs = new World();
+    this.world = new World();
     this.scene = new SceneManager(document.getElementById('game')!);
 
     this.initialize();
@@ -29,13 +29,6 @@ export class Game {
 
   private async initialize() {
     await this.authHandler.initialize();
-    this.setupEventListeners();
-  }
-
-  private setupEventListeners() {
-    document
-      .getElementById('connect')!
-      .addEventListener('click', () => this.connect());
   }
 
   private gameLoop() {
@@ -44,14 +37,14 @@ export class Game {
       this.lastTick = Date.now();
 
       // Update the ecs
-      this.ecs.update(deltaTime);
+      this.world.update(deltaTime);
 
       // Update the scene
-      this.scene.update(deltaTime);
+      this.scene.update();
     }, 1000 / 60); // 60 FPS
   }
 
-  private async connect() {
+  public async connect() {
     // Login using Internet Identity
     const identity = await this.authHandler.login();
     const principal = this.authHandler.getPrincipal();
@@ -60,7 +53,7 @@ export class Game {
     }
 
     // Add the RenderPlayers to the ECS
-    this.ecs.addSystem(new RenderPlayers(this.scene.scene, principal));
+    this.world.addSystem(new RenderPlayers(this.scene.scene, principal));
 
     // Connect to the game server over Connection
     const wsConfig = createWsConfig({
@@ -70,12 +63,12 @@ export class Game {
       networkUrl: IC_URL,
     });
 
-    const connection = new Connection(GATEWAY_URL, wsConfig, this.ecs);
+    const connection = new Connection(GATEWAY_URL, wsConfig, this.world);
     connection.initialize();
 
     // Hide the menu and show the game
     document.getElementById('game')!.style.display = 'block';
-    document.getElementById('menu')!.style.display = 'none';
+    document.getElementById('ui')!.style.display = 'none';
 
     // Start the game loop
     this.gameLoop();

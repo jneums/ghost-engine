@@ -6,9 +6,9 @@ import { Principal } from '@dfinity/principal';
 import { getPrincipal } from '../queries/player';
 
 const ColorMap = {
-  me: 0x00ff00,
-  others: 0xff0000,
-  item: 0x0000ff,
+  me: 0xdda15e,
+  others: 0xbc6c25,
+  item: 0x606c38,
 };
 
 export class RenderPlayers implements System {
@@ -60,7 +60,7 @@ export class RenderPlayers implements System {
   private updateMesh(mesh: THREE.Mesh, transform: TransformComponent): void {
     mesh.position.set(
       transform.position.x,
-      transform.position.y,
+      transform.position.y + 0.5,
       transform.position.z,
     );
     mesh.rotation.setFromQuaternion(transform.rotation);
@@ -79,13 +79,6 @@ export class RenderPlayers implements System {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = entityId.toString();
     this.updateMesh(mesh, transform);
-
-    // Debugging logs
-    console.log(`Updated Mesh: ${mesh.name}`);
-    console.log(
-      `Position: ${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z}`,
-    );
-    console.log(`Scale: ${mesh.scale.x}, ${mesh.scale.y}, ${mesh.scale.z}`);
 
     return mesh;
   }
