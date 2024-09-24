@@ -4,14 +4,12 @@ body {
 }
 
 #btn-container {
-  background-color: #f8f8f8;
   height: 100vh;
   width: 100vw;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  transition: transform 0.3s ease-in-out;
   margin: auto;
 }
 

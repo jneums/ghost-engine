@@ -1,4 +1,4 @@
-import { Entity } from '../entity';
+import { Entity } from './entity';
 import { System } from '../systems';
 
 /**
@@ -38,6 +38,9 @@ export class World {
   private entitiesToDestroy = new Array<EntityId>();
 
   // API: Entities
+  public getEntities(): EntityId[] {
+    return Array.from(this.entities.keys());
+  }
 
   public getEntity(entityId: EntityId): Entity {
     if (this.entities.has(entityId)) {

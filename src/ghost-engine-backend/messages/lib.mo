@@ -7,8 +7,6 @@ module {
   public let Types = T;
 
   func send(ctx : T.Context, to : Principal, msg : Actions.Action) : async () {
-    Debug.print("Sending message: " # debug_show (msg));
-
     // here we call the send from the CDK!!
     switch (await IcWebSocketCdk.send(ctx.wsState, to, to_candid (msg))) {
       case (#Err(err)) {

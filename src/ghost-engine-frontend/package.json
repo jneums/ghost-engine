@@ -26,6 +26,7 @@
     "@dfinity/auth-client": "^2.1.1",
     "@dfinity/candid": "^2.0.0",
     "@dfinity/principal": "^2.0.0",
+    "@tweenjs/tween.js": "^25.0.0",
     "ic-websocket-js": "^0.4.0",
     "lil-gui": "^0.19.2",
     "react-router-dom": "^6.26.2",

@@ -1,6 +1,7 @@
 import T "Types";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
+import Time "mo:base/Time";
 import ECS "mo:geecs";
 import PlayerQueries "../queries/PlayerQueries";
 import Components "../components";
@@ -17,7 +18,14 @@ module {
     // Remove the player from the simulation
     switch (entityId) {
       case (?exists) {
-        ECS.World.removeComponent(ctx, exists, "TransformComponent");
+        ECS.World.addComponent(
+          ctx,
+          exists,
+          "ConnectionComponent",
+          #ConnectionComponent({
+            offline_since = Time.now();
+          }),
+        );
       };
       case (null) {};
     };

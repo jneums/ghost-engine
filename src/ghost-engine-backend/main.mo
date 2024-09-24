@@ -78,6 +78,21 @@ actor {
       principal = args.client_principal;
     });
     Actions.handleAction(ctx, action);
+
+    // Send client the current state as an #Updates message
+    let updatedComponents = Vector.new<ECS.Types.Update<Components.Component>>();
+    for ((entityId, components) in Map.entries(ctx.entities)) {
+      for (component in Map.vals(components)) {
+        let update = #Insert({
+          entityId = entityId;
+          component = component;
+        });
+        Vector.add(updatedComponents, update);
+      };
+    };
+
+    let updates = #Updates(Vector.toArray(updatedComponents));
+    ignore Messages.Client.send(ctx, args.client_principal, updates);
   };
 
   // Deserialize the action and handle it

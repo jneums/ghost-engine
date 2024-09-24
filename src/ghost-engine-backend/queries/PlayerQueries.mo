@@ -24,15 +24,11 @@ module {
       ctx,
       ["PrincipalComponent"],
     );
-
-    Debug.print("findPlayersEntityId: playerIds: " # debug_show (playerIds));
-
     // Find the player with the matching principal and remove them from the simulation
     var res : ?ECS.Types.EntityId = null;
     label findPrincipal for (playerId in Iter.fromArray(playerIds)) {
       switch (getPrincipal(ctx, playerId)) {
         case (?exists) {
-          Debug.print("findPlayersEntityId: exists: " # debug_show (exists));
           if (exists == principal) {
             res := ?playerId;
             break findPrincipal;

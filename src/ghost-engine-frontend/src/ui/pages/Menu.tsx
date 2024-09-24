@@ -1,10 +1,13 @@
+import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '../context/GameContext';
 
 export default function Menu() {
   const { game } = useGameContext();
+  const navigate = useNavigate();
 
-  const handleClick = () => {
-    game.connect();
+  const handleClick = async () => {
+    await game.connect();
+    navigate('/game');
   };
 
   return (

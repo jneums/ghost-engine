@@ -1,14 +1,14 @@
 module {
   public type Vector3 = {
-    x : Nat;
-    y : Nat;
-    z : Nat;
+    x : Float;
+    y : Float;
+    z : Float;
   };
 
   public type Quaternion = {
-    x : Nat;
-    y : Nat;
-    z : Nat;
-    w : Nat;
+    x : Float;
+    y : Float;
+    z : Float;
+    w : Float;
   };
 };

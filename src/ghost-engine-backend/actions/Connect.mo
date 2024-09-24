@@ -30,12 +30,32 @@ module {
     ECS.World.addComponent(
       ctx,
       entity,
-      "TransformComponent",
-      #TransformComponent({
-        scale = { x = 1; y = 1; z = 1 };
-        rotation = { x = 0; y = 0; z = 0; w = 0 };
-        position = { x = 0; y = 0; z = 0 };
+      "ConnectionComponent",
+      #ConnectionComponent({
+        offline_since = 0;
       }),
+    );
+
+    // Get old transform if exists
+    let oldTransform = ECS.World.getComponent(ctx, entity, "TransformComponent");
+    let newTransform = switch (oldTransform) {
+      case (? #TransformComponent(transform)) {
+        transform;
+      };
+      case (_) {
+        {
+          scale = { x = 1.0; y = 1.0; z = 1.0 };
+          rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
+          position = { x = 0.0; y = 0.0; z = 0.0 };
+        };
+      };
+    };
+
+    ECS.World.addComponent(
+      ctx,
+      entity,
+      "TransformComponent",
+      #TransformComponent(newTransform),
     );
   };
 

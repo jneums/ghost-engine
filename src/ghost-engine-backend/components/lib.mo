@@ -1,4 +1,5 @@
 import Math "../math";
+import Time "mo:base/Time";
 
 module {
   public type PrincipalComponent = {
@@ -18,6 +19,10 @@ module {
     rotation : Math.Types.Quaternion;
     scale : Math.Types.Vector3;
   };
+
+  public type ConnectionComponent = {
+    offline_since : Time.Time;
+  };
   // Define new component data types here...
 
   // Register component data types here...
@@ -26,5 +31,6 @@ module {
     #PositionComponent : PositionComponent;
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
+    #ConnectionComponent : ConnectionComponent;
   };
 };

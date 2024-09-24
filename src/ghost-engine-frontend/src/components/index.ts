@@ -23,6 +23,18 @@ export class TransformComponent {
   ) {}
 }
 
+export class ClientTransformComponent {
+  constructor(
+    public position: THREE.Vector3,
+    public rotation: THREE.Quaternion,
+    public scale: THREE.Vector3,
+  ) {}
+}
+
+export class ConnectionComponent {
+  constructor(public offline_since: number) {}
+}
+
 export function createComponentClass(data: Component) {
   return match(data)
     .with({ PrincipalComponent: P.select() }, ({ principal }) => {
@@ -30,40 +42,26 @@ export function createComponentClass(data: Component) {
     })
     .with({ PositionComponent: P.select() }, ({ position }) => {
       return new PositionComponent(
-        new THREE.Vector3(
-          Number(position.x),
-          Number(position.y),
-          Number(position.z),
-        ),
+        new THREE.Vector3(position.x, position.y, position.z),
       );
     })
     .with({ VelocityComponent: P.select() }, ({ velocity }) => {
       return new VelocityComponent(
-        new THREE.Vector3(
-          Number(velocity.x),
-          Number(velocity.y),
-          Number(velocity.z),
-        ),
+        new THREE.Vector3(velocity.x, velocity.y, velocity.z),
       );
     })
     .with(
       { TransformComponent: P.select() },
       ({ position, rotation, scale }) => {
         return new TransformComponent(
-          new THREE.Vector3(
-            Number(position.x),
-            Number(position.y),
-            Number(position.z),
-          ),
-          new THREE.Quaternion(
-            Number(rotation.x),
-            Number(rotation.y),
-            Number(rotation.z),
-            Number(rotation.w),
-          ),
-          new THREE.Vector3(Number(scale.x), Number(scale.y), Number(scale.z)),
+          new THREE.Vector3(position.x, position.y, position.z),
+          new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+          new THREE.Vector3(scale.x, scale.y, scale.z),
         );
       },
     )
+    .with({ ConnectionComponent: P.select() }, ({ offline_since }) => {
+      return new ConnectionComponent(Number(offline_since));
+    })
     .exhaustive();
 }

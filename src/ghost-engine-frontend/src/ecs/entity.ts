@@ -1,4 +1,4 @@
-import { Component, ComponentClass } from '../ecs';
+import { Component, ComponentClass } from '.';
 
 /**
  * This custom entity is so that calling code can provide the
@@ -21,6 +21,12 @@ import { Component, ComponentClass } from '../ecs';
  */
 export class Entity {
   private map = new Map<string, Component>();
+
+  public getArchetype(): Component[] {
+    return Array.from(this.map.values()).map(
+      (component) => component.constructor,
+    );
+  }
 
   public addComponent(component: Component): void {
     this.map.set(component.constructor.name, component);
