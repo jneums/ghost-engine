@@ -2,6 +2,7 @@ import Debug "mo:base/Debug";
 import Timer "mo:base/Timer";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
+import Array "mo:base/Array";
 import Vector "mo:vector";
 import Map "mo:stable-hash-map/Map/Map";
 import IcWebSocketCdk "mo:ic-websocket-cdk";
@@ -11,6 +12,8 @@ import ECS "mo:geecs";
 import Actions "actions";
 import Messages "messages";
 import { MovementSystem } "systems/MovementSystem";
+import { MiningSystem } "systems/MiningSystem";
+import { NodeSpawningSystem } "systems/NodeSpawningSystem";
 import Components "components";
 
 actor {
@@ -42,8 +45,28 @@ actor {
     };
   };
 
+  // Setup node spawner if it doesn't exist
+  let nodeSpawningComponent = ECS.World.getEntitiesByArchetype(ctx, ["NodeSpawningComponent"]);
+  if (Array.size(nodeSpawningComponent) < 1) {
+    let nodeSpawningEntityId = ECS.World.addEntity(ctx);
+    let nodeSpawningConfig = #NodeSpawningComponent({
+      maxNodes = 4;
+      spawnInterval = 30 * 1_000_000_000; // 30 seconds
+      lastSpawn = 0;
+      spawnBoundary = {
+        minX = -48.0;
+        maxX = 48.0;
+        minZ = -48.0;
+        maxZ = 48.0;
+      };
+    });
+    ECS.World.addComponent(ctx, nodeSpawningEntityId, "NodeSpawningComponent", nodeSpawningConfig);
+  };
+
   // Register systems here
   ECS.World.addSystem(ctx, MovementSystem);
+  ECS.World.addSystem(ctx, NodeSpawningSystem);
+  ECS.World.addSystem(ctx, MiningSystem);
 
   // Game loop runs all the systems
   func gameLoop() : async () {

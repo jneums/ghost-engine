@@ -18,6 +18,7 @@ module {
     let entityId = PlayerQueries.findPlayersEntityId(ctx, args.principal);
     let entity = Option.get(entityId, ECS.World.addEntity(ctx));
 
+    // Add the principal and connection components
     ECS.World.addComponent(
       ctx,
       entity,
@@ -26,7 +27,6 @@ module {
         principal = args.principal;
       }),
     );
-
     ECS.World.addComponent(
       ctx,
       entity,
@@ -50,13 +50,53 @@ module {
         };
       };
     };
-
     ECS.World.addComponent(
       ctx,
       entity,
       "TransformComponent",
       #TransformComponent(newTransform),
     );
+
+    // Get old cargo if exists
+    let oldCargo = ECS.World.getComponent(ctx, entity, "CargoComponent");
+    let newCargo = switch (oldCargo) {
+      case (? #CargoComponent(cargo)) {
+        cargo;
+      };
+      case (_) {
+        {
+          capacity = 100;
+          current = 0;
+        };
+      };
+    };
+    ECS.World.addComponent(
+      ctx,
+      entity,
+      "CargoComponent",
+      #CargoComponent(newCargo),
+    );
+
+    // Get old health if it exists
+    let oldHealth = ECS.World.getComponent(ctx, entity, "HealthComponent");
+    let newHealth = switch (oldHealth) {
+      case (? #HealthComponent(health)) {
+        health;
+      };
+      case (_) {
+        {
+          health = 10;
+          maxHealth = 10;
+        };
+      };
+    };
+    ECS.World.addComponent(
+      ctx,
+      entity,
+      "HealthComponent",
+      #HealthComponent(newHealth),
+    );
+
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {

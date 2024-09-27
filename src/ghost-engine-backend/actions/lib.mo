@@ -1,10 +1,11 @@
+import T "Types";
 import ECS "mo:geecs";
 import Move "Move";
 import Connect "Connect";
-import T "Types";
 import Disconnect "Disconnect";
 import Debug "mo:base/Debug";
 import Components "../components";
+import Mine "Mine";
 
 module {
   public let Types = T;
@@ -17,6 +18,7 @@ module {
     #Connect : Connect.Args;
     #Disconnect : Disconnect.Args;
     #Move : Move.Args;
+    #Mine : Mine.Args;
   };
 
   // Add action handler functions here
@@ -30,6 +32,9 @@ module {
       };
       case (#Move(args)) {
         Move.Handler.handle(ctx, args);
+      };
+      case (#Mine(args)) {
+        Mine.Handler.handle(ctx, args);
       };
       case (#Updates(_)) {
         Debug.print("These actions are sent to the clients...");

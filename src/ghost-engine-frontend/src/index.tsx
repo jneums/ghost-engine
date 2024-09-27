@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import UI from './ui';
+import App from './App';
+import '@fontsource/inter';
 
-createRoot(document.getElementById('ui')!).render(<UI />);
+createRoot(document.getElementById('root')!).render(<App />);

@@ -3,3 +3,4 @@ declare namespace NodeJS {
     CANISTER_ID_INTERNET_IDENTITY: string;
   }
 }
+declare module 'babel-plugin-glsl/macro';

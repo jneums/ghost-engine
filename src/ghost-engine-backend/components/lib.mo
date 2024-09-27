@@ -6,6 +6,15 @@ module {
     principal : Principal;
   };
 
+  public type NameableComponent = {
+    name : Text;
+  };
+
+  public type HealthComponent = {
+    health : Nat;
+    maxHealth : Nat;
+  };
+
   public type PositionComponent = {
     position : Math.Types.Vector3;
   };
@@ -23,6 +32,41 @@ module {
   public type ConnectionComponent = {
     offline_since : Time.Time;
   };
+
+  public type MiningComponent = {
+    targetEntityId : Nat;
+    speed : Float;
+    range : Float;
+    startAt : Time.Time;
+  };
+
+  public type CombatComponent = {
+    targetEntityId : Nat;
+    speed : Float;
+    range : Float;
+    startAt : Time.Time;
+  };
+
+  public type CargoComponent = {
+    capacity : Nat;
+    current : Nat;
+  };
+
+  public type ResourceComponent = {
+    amount : Nat;
+  };
+
+  public type NodeSpawningComponent = {
+    maxNodes : Nat;
+    spawnInterval : Time.Time;
+    lastSpawn : Time.Time;
+    spawnBoundary : {
+      minX : Float;
+      maxX : Float;
+      minZ : Float;
+      maxZ : Float;
+    };
+  };
   // Define new component data types here...
 
   // Register component data types here...
@@ -32,5 +76,12 @@ module {
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
     #ConnectionComponent : ConnectionComponent;
+    #MiningComponent : MiningComponent;
+    #CargoComponent : CargoComponent;
+    #NodeSpawningComponent : NodeSpawningComponent;
+    #ResourceComponent : ResourceComponent;
+    #NameableComponent : NameableComponent;
+    #HealthComponent : HealthComponent;
+    #CombatComponent : CombatComponent;
   };
 };

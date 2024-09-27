@@ -22,6 +22,6 @@ dist/
 .svelte-kit/
 
 # environment variables
-.env
+.env.*
 
 .mops

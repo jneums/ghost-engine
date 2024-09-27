@@ -1,4 +1,4 @@
-import { Component, ComponentClass } from '.';
+import { Component, ComponentClass } from './useWorldState';
 
 /**
  * This custom entity is so that calling code can provide the
@@ -21,6 +21,11 @@ import { Component, ComponentClass } from '.';
  */
 export class Entity {
   private map = new Map<string, Component>();
+  public id: number;
+
+  constructor(id: number) {
+    this.id = id;
+  }
 
   public getArchetype(): Component[] {
     return Array.from(this.map.values()).map(
@@ -51,7 +56,7 @@ export class Entity {
     return true;
   }
 
-  public deleteComponent(componentType: string): void {
-    this.map.delete(componentType);
+  public deleteComponent(componentClass: Function): void {
+    this.map.delete(componentClass.name);
   }
 }
