@@ -6,19 +6,24 @@ import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Ground from '../components/Ground';
-import { useWorldState } from '../hooks/useWorldState';
-import { useConnectionState } from '../hooks/useConnectionState';
 import Mines from '../components/Mines';
 import Cargo from '../components/Cargo';
-import { findPlayersEntityId } from '../utils';
 import PlayerCard from '../components/PlayerCard';
 import TargetCard from '../components/TargetCard';
+import { useWorld } from '../context/WorldProvider';
+import {
+  PrincipalComponent,
+  ResourceComponent,
+  TransformComponent,
+} from '../components';
+import { useDialog } from '../context/DialogProvider';
+import Respawn from '../components/Respawn';
 
 export default function Game() {
+  const { world, isPlayerDead } = useWorld();
+  const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
   const navigate = useNavigate();
-  const world = useWorldState();
-  const connection = useConnectionState(world);
 
   useEffect(() => {
     if (!identity) {
@@ -26,25 +31,24 @@ export default function Game() {
     }
   }, [identity]);
 
-  if (!identity || !connection) {
+  if (!identity) {
     return null;
   }
 
-  // Get player entity
-  const playerEntityId = findPlayersEntityId(
-    Array.from(world.state.entities.values()),
-    identity.getPrincipal(),
-  );
+  useEffect(() => {
+    if (isPlayerDead) {
+      openDialog(<Respawn />);
+    }
+  }, [isPlayerDead]);
 
-  if (!playerEntityId) {
-    return null;
-  }
-
-  // Get player trasnform component
-  const playerEntity = world.getEntity(playerEntityId);
-  if (!playerEntity) {
-    return null;
-  }
+  const mineEntities = world.getEntitiesByArchetype([
+    ResourceComponent,
+    TransformComponent,
+  ]);
+  const playerEntities = world.getEntitiesByArchetype([
+    PrincipalComponent,
+    TransformComponent,
+  ]);
 
   return (
     <>
@@ -58,8 +62,8 @@ export default function Game() {
         ]}>
         <Canvas shadows gl={{ alpha: false }} camera={{ position: [5, 5, 5] }}>
           <color attach="background" args={['#f0f0f0']} />
-          <Players world={world} />
-          <Mines world={world} connection={connection} />
+          <Players entityIds={playerEntities} />
+          <Mines entityIds={mineEntities} />
           <Sky sunPosition={[100, 20, 100]} />
           <ambientLight intensity={1} />
           <pointLight
@@ -67,15 +71,15 @@ export default function Game() {
             intensity={100000}
             position={[100, 100, 100]}
           />
-          <Ground connection={connection} world={world} identity={identity} />
+          <Ground />
           <fog attach="fog" args={['#f0f0f0', 0, 75]} />
           <Stats />
           <Controls />
         </Canvas>
       </KeyboardControls>
-      <Cargo world={world} connection={connection} />
-      <PlayerCard world={world} playerEntityId={playerEntityId} />
-      <TargetCard world={world} playerEntityId={playerEntityId} />
+      <Cargo />
+      <PlayerCard />
+      <TargetCard />
     </>
   );
 }

@@ -12,7 +12,7 @@ module {
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nPlayer connected: " # debug_show (args.principal));
+    Debug.print("\nPlayer respawned: " # debug_show (args.principal));
 
     // Check if the player already has entityId
     let entityId = PlayerQueries.findPlayersEntityId(ctx, args.principal);
@@ -36,65 +36,35 @@ module {
       }),
     );
 
-    // Get old transform if exists
-    let oldTransform = ECS.World.getComponent(ctx, entity, "TransformComponent");
-    let newTransform = switch (oldTransform) {
-      case (? #TransformComponent(transform)) {
-        transform;
-      };
-      case (_) {
-        {
-          scale = { x = 1.0; y = 1.0; z = 1.0 };
-          rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
-          position = { x = 0.0; y = 0.0; z = 0.0 };
-        };
-      };
-    };
     ECS.World.addComponent(
       ctx,
       entity,
       "TransformComponent",
-      #TransformComponent(newTransform),
+      #TransformComponent({
+        scale = { x = 1.0; y = 1.0; z = 1.0 };
+        rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
+        position = { x = 0.0; y = 0.0; z = 0.0 };
+      }),
     );
 
-    // Get old cargo if exists
-    let oldCargo = ECS.World.getComponent(ctx, entity, "CargoComponent");
-    let newCargo = switch (oldCargo) {
-      case (? #CargoComponent(cargo)) {
-        cargo;
-      };
-      case (_) {
-        {
-          capacity = 100;
-          current = 0;
-        };
-      };
-    };
     ECS.World.addComponent(
       ctx,
       entity,
       "CargoComponent",
-      #CargoComponent(newCargo),
+      #CargoComponent({
+        capacity = 100;
+        current = 0;
+      }),
     );
 
-    // Get old health if it exists
-    let oldHealth = ECS.World.getComponent(ctx, entity, "HealthComponent");
-    let newHealth = switch (oldHealth) {
-      case (? #HealthComponent(health)) {
-        health;
-      };
-      case (_) {
-        {
-          amount = 10;
-          max = 10;
-        };
-      };
-    };
     ECS.World.addComponent(
       ctx,
       entity,
       "HealthComponent",
-      #HealthComponent(newHealth),
+      #HealthComponent({
+        amount = 10;
+        max = 10;
+      }),
     );
 
   };

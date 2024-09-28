@@ -43,11 +43,10 @@ module {
             scale = { x = 1.0; y = 1.0; z = 1.0 };
           });
           ECS.World.addComponent(ctx, newNodeEntityId, "TransformComponent", newNodeTransform);
-          let newNodeResource = #ResourceComponent({
-            amount = 1;
-          });
-          ECS.World.addComponent(ctx, newNodeEntityId, "ResourceComponent", newNodeResource);
+          ECS.World.addComponent(ctx, newNodeEntityId, "ResourceComponent", #ResourceComponent({ resourceType = "tGENG" }));
           ECS.World.addComponent(ctx, newNodeEntityId, "NameableComponent", #NameableComponent({ name = "Mining Node" }));
+          ECS.World.addComponent(ctx, newNodeEntityId, "HealthComponent", #HealthComponent({ amount = 1; max = 1 }));
+          ECS.World.addComponent(ctx, newNodeEntityId, "CargoComponent", #CargoComponent({ capacity = 1; current = 1 }));
 
           // Update the last spawn time and increment the current nodes count
           let newSpawnTime = currentTime;

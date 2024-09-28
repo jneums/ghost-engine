@@ -1,6 +1,7 @@
 import { Principal } from '@dfinity/principal';
 import { PrincipalComponent } from '../components';
-import { Entity } from '../hooks/entity';
+import { Entity } from '../world/entity';
+import { EntityId, World } from '../world';
 
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,10 +20,15 @@ export function getPrincipal(entity: Entity): Principal | undefined {
   return component?.principal;
 }
 
-export function findPlayersEntityId(entities: Entity[], principal: Principal) {
+export function findPlayersEntityId(
+  world: World,
+  entities: EntityId[],
+  principal: Principal,
+) {
   if (!entities) return;
 
-  for (const entity of entities.values()) {
+  for (const entityId of entities.values()) {
+    const entity = world.getEntity(entityId);
     const component = entity.getComponent(PrincipalComponent);
     if (component?.principal.compareTo(principal) === 'eq') {
       return entity.id;

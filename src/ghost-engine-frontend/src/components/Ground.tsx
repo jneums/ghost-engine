@@ -1,26 +1,12 @@
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import MoveAction from '../actions/move-action';
-import { Connection } from '../connection';
-import { findPlayersEntityId } from '../utils';
-import { Identity } from '@dfinity/agent';
-import { World } from '../hooks/useWorldState';
+import { useWorld } from '../context/WorldProvider';
 
-const DRAG_THRESHOLD = 25;
+const DRAG_THRESHOLD = 5;
 
-export default function Ground({
-  connection,
-  world,
-  identity,
-}: {
-  connection: Connection;
-  world: World;
-  identity: Identity;
-}) {
-  const entityId = findPlayersEntityId(
-    Array.from(world.state.entities.values()),
-    identity.getPrincipal(),
-  );
+export default function Ground() {
+  const { world, connection, playerEntityId, isPlayerDead } = useWorld();
 
   const handleLeftClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -30,11 +16,21 @@ export default function Ground({
 
   const handleRightClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    if (e.delta > DRAG_THRESHOLD || !connection || !entityId) return;
+    if (e.delta > DRAG_THRESHOLD) return;
     console.log('Floor RIGHT clicked!');
+
+    if (!playerEntityId) {
+      console.error('Player entity not found');
+      return;
+    }
+
+    if (isPlayerDead) {
+      console.error('You are dead!');
+      return;
+    }
     const move = new MoveAction(world, connection);
     move.handle({
-      entityId,
+      entityId: playerEntityId,
       position: new THREE.Vector3(e.point.x, 0, e.point.z),
     });
   };

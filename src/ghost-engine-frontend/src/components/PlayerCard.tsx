@@ -1,35 +1,44 @@
-import { World } from '../hooks/useWorldState';
 import { HealthComponent, NameableComponent, PrincipalComponent } from '.';
 import EntityCard from './EntityCard';
+import { useWorld } from '../context/WorldProvider';
+import { useInternetIdentity } from 'ic-use-internet-identity';
+import { findPlayersEntityId } from '../utils';
 
-export default function PlayerCard({
-  world,
-  playerEntityId,
-}: {
-  world: World;
-  playerEntityId: number;
-}) {
+export default function PlayerCard() {
+  const { world } = useWorld();
+  const { identity } = useInternetIdentity();
+  if (!identity) {
+    throw new Error('Identity not found');
+  }
+
+  const playerEntityId = findPlayersEntityId(
+    world,
+    world.getEntitiesByArchetype([PrincipalComponent]),
+    identity.getPrincipal(),
+  );
+  if (!playerEntityId) {
+    return null;
+  }
+
   const entity = world.getEntity(playerEntityId);
   if (!entity) {
-    return null;
+    throw new Error('Entity not found');
   }
 
   const health = entity.getComponent(HealthComponent);
   if (!health) {
-    return null;
+    throw new Error('Health component not found');
   }
 
   const principal = entity.getComponent(PrincipalComponent);
   if (!principal) {
-    return null;
+    throw new Error('Principal component not found');
   }
 
   const nameabel = entity.getComponent(NameableComponent);
   const name = nameabel?.name || `Player ${entity.id.toString()}`;
 
-  const hitpoints = Math.round(
-    Number((health.health / health.maxHealth) * 100),
-  );
+  const hitpoints = Math.round(Number((health.amount / health.max) * 100));
 
   return <EntityCard name={name} hitpoints={hitpoints} bottom={0} left={0} />;
 }

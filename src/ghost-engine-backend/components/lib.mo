@@ -11,8 +11,8 @@ module {
   };
 
   public type HealthComponent = {
-    health : Nat;
-    maxHealth : Nat;
+    amount : Nat;
+    max : Nat;
   };
 
   public type PositionComponent = {
@@ -33,11 +33,9 @@ module {
     offline_since : Time.Time;
   };
 
-  public type MiningComponent = {
-    targetEntityId : Nat;
-    speed : Float;
-    range : Float;
-    startAt : Time.Time;
+  public type DamageComponent = {
+    sourceEntityId : Nat;
+    amount : Nat;
   };
 
   public type CombatComponent = {
@@ -53,7 +51,7 @@ module {
   };
 
   public type ResourceComponent = {
-    amount : Nat;
+    resourceType : Text;
   };
 
   public type NodeSpawningComponent = {
@@ -76,12 +74,12 @@ module {
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
     #ConnectionComponent : ConnectionComponent;
-    #MiningComponent : MiningComponent;
     #CargoComponent : CargoComponent;
     #NodeSpawningComponent : NodeSpawningComponent;
     #ResourceComponent : ResourceComponent;
     #NameableComponent : NameableComponent;
     #HealthComponent : HealthComponent;
     #CombatComponent : CombatComponent;
+    #DamageComponent : DamageComponent;
   };
 };

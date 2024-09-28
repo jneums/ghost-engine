@@ -1,14 +1,30 @@
-import { World } from '../hooks/useWorldState';
-import { HealthComponent, NameableComponent, TargetComponent } from '.';
+import {
+  HealthComponent,
+  NameableComponent,
+  PrincipalComponent,
+  TargetComponent,
+} from '.';
 import EntityCard from './EntityCard';
+import { useWorld } from '../context/WorldProvider';
+import { useInternetIdentity } from 'ic-use-internet-identity';
+import { findPlayersEntityId } from '../utils';
 
-export default function TargetCard({
-  world,
-  playerEntityId,
-}: {
-  world: World;
-  playerEntityId: number;
-}) {
+export default function TargetCard() {
+  const { world } = useWorld();
+  const { identity } = useInternetIdentity();
+  if (!identity) {
+    throw new Error('Identity not found');
+  }
+
+  const playerEntityId = findPlayersEntityId(
+    world,
+    world.getEntitiesByArchetype([PrincipalComponent]),
+    identity.getPrincipal(),
+  );
+  if (!playerEntityId) {
+    return null;
+  }
+
   const entity = world.getEntity(playerEntityId);
   if (!entity) {
     throw new Error('Entity not found');
@@ -31,7 +47,7 @@ export default function TargetCard({
   const name = nameable?.name || `Player ${targetEntity.id.toString()}`;
 
   const hitpoints = health
-    ? Math.round(Number((health.health / health.maxHealth) * 100))
+    ? Math.round(Number((health.amount / health.max) * 100))
     : 0;
 
   return <EntityCard name={name} hitpoints={hitpoints} bottom={0} right={0} />;

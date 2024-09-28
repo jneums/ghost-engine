@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PositionComponent } from '../components';
 import { Connection } from '../connection';
 import { sleep } from '../utils';
-import { World } from '../hooks/useWorldState';
+import { World } from '../world';
 
 export default class MoveAction {
   constructor(private world: World, private connection: Connection) {}

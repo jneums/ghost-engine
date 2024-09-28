@@ -1,30 +1,23 @@
 import { ThreeEvent } from '@react-three/fiber';
-import { TransformComponent } from '.';
+import { HealthComponent, TransformComponent } from '.';
 import * as THREE from 'three';
 import { useRef } from 'react';
-import { World } from '../hooks/useWorldState';
-import { useEntityId } from '../hooks/useEntityId';
-import MineAction from '../actions/mine-action';
-import { Connection } from '../connection';
+import AttackAction from '../actions/attack-action';
 import SetTargetAction from '../actions/set-target';
+import { useWorld } from '../context/WorldProvider';
 
-export default function Mine({
-  entityId,
-  world,
-  connection,
-}: {
-  entityId: number;
-  world: World;
-  connection: Connection;
-}) {
+export default function Mine({ entityId }: { entityId: number }) {
+  const { world, connection, playerEntityId } = useWorld();
   const entity = world.getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
-  const playerEntityId = useEntityId(world);
 
   if (!entity) return null;
 
   const serverTransform = entity.getComponent(TransformComponent);
-  const color = 'blue';
+  const health = entity.getComponent(HealthComponent);
+
+  const isDead = health.amount <= 0;
+  const color = isDead ? 'black' : 'blue';
 
   const handleLeftClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
@@ -52,6 +45,13 @@ export default function Mine({
       return;
     }
 
+    // Set target id
+    const setTarget = new SetTargetAction(world);
+    setTarget.handle({
+      entityId: playerEntityId,
+      targetEntityId: entityId,
+    });
+
     const playerTransform = world.getEntity(playerEntityId);
     if (!playerTransform) {
       console.error('Player transform not found');
@@ -67,9 +67,9 @@ export default function Mine({
       return;
     }
 
-    // Handle mine click
-    const mineAction = new MineAction(world, connection);
-    mineAction.handle({
+    // Handle attack click
+    const attackAction = new AttackAction(world, connection);
+    attackAction.handle({
       entityId: playerEntityId,
       targetEntityId: entityId,
     });

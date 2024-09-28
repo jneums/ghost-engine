@@ -12,7 +12,7 @@ export class NameableComponent {
 }
 
 export class HealthComponent {
-  constructor(public health: number, public maxHealth: number) {}
+  constructor(public amount: number, public max: number) {}
 }
 
 export class PositionComponent {
@@ -35,13 +35,8 @@ export class ConnectionComponent {
   constructor(public offline_since: number) {}
 }
 
-export class MiningComponent {
-  constructor(
-    public targetEntityId: number,
-    public speed: number,
-    public range: number,
-    public startAt: number,
-  ) {}
+export class DamageComponent {
+  constructor(public entityId: number, public amount: number) {}
 }
 
 export class CombatComponent {
@@ -58,7 +53,7 @@ export class CargoComponent {
 }
 
 export class ResourceComponent {
-  constructor(public amount: number) {}
+  constructor(public resourceType: string) {}
 }
 
 export class NodeSpawningComponent {
@@ -96,8 +91,8 @@ export function createComponentClass(data: Component) {
     .with({ NameableComponent: P.select() }, ({ name }) => {
       return new NameableComponent(name);
     })
-    .with({ HealthComponent: P.select() }, ({ health, maxHealth }) => {
-      return new HealthComponent(Number(health), Number(maxHealth));
+    .with({ HealthComponent: P.select() }, ({ amount, max }) => {
+      return new HealthComponent(Number(amount), Number(max));
     })
     .with({ PositionComponent: P.select() }, ({ position }) => {
       return new PositionComponent(
@@ -123,17 +118,6 @@ export function createComponentClass(data: Component) {
       return new ConnectionComponent(Number(offline_since));
     })
     .with(
-      { MiningComponent: P.select() },
-      ({ targetEntityId, speed, range, startAt }) => {
-        return new MiningComponent(
-          Number(targetEntityId),
-          Number(speed),
-          Number(range),
-          Number(startAt),
-        );
-      },
-    )
-    .with(
       { CombatComponent: P.select() },
       ({ targetEntityId, speed, range, startAt }) => {
         return new CombatComponent(
@@ -147,8 +131,8 @@ export function createComponentClass(data: Component) {
     .with({ CargoComponent: P.select() }, ({ capacity, current }) => {
       return new CargoComponent(Number(capacity), Number(current));
     })
-    .with({ ResourceComponent: P.select() }, ({ amount }) => {
-      return new ResourceComponent(Number(amount));
+    .with({ ResourceComponent: P.select() }, ({ resourceType }) => {
+      return new ResourceComponent(resourceType);
     })
     .with(
       { NodeSpawningComponent: P.select() },
@@ -166,6 +150,9 @@ export function createComponentClass(data: Component) {
         );
       },
     )
+    .with({ DamageComponent: P.select() }, ({ sourceEntityId, amount }) => {
+      return new DamageComponent(Number(sourceEntityId), Number(amount));
+    })
     .exhaustive();
 }
 
@@ -175,8 +162,10 @@ export const ComponentConstructors: Record<string, Function> = {
   VelocityComponent: VelocityComponent,
   TransformComponent: TransformComponent,
   ConnectionComponent: ConnectionComponent,
-  MiningComponent: MiningComponent,
+  DamageComponent: DamageComponent,
   CargoComponent: CargoComponent,
   NodeSpawningComponent: NodeSpawningComponent,
   ResourceComponent: ResourceComponent,
+  CombatComponent: CombatComponent,
+  HealthComponent: HealthComponent,
 };

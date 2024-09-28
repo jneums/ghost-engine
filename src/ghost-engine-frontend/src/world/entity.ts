@@ -1,4 +1,4 @@
-import { Component, ComponentClass } from './useWorldState';
+import { Component, ComponentClass } from '.';
 
 /**
  * This custom entity is so that calling code can provide the

@@ -3,30 +3,23 @@ import {
   PositionComponent,
   TransformComponent,
   ClientTransformComponent,
-  MiningComponent,
+  CombatComponent,
+  HealthComponent,
 } from '.';
-import { findPlayersEntityId, getPrincipal } from '../utils';
-import { useInternetIdentity } from 'ic-use-internet-identity';
-import { isPrincipalEqual } from '../utils';
 import * as THREE from 'three';
 import { useRef, useEffect, useState } from 'react';
-import { World } from '../hooks/useWorldState';
 import LightningBeam from './LightningBeam';
 import SetTargetAction from '../actions/set-target';
+import { useWorld } from '../context/WorldProvider';
+import AttackAction from '../actions/attack-action';
 
-export default function Player({
-  entityId,
-  world,
-}: {
-  entityId: number;
-  world: World;
-}) {
-  const { identity } = useInternetIdentity();
+export default function Player({ entityId }: { entityId: number }) {
+  const { world, playerEntityId, connection } = useWorld();
   const entity = world.getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
   const velocity = 2; // units per second
   const epsilon = 0.05; // Small value to prevent shaking
-  const [miningTarget, setMiningTarget] = useState<THREE.Vector3 | null>(null);
+  const [combatTarget, setCombatTarget] = useState<THREE.Vector3 | null>(null);
 
   if (!entity) return null;
 
@@ -43,18 +36,12 @@ export default function Player({
     entity.addComponent(clientTransform);
   }
 
-  const mining = entity.getComponent(MiningComponent);
+  const combat = entity.getComponent(CombatComponent);
+  const health = entity.getComponent(HealthComponent);
 
-  const principal = getPrincipal(entity);
-  const isPlayer = isPrincipalEqual(principal, identity?.getPrincipal());
-  const color = isPlayer ? 'green' : 'red';
-
-  const playerEntityId = identity
-    ? findPlayersEntityId(
-        Array.from(world.state.entities.values()),
-        identity.getPrincipal(),
-      )
-    : null;
+  const isPlayer = entityId === playerEntityId;
+  const isDead = health.amount <= 0;
+  const color = isDead ? 'black' : isPlayer ? 'green' : 'red';
 
   const handleLeftClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
@@ -79,25 +66,63 @@ export default function Player({
 
   const handleRightClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
+    if (!playerEntityId) {
+      console.error('Player entity not found');
+      return;
+    }
 
     if (isPlayer) {
       console.log('Right click on my Player');
     } else {
       console.log('Right click on another Player');
     }
+
+    // Set target id
+    const setTarget = new SetTargetAction(world);
+    setTarget.handle({
+      entityId: playerEntityId,
+      targetEntityId: entityId,
+    });
+
+    if (isDead) {
+      console.error('Dead entities cannot be attacked');
+      return;
+    }
+
+    const playerTransform = world.getEntity(playerEntityId);
+    if (!playerTransform) {
+      console.error('Player transform not found');
+      return;
+    }
+
+    // Range check
+    const distance = serverTransform.position.distanceTo(
+      playerTransform.getComponent(TransformComponent).position,
+    );
+    if (distance > 3) {
+      console.error('Mine is too far away');
+      return;
+    }
+
+    // Handle attack click
+    const attackAction = new AttackAction(world, connection);
+    attackAction.handle({
+      entityId: playerEntityId,
+      targetEntityId: entityId,
+    });
   };
 
   useEffect(() => {
-    if (mining) {
-      const target = world.getEntity(mining.targetEntityId);
+    if (combat) {
+      const target = world.getEntity(combat.targetEntityId);
       if (target) {
         const targetTransform = target.getComponent(TransformComponent);
-        setMiningTarget(targetTransform.position);
+        setCombatTarget(targetTransform.position);
       }
     } else {
-      setMiningTarget(null);
+      setCombatTarget(null);
     }
-  }, [mining]);
+  }, [combat]);
 
   useFrame((state, delta) => {
     if (position && clientTransform && meshRef.current) {
@@ -140,6 +165,9 @@ export default function Player({
 
       meshRef.current.position.copy(clientTransform.position);
     }
+    if (isDead) {
+      world.removeComponent(entityId, ClientTransformComponent);
+    }
   });
 
   return (
@@ -157,8 +185,8 @@ export default function Player({
         <boxGeometry args={[1, 1, 1]} />
         <meshPhongMaterial color={color} />
       </mesh>
-      {miningTarget && (
-        <LightningBeam start={clientTransform.position} end={miningTarget} />
+      {combatTarget && (
+        <LightningBeam start={clientTransform.position} end={combatTarget} />
       )}
     </>
   );

@@ -1,5 +1,5 @@
 import { TargetComponent } from '../components';
-import { World } from '../hooks/useWorldState';
+import { World } from '../world';
 
 export default class SetTargetAction {
   constructor(private world: World) {}

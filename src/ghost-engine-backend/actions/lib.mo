@@ -4,8 +4,9 @@ import Move "Move";
 import Connect "Connect";
 import Disconnect "Disconnect";
 import Debug "mo:base/Debug";
+import Attack "Attack";
+import Respawn "Respawn";
 import Components "../components";
-import Mine "Mine";
 
 module {
   public let Types = T;
@@ -18,7 +19,8 @@ module {
     #Connect : Connect.Args;
     #Disconnect : Disconnect.Args;
     #Move : Move.Args;
-    #Mine : Mine.Args;
+    #Attack : Attack.Args;
+    #Respawn : Respawn.Args;
   };
 
   // Add action handler functions here
@@ -33,8 +35,11 @@ module {
       case (#Move(args)) {
         Move.Handler.handle(ctx, args);
       };
-      case (#Mine(args)) {
-        Mine.Handler.handle(ctx, args);
+      case (#Attack(args)) {
+        Attack.Handler.handle(ctx, args);
+      };
+      case (#Respawn(args)) {
+        Respawn.Handler.handle(ctx, args);
       };
       case (#Updates(_)) {
         Debug.print("These actions are sent to the clients...");

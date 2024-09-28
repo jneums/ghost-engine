@@ -11,13 +11,14 @@ import {
 } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
 import { ComponentConstructors, createComponentClass } from '../components';
 import { SignIdentity } from '@dfinity/agent';
-import { Component } from '../hooks/useWorldState';
+import { World } from '../world';
 
 const IC_URL = import.meta.env.VITE_IC_URL as string;
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL as string;
 
 export class Connection {
   private ws: IcWebSocket<typeof ghost_engine_backend> | null = null;
+  public isConnected = false;
 
   public send(message: Action) {
     if (this.ws) {
@@ -25,11 +26,7 @@ export class Connection {
     }
   }
 
-  public initialize(
-    identity: SignIdentity,
-    onInsert: (entityId: number, component: Component) => void,
-    onDelete: (entityId: number, componentClass: Function) => void,
-  ) {
+  public initialize(identity: SignIdentity, world: World) {
     const wsConfig = createWsConfig({
       canisterId,
       canisterActor: ghost_engine_backend,
@@ -39,8 +36,11 @@ export class Connection {
 
     this.ws = new IcWebSocket(GATEWAY_URL, undefined, wsConfig);
 
+    console.log('Connecting to the canister: ', canisterId);
+
     this.ws.onopen = () => {
       console.log('Connected to the canister');
+      this.isConnected = true;
     };
 
     // Handle component updates from the server
@@ -52,11 +52,11 @@ export class Connection {
             match(action)
               .with({ Insert: P.select() }, (action) => {
                 const component = createComponentClass(action.component);
-                onInsert(Number(action.entityId), component);
+                world.addComponent(Number(action.entityId), component);
               })
               .with({ Delete: P.select() }, (action) => {
                 const constructor = ComponentConstructors[action.componentType];
-                onDelete(Number(action.entityId), constructor);
+                world.removeComponent(Number(action.entityId), constructor);
               })
               .otherwise(() => {
                 console.log('Message is not Insert or Delete!');
@@ -70,12 +70,10 @@ export class Connection {
 
     this.ws.onclose = () => {
       console.log('Disconnected from the canister');
+      this.isConnected = false;
     };
 
     this.ws.onerror = (error) => {
-      if (String(error.error).includes('Ack message timeout')) {
-        this.initialize(identity, onInsert, onDelete);
-      }
       console.log('Error:', error);
     };
   }

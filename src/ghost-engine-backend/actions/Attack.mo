@@ -11,14 +11,14 @@ module {
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nBegin mining: " # debug_show (args.entityId) # " target " # debug_show (args.targetEntityId));
-    let mining = #MiningComponent({
+    Debug.print("\nBegin attacking: " # debug_show (args.entityId) # " target " # debug_show (args.targetEntityId));
+    let mining = #CombatComponent({
       targetEntityId = args.targetEntityId;
       startAt = Time.now();
-      speed = 5.0;
-      range = 3.0;
+      speed = 1.0;
+      range = 7.0;
     });
-    World.addComponent(ctx, args.entityId, "MiningComponent", mining);
+    World.addComponent(ctx, args.entityId, "CombatComponent", mining);
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {

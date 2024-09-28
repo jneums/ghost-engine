@@ -1,25 +1,20 @@
-import { World } from '../hooks/useWorldState';
-import { Connection } from '../connection';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { findPlayersEntityId } from '../utils';
-import { CargoComponent } from '.';
+import { CargoComponent, PrincipalComponent } from '.';
 import { Button, Card, Stack, Tooltip, Typography } from '@mui/joy';
-import { Help, HelpOutline, Send } from '@mui/icons-material';
+import { HelpOutline, Send } from '@mui/icons-material';
+import { useWorld } from '../context/WorldProvider';
 
-export default function Cargo({
-  world,
-  connection,
-}: {
-  world: World;
-  connection: Connection;
-}) {
+export default function Cargo() {
+  const { world } = useWorld();
   const { identity } = useInternetIdentity();
   if (!identity) {
     return null;
   }
 
   const playerId = findPlayersEntityId(
-    Array.from(world.state.entities.values()),
+    world,
+    world.getEntitiesByArchetype([PrincipalComponent]),
     identity.getPrincipal(),
   );
   if (!playerId) {

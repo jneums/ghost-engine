@@ -12,7 +12,8 @@ import ECS "mo:geecs";
 import Actions "actions";
 import Messages "messages";
 import { MovementSystem } "systems/MovementSystem";
-import { MiningSystem } "systems/MiningSystem";
+import { CombatSystem } "systems/CombatSystem";
+import { DamageSystem } "systems/DamageSystem";
 import { NodeSpawningSystem } "systems/NodeSpawningSystem";
 import Components "components";
 
@@ -66,7 +67,8 @@ actor {
   // Register systems here
   ECS.World.addSystem(ctx, MovementSystem);
   ECS.World.addSystem(ctx, NodeSpawningSystem);
-  ECS.World.addSystem(ctx, MiningSystem);
+  ECS.World.addSystem(ctx, CombatSystem);
+  ECS.World.addSystem(ctx, DamageSystem);
 
   // Game loop runs all the systems
   func gameLoop() : async () {
