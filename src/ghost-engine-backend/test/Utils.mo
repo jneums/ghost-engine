@@ -1,6 +1,6 @@
 import ECS "mo:geecs";
 
-import Components "../src/ghost-engine-backend/components";
+import Components "../components";
 
 module {
   public let componentToText = func(a : Components.Component) : Text {

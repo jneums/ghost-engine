@@ -16,6 +16,7 @@ import { CombatSystem } "systems/CombatSystem";
 import { DamageSystem } "systems/DamageSystem";
 import { SpawnSystem } "systems/SpawnSystem";
 import Components "components";
+import Updates "utils/Updates";
 
 actor {
   // ECS state
@@ -31,7 +32,7 @@ actor {
   let params = IcWebSocketCdkTypes.WsInitParams(null, null);
   let wsState = IcWebSocketCdkState.IcWebSocketState(params);
 
-  // Context is mutable and shared between all the systems
+  // Context is mutable and shared between all systems
   let ctx : ECS.Types.Context<Components.Component> and Messages.Types.Context = {
     entities = entities;
     systemsEntities = systemsEntities;
@@ -52,6 +53,7 @@ actor {
   ECS.World.addSystem(ctx, CombatSystem);
   ECS.World.addSystem(ctx, DamageSystem);
 
+  // Add some mining nodes
   let MAX_MINES = 5;
 
   // Get current number of mines
@@ -63,7 +65,6 @@ actor {
 
   Debug.print("Current mines: " # debug_show (numMines) # " Mines needed: " # debug_show (minesNeeded));
 
-  // Add some mining nodes
   while (minesNeeded > 0) {
     let entityId = ECS.World.addEntity(ctx);
     ECS.World.addComponent(ctx, entityId, "ResourceComponent", #ResourceComponent({ resourceType = "tGENG" }));
@@ -76,36 +77,13 @@ actor {
 
   // Game loop runs all the systems
   func gameLoop() : async () {
-    // Process all the systems
+    // Process all systems and save delta time
     let thisTick = ECS.World.update(ctx, lastTick);
     let deltaTime = thisTick - lastTick;
     lastTick := thisTick;
 
     // Iterate through the players and send them the updates
-    let updates = Vector.new<ECS.Types.Update<Components.Component>>();
-
-    label filterUpdates for (update in Vector.vals(ctx.updatedComponents)) {
-      switch (update) {
-        case (#Insert({ component })) {
-          switch (component) {
-            case (#MoveTargetComponent(_)) {
-              continue filterUpdates;
-            };
-            case (_) {};
-          };
-        };
-        case (#Delete({ componentType })) {
-          switch (componentType) {
-            case ("MoveTargetComponent") {
-              continue filterUpdates;
-            };
-            case (_) {};
-          };
-        };
-      };
-      Vector.add(updates, update);
-    };
-
+    let updates = Updates.filterUpdatesForClient(ctx.updatedComponents);
     let clientUpdates = #Updates(Vector.toArray(updates));
 
     Debug.print("\n[" # debug_show (deltaTime) # "] " # "Sending " # debug_show (Vector.size(updatedComponents)) # " updates");
@@ -126,7 +104,10 @@ actor {
 
   // Trigger a connection action when a client connects
   func onOpen(args : IcWebSocketCdk.OnOpenCallbackArgs) : async () {
+    // Add the client to the clients map
     Map.set(clients, Map.phash, args.client_principal, Time.now());
+
+    // Create a connection action
     let action : Actions.Action = #Connect({
       principal = args.client_principal;
     });
@@ -144,8 +125,12 @@ actor {
       };
     };
 
-    let updates = #Updates(Vector.toArray(updatedComponents));
-    ignore Messages.Client.send(ctx, args.client_principal, updates);
+    // Filter out server only components
+    let updates = Updates.filterUpdatesForClient(updatedComponents);
+    let clientUpdates = #Updates(Vector.toArray(updates));
+
+    // Send the updates to the client
+    ignore Messages.Client.send(ctx, args.client_principal, clientUpdates);
   };
 
   // Deserialize the action and handle it

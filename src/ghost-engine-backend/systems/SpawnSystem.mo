@@ -9,10 +9,9 @@ import Random "mo:noise/Random";
 
 module {
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : () {
-    let currentTime = Time.now();
-
     switch (ECS.World.getComponent(ctx, entityId, "RespawnComponent")) {
       case (? #RespawnComponent(respawn)) {
+        let currentTime = Time.now();
         let elapsedTime = currentTime - respawn.deathTime;
         Debug.print("\nElapsed time: " # debug_show (elapsedTime));
         if (elapsedTime >= respawn.duration) {
@@ -56,7 +55,7 @@ module {
 
           // If has a resource component, reset the cargo
           switch (ECS.World.getComponent(ctx, entityId, "ResourceComponent")) {
-            case (? #ResourceComponent(resource)) {
+            case (? #ResourceComponent(_)) {
               ECS.World.addComponent(ctx, entityId, "CargoComponent", #CargoComponent({ capacity = 1; current = 1 }));
             };
             case (_) {};

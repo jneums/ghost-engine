@@ -2,12 +2,12 @@ import { test; suite; expect } "mo:test";
 
 import ECS "mo:geecs";
 import Principal "mo:base/Principal";
-import Components "../../src/ghost-engine-backend/components";
-import Disconnect "../../src/ghost-engine-backend/actions/Disconnect";
+import Components "../../components";
+import Connect "../../actions/Connect";
 import Utils "../Utils";
 
 suite(
-  "Disconnect Action",
+  "Connect Action",
   func() {
 
     // Initialize the entity counter:
@@ -28,18 +28,18 @@ suite(
     ECS.World.addComponent(ctx, entityId, "PrincipalComponent", principal);
 
     test(
-      "Can handle a player disconnect",
+      "Can handle a player connection",
       func() {
 
         // Test the action
         let args = {
           principal = Principal.fromText("nct3x-dynci-pak");
         };
-        Disconnect.Handler.handle(ctx, args);
+        Connect.Handler.handle(ctx, args);
 
         // Check the entity has a position component
         let position = ECS.World.getComponent(ctx, entityId, "TransformComponent");
-        expect.option(position, Utils.componentToText, Utils.componentEqual).isNull();
+        expect.option(position, Utils.componentToText, Utils.componentEqual).isSome();
       },
     );
   },

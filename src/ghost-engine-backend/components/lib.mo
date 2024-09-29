@@ -2,6 +2,7 @@ import Math "../math";
 import Time "mo:base/Time";
 
 module {
+  // Define new component data types here...
   public type PrincipalComponent = {
     principal : Principal;
   };
@@ -58,7 +59,6 @@ module {
   public type ResourceComponent = {
     resourceType : Text;
   };
-  // Define new component data types here...
 
   // Register component data types here...
   public type Component = {

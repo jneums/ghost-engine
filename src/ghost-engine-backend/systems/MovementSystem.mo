@@ -65,7 +65,7 @@ module {
 
   public let MovementSystem : ECS.Types.System<Components.Component> = {
     systemType = "MovementSystem";
-    archetype = ["PrincipalComponent", "TransformComponent", "MoveTargetComponent"];
+    archetype = ["TransformComponent", "MoveTargetComponent"];
     update = update;
   };
 };

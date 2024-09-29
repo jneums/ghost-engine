@@ -3,7 +3,7 @@ import T "Types";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Option "mo:base/Option";
-import PlayerQueries "../queries/PlayerQueries";
+import Player "../utils/Player";
 import Components "../components";
 
 module {
@@ -15,7 +15,7 @@ module {
     Debug.print("\nPlayer connected: " # debug_show (args.principal));
 
     // Check if the player already has entityId
-    let entityId = PlayerQueries.findPlayersEntityId(ctx, args.principal);
+    let entityId = Player.findPlayersEntityId(ctx, args.principal);
     let entity = Option.get(entityId, ECS.World.addEntity(ctx));
 
     // Add the principal and connection components

@@ -6,7 +6,7 @@ import Components "../components";
 import Math "../math";
 
 module {
-  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : () {
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : () {
     switch (
       ECS.World.getComponent(ctx, entityId, "CombatComponent"),
       ECS.World.getComponent(ctx, entityId, "TransformComponent"),

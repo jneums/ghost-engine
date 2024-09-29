@@ -1,6 +1,5 @@
 import ECS "mo:geecs";
 import Iter "mo:base/Iter";
-import Debug "mo:base/Debug";
 import Components "../components";
 
 module {

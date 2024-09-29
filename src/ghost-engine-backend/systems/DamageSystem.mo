@@ -3,7 +3,7 @@ import Time "mo:base/Time";
 import Components "../components";
 
 module {
-  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : () {
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : () {
     switch (
       ECS.World.getComponent(ctx, entityId, "DamageComponent"),
       ECS.World.getComponent(ctx, entityId, "CargoComponent"),
@@ -52,7 +52,7 @@ module {
 
           // If the entity has a resource component, create a respawn timer
           switch (ECS.World.getComponent(ctx, entityId, "ResourceComponent")) {
-            case (? #ResourceComponent(resource)) {
+            case (? #ResourceComponent(_)) {
               let respawn = #RespawnComponent({
                 deathTime = Time.now();
                 duration = 3 * 60 * 1_000_000_000;

@@ -3,11 +3,11 @@ import { test; suite; expect } "mo:test";
 import ECS "mo:geecs";
 import Principal "mo:base/Principal";
 import Nat "mo:base/Nat";
-import Components "../../src/ghost-engine-backend/components";
-import PlayerQueries "../../src/ghost-engine-backend/queries/PlayerQueries";
+import Components "../../components";
+import Player "../../utils/Player";
 
 suite(
-  "PlayerQueries",
+  "Player",
   func() {
 
     // Initialize the entity counter:
@@ -41,7 +41,7 @@ suite(
       func() {
 
         // Get the principal
-        let result = PlayerQueries.getPrincipal(ctx, entityId);
+        let result = Player.getPrincipal(ctx, entityId);
         expect.option(result, Principal.toText, Principal.equal).equal(?Principal.fromText("nct3x-dynci-pak"));
       },
     );
@@ -51,7 +51,7 @@ suite(
       func() {
 
         // Find the entity by principal
-        let result = PlayerQueries.findPlayersEntityId(ctx, Principal.fromText("nct3x-dynci-pak"));
+        let result = Player.findPlayersEntityId(ctx, Principal.fromText("nct3x-dynci-pak"));
         expect.option(result, Nat.toText, Nat.equal).equal(?entityId);
       },
     );
