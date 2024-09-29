@@ -2,7 +2,7 @@
 
 ## Description
 
-This is a simple game engine that uses the Internet Computer as a backend. The backend is an authoritative server that runs the game logic and sends updates to the client. The client is a web app that renders the game and sends user input to the server, and uses React and Threejs.
+This is a simple game engine that uses the Internet Computer as a backend. The backend is an authoritative server written in Motoko that runs the game logic and sends updates to the client using the ICWebsocket integration. The client is a web app that renders the game and sends user input to the server, and uses React and Threejs.
 
 ## Deployed canister
 
