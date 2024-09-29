@@ -14,7 +14,7 @@ import Messages "messages";
 import { MovementSystem } "systems/MovementSystem";
 import { CombatSystem } "systems/CombatSystem";
 import { DamageSystem } "systems/DamageSystem";
-import { NodeSpawningSystem } "systems/NodeSpawningSystem";
+import { SpawnSystem } "systems/SpawnSystem";
 import Components "components";
 
 actor {
@@ -46,29 +46,33 @@ actor {
     };
   };
 
-  // Setup node spawner if it doesn't exist
-  let nodeSpawningComponent = ECS.World.getEntitiesByArchetype(ctx, ["NodeSpawningComponent"]);
-  if (Array.size(nodeSpawningComponent) < 1) {
-    let nodeSpawningEntityId = ECS.World.addEntity(ctx);
-    let nodeSpawningConfig = #NodeSpawningComponent({
-      maxNodes = 4;
-      spawnInterval = 30 * 1_000_000_000; // 30 seconds
-      lastSpawn = 0;
-      spawnBoundary = {
-        minX = -48.0;
-        maxX = 48.0;
-        minZ = -48.0;
-        maxZ = 48.0;
-      };
-    });
-    ECS.World.addComponent(ctx, nodeSpawningEntityId, "NodeSpawningComponent", nodeSpawningConfig);
-  };
-
   // Register systems here
   ECS.World.addSystem(ctx, MovementSystem);
-  ECS.World.addSystem(ctx, NodeSpawningSystem);
+  ECS.World.addSystem(ctx, SpawnSystem);
   ECS.World.addSystem(ctx, CombatSystem);
   ECS.World.addSystem(ctx, DamageSystem);
+
+  let MAX_MINES = 5;
+
+  // Get current number of mines
+  let mines = ECS.World.getEntitiesByArchetype(ctx, ["ResourceComponent"]);
+  let numMines = Array.size(mines);
+  var minesNeeded = if (MAX_MINES > numMines) { MAX_MINES - numMines : Nat } else {
+    0;
+  };
+
+  Debug.print("Current mines: " # debug_show (numMines) # " Mines needed: " # debug_show (minesNeeded));
+
+  // Add some mining nodes
+  while (minesNeeded > 0) {
+    let entityId = ECS.World.addEntity(ctx);
+    ECS.World.addComponent(ctx, entityId, "ResourceComponent", #ResourceComponent({ resourceType = "tGENG" }));
+    ECS.World.addComponent(ctx, entityId, "NameableComponent", #NameableComponent({ name = "Mining Node" }));
+    ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent({ amount = 3; max = 3 }));
+    ECS.World.addComponent(ctx, entityId, "CargoComponent", #CargoComponent({ capacity = 1; current = 1 }));
+    ECS.World.addComponent(ctx, entityId, "RespawnComponent", #RespawnComponent({ deathTime = Time.now(); duration = 0 }));
+    minesNeeded -= 1;
+  };
 
   // Game loop runs all the systems
   func gameLoop() : async () {
@@ -78,13 +82,37 @@ actor {
     lastTick := thisTick;
 
     // Iterate through the players and send them the updates
-    let updates = #Updates(Vector.toArray(updatedComponents));
+    let updates = Vector.new<ECS.Types.Update<Components.Component>>();
+
+    label filterUpdates for (update in Vector.vals(ctx.updatedComponents)) {
+      switch (update) {
+        case (#Insert({ component })) {
+          switch (component) {
+            case (#MoveTargetComponent(_)) {
+              continue filterUpdates;
+            };
+            case (_) {};
+          };
+        };
+        case (#Delete({ componentType })) {
+          switch (componentType) {
+            case ("MoveTargetComponent") {
+              continue filterUpdates;
+            };
+            case (_) {};
+          };
+        };
+      };
+      Vector.add(updates, update);
+    };
+
+    let clientUpdates = #Updates(Vector.toArray(updates));
 
     Debug.print("\n[" # debug_show (deltaTime) # "] " # "Sending " # debug_show (Vector.size(updatedComponents)) # " updates");
     if (Vector.size(updatedComponents) < 1) return;
 
     for ((client, lastUpdate) in Map.entries(clients)) {
-      ignore Messages.Client.send(ctx, client, updates);
+      ignore Messages.Client.send(ctx, client, clientUpdates);
     };
 
     // Clear the updatedComponents vector

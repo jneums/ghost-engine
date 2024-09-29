@@ -47,35 +47,33 @@ declare global {
 
 interface LightningBeamProps {
   start: THREE.Vector3;
-  end: THREE.Vector3;
+  getEndPosition: () => THREE.Vector3 | null;
 }
 
-const LightningBeam: React.FC<LightningBeamProps> = ({ start, end }) => {
+const LightningBeam: React.FC<LightningBeamProps> = ({
+  start,
+  getEndPosition,
+}) => {
   const linesRef = useRef<THREE.Line[]>([]);
   const materialRef = useRef<any>(null);
-
-  useEffect(() => {
-    linesRef.current.forEach((line) => {
-      const points = generateLightningPath(start, end);
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      line.geometry = geometry;
-    });
-  }, [start, end]);
 
   useFrame((state) => {
     if (materialRef.current) {
       materialRef.current.uniforms.time.value = state.clock.getElapsedTime();
     }
 
-    linesRef.current.forEach((line) => {
-      const points = generateLightningPath(
-        start,
-        end,
-        state.clock.getElapsedTime(),
-      );
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      line.geometry = geometry;
-    });
+    const end = getEndPosition();
+    if (end) {
+      linesRef.current.forEach((line) => {
+        const points = generateLightningPath(
+          start,
+          end,
+          state.clock.getElapsedTime(),
+        );
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        line.geometry = geometry;
+      });
+    }
   });
 
   return (

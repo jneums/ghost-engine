@@ -28,7 +28,9 @@ export default function Respawn() {
 
   return (
     <>
-      <Typography level="title-md">You have died</Typography>
+      <Typography level="title-md">
+        {isLoading ? 'Respawning...' : 'You have died'}
+      </Typography>
       <Button loading={isLoading} onClick={handleRespawn}>
         Respawn
       </Button>

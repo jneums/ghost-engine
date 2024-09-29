@@ -1,5 +1,4 @@
 import ECS "mo:geecs";
-import Debug "mo:base/Debug";
 import Time "mo:base/Time";
 import Components "../components";
 
@@ -46,15 +45,22 @@ module {
               });
             };
           };
-
           ECS.World.addComponent(ctx, damage.sourceEntityId, "CargoComponent", newSourceCargo);
 
-          // Update the target's components
-          let newCargo = #CargoComponent({
-            capacity = cargo.capacity;
-            current = 0;
-          });
-          ECS.World.addComponent(ctx, entityId, "CargoComponent", newCargo);
+          // Reset the target's cargo
+          ECS.World.addComponent(ctx, entityId, "CargoComponent", #CargoComponent({ capacity = cargo.capacity; current = 0 }));
+
+          // If the entity has a resource component, create a respawn timer
+          switch (ECS.World.getComponent(ctx, entityId, "ResourceComponent")) {
+            case (? #ResourceComponent(resource)) {
+              let respawn = #RespawnComponent({
+                deathTime = Time.now();
+                duration = 3 * 60 * 1_000_000_000;
+              });
+              ECS.World.addComponent(ctx, entityId, "RespawnComponent", respawn);
+            };
+            case (_) {};
+          };
         };
 
         // Remove the damage component after applying damage

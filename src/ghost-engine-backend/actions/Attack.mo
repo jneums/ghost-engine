@@ -16,7 +16,7 @@ module {
       targetEntityId = args.targetEntityId;
       startAt = Time.now();
       speed = 1.0;
-      range = 7.0;
+      range = 10.0;
     });
     World.addComponent(ctx, args.entityId, "CombatComponent", mining);
   };

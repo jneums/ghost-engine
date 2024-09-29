@@ -26,7 +26,13 @@ export class Connection {
     }
   }
 
-  public initialize(identity: SignIdentity, world: World) {
+  public initialize(
+    identity: SignIdentity,
+    world: World,
+    setIsConnected: (isConnected: boolean) => void,
+    setIsConnecting: (isConnecting: boolean) => void,
+  ) {
+    setIsConnecting(true);
     const wsConfig = createWsConfig({
       canisterId,
       canisterActor: ghost_engine_backend,
@@ -40,7 +46,8 @@ export class Connection {
 
     this.ws.onopen = () => {
       console.log('Connected to the canister');
-      this.isConnected = true;
+      setIsConnecting(false);
+      setIsConnected(true);
     };
 
     // Handle component updates from the server
@@ -70,7 +77,7 @@ export class Connection {
 
     this.ws.onclose = () => {
       console.log('Disconnected from the canister');
-      this.isConnected = false;
+      setIsConnected(false);
     };
 
     this.ws.onerror = (error) => {

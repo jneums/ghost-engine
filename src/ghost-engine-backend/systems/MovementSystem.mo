@@ -6,8 +6,8 @@ import Math "../math";
 
 module {
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : () {
-    switch (ECS.World.getComponent(ctx, entityId, "PositionComponent"), ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
-      case (? #PositionComponent(position), ? #TransformComponent(transform)) {
+    switch (ECS.World.getComponent(ctx, entityId, "MoveTargetComponent"), ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
+      case (? #MoveTargetComponent(position), ? #TransformComponent(transform)) {
         let defaultVelocity = 2.0;
         let deltaTimeSeconds = Float.fromInt(deltaTime) / 1_000_000_000.0; // Assuming deltaTime is in nanoseconds
         let velocity = defaultVelocity * deltaTimeSeconds;
@@ -36,7 +36,7 @@ module {
         ) {
           // Snap to the target position
           newPosition := position.position;
-          ECS.World.removeComponent(ctx, entityId, "PositionComponent");
+          ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
         };
 
         // Calculate the new rotation to face the direction of movement
@@ -65,7 +65,7 @@ module {
 
   public let MovementSystem : ECS.Types.System<Components.Component> = {
     systemType = "MovementSystem";
-    archetype = ["PrincipalComponent", "TransformComponent", "PositionComponent"];
+    archetype = ["PrincipalComponent", "TransformComponent", "MoveTargetComponent"];
     update = update;
   };
 };

@@ -12,10 +12,10 @@ module {
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
     Debug.print("\nMove entity: " # debug_show (args.entityId) # " to " # debug_show (args.position));
-    let position = #PositionComponent({
+    let position = #MoveTargetComponent({
       position = args.position;
     });
-    World.addComponent(ctx, args.entityId, "PositionComponent", position);
+    World.addComponent(ctx, args.entityId, "MoveTargetComponent", position);
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {

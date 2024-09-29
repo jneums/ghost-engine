@@ -15,7 +15,7 @@ export default function EntityCard({
       maxWidth="45%"
       width="420px"
       {...stackProps}>
-      <Card>
+      <Card size="sm">
         <Stack
           width="100%"
           direction="row"

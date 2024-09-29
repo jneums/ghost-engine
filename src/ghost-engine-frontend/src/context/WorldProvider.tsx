@@ -12,19 +12,28 @@ import { useInternetIdentity } from 'ic-use-internet-identity';
 import { SignIdentity } from '@dfinity/agent';
 import { findPlayersEntityId } from '../utils';
 import { HealthComponent, PrincipalComponent } from '../components';
+import { Principal } from '@dfinity/principal';
 
 export interface WorldState {
   world: World;
   connection: Connection;
   playerEntityId?: number;
-  isPlayerDead?: boolean;
+  playerPrincipalId?: Principal;
+  isPlayerDead: boolean;
+  connect: () => void;
+  isConnected: boolean;
+  isConnecting: boolean;
 }
 
 const initialState: WorldState = {
   world: new World(),
   connection: new Connection(),
   playerEntityId: undefined,
+  playerPrincipalId: undefined,
   isPlayerDead: false,
+  connect: () => {},
+  isConnected: false,
+  isConnecting: false,
 };
 
 const WorldContext = createContext<WorldState>(initialState);
@@ -34,6 +43,8 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const worldRef = useRef<World>(new World());
   const connectionRef = useRef<Connection>(new Connection());
   const [tick, setTick] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const playerEntityId = useMemo(() => {
     if (!identity) {
@@ -59,14 +70,20 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
     return health?.amount <= 0;
   }, [playerEntityId, worldRef.current, tick]);
 
+  const connect = () => {
+    connectionRef.current.initialize(
+      identity as SignIdentity,
+      worldRef.current,
+      setIsConnected,
+      setIsConnecting,
+    );
+  };
+
   useEffect(() => {
-    if (identity && !connectionRef.current.isConnected) {
-      connectionRef.current.initialize(
-        identity as SignIdentity,
-        worldRef.current,
-      );
+    if (identity) {
+      connect();
     }
-  }, [connectionRef.current, identity]);
+  }, [identity]);
 
   useEffect(() => {
     const callback = () => setTick((tick) => tick + 1);
@@ -82,7 +99,11 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
         world: worldRef.current,
         connection: connectionRef.current,
         playerEntityId,
+        playerPrincipalId: identity?.getPrincipal(),
         isPlayerDead,
+        connect,
+        isConnected,
+        isConnecting,
       }}>
       {children}
     </WorldContext.Provider>

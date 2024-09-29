@@ -15,8 +15,13 @@ module {
     max : Nat;
   };
 
-  public type PositionComponent = {
+  public type MoveTargetComponent = {
     position : Math.Types.Vector3;
+  };
+
+  public type RespawnComponent = {
+    deathTime : Time.Time;
+    duration : Time.Time;
   };
 
   public type VelocityComponent = {
@@ -53,33 +58,21 @@ module {
   public type ResourceComponent = {
     resourceType : Text;
   };
-
-  public type NodeSpawningComponent = {
-    maxNodes : Nat;
-    spawnInterval : Time.Time;
-    lastSpawn : Time.Time;
-    spawnBoundary : {
-      minX : Float;
-      maxX : Float;
-      minZ : Float;
-      maxZ : Float;
-    };
-  };
   // Define new component data types here...
 
   // Register component data types here...
   public type Component = {
     #PrincipalComponent : PrincipalComponent;
-    #PositionComponent : PositionComponent;
+    #MoveTargetComponent : MoveTargetComponent;
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
     #ConnectionComponent : ConnectionComponent;
     #CargoComponent : CargoComponent;
-    #NodeSpawningComponent : NodeSpawningComponent;
     #ResourceComponent : ResourceComponent;
     #NameableComponent : NameableComponent;
     #HealthComponent : HealthComponent;
     #CombatComponent : CombatComponent;
     #DamageComponent : DamageComponent;
+    #RespawnComponent : RespawnComponent;
   };
 };

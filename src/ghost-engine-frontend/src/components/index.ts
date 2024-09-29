@@ -15,7 +15,7 @@ export class HealthComponent {
   constructor(public amount: number, public max: number) {}
 }
 
-export class PositionComponent {
+export class MoveTargetComponent {
   constructor(public position: THREE.Vector3) {}
 }
 
@@ -56,18 +56,8 @@ export class ResourceComponent {
   constructor(public resourceType: string) {}
 }
 
-export class NodeSpawningComponent {
-  constructor(
-    public maxNodes: number,
-    public spawnInterval: number,
-    public lastSpawn: number,
-    public spawnBoundary: {
-      minX: number;
-      maxX: number;
-      minZ: number;
-      maxZ: number;
-    },
-  ) {}
+export class RespawnComponent {
+  constructor(public duration: number, public deathTime: number) {}
 }
 
 // Client side only
@@ -94,8 +84,8 @@ export function createComponentClass(data: Component) {
     .with({ HealthComponent: P.select() }, ({ amount, max }) => {
       return new HealthComponent(Number(amount), Number(max));
     })
-    .with({ PositionComponent: P.select() }, ({ position }) => {
-      return new PositionComponent(
+    .with({ MoveTargetComponent: P.select() }, ({ position }) => {
+      return new MoveTargetComponent(
         new THREE.Vector3(position.x, position.y, position.z),
       );
     })
@@ -134,22 +124,9 @@ export function createComponentClass(data: Component) {
     .with({ ResourceComponent: P.select() }, ({ resourceType }) => {
       return new ResourceComponent(resourceType);
     })
-    .with(
-      { NodeSpawningComponent: P.select() },
-      ({ maxNodes, spawnInterval, lastSpawn, spawnBoundary }) => {
-        return new NodeSpawningComponent(
-          Number(maxNodes),
-          Number(spawnInterval),
-          Number(lastSpawn),
-          {
-            minX: Number(spawnBoundary.minX),
-            maxX: Number(spawnBoundary.maxX),
-            minZ: Number(spawnBoundary.minZ),
-            maxZ: Number(spawnBoundary.maxZ),
-          },
-        );
-      },
-    )
+    .with({ RespawnComponent: P.select() }, ({ duration, deathTime }) => {
+      return new RespawnComponent(Number(duration), Number(deathTime));
+    })
     .with({ DamageComponent: P.select() }, ({ sourceEntityId, amount }) => {
       return new DamageComponent(Number(sourceEntityId), Number(amount));
     })
@@ -158,13 +135,13 @@ export function createComponentClass(data: Component) {
 
 export const ComponentConstructors: Record<string, Function> = {
   PrincipalComponent: PrincipalComponent,
-  PositionComponent: PositionComponent,
+  MoveTargetComponent: MoveTargetComponent,
   VelocityComponent: VelocityComponent,
   TransformComponent: TransformComponent,
   ConnectionComponent: ConnectionComponent,
   DamageComponent: DamageComponent,
   CargoComponent: CargoComponent,
-  NodeSpawningComponent: NodeSpawningComponent,
+  RespawnComponent: RespawnComponent,
   ResourceComponent: ResourceComponent,
   CombatComponent: CombatComponent,
   HealthComponent: HealthComponent,

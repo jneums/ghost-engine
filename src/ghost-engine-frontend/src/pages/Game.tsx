@@ -1,10 +1,8 @@
 import { Canvas } from '@react-three/fiber';
 import { Stats, Sky, KeyboardControls } from '@react-three/drei';
 import Players from '../components/Players';
-import Controls from '../components/Controls';
-import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import Ground from '../components/Ground';
 import Mines from '../components/Mines';
 import Cargo from '../components/Cargo';
@@ -18,28 +16,53 @@ import {
 } from '../components';
 import { useDialog } from '../context/DialogProvider';
 import Respawn from '../components/Respawn';
+import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
 
 export default function Game() {
-  const { world, isPlayerDead } = useWorld();
+  const {
+    world,
+    isPlayerDead,
+    playerEntityId,
+    playerPrincipalId,
+    connect,
+    isConnected,
+    isConnecting,
+  } = useWorld();
   const { openDialog } = useDialog();
-  const { identity } = useInternetIdentity();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!identity) {
-      navigate('/');
-    }
-  }, [identity]);
-
-  if (!identity) {
-    return null;
-  }
+  const onReconnectClick = () => {
+    connect();
+  };
 
   useEffect(() => {
     if (isPlayerDead) {
       openDialog(<Respawn />);
     }
   }, [isPlayerDead]);
+
+  if (isConnecting) {
+    return (
+      <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
+        <CircularProgress />
+        <Typography level="h4">Connecting...</Typography>
+      </Stack>
+    );
+  }
+
+  if (!playerPrincipalId) {
+    return <Navigate to="/" />;
+  }
+
+  if (!isConnected) {
+    return (
+      <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
+        <Typography level="h4">Disconnected</Typography>
+        <Button variant="outlined" onClick={onReconnectClick}>
+          Reconnect
+        </Button>
+      </Stack>
+    );
+  }
 
   const mineEntities = world.getEntitiesByArchetype([
     ResourceComponent,
@@ -49,6 +72,14 @@ export default function Game() {
     PrincipalComponent,
     TransformComponent,
   ]);
+
+  if (!playerEntityId) {
+    return null;
+  }
+
+  // Player entity
+  const playerEntity = world.getEntity(playerEntityId);
+  const playerTransform = playerEntity.getComponent(TransformComponent);
 
   return (
     <>
@@ -60,10 +91,16 @@ export default function Game() {
           { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
           { name: 'jump', keys: ['Space'] },
         ]}>
-        <Canvas shadows gl={{ alpha: false }} camera={{ position: [5, 5, 5] }}>
-          <color attach="background" args={['#f0f0f0']} />
-          <Players entityIds={playerEntities} />
-          <Mines entityIds={mineEntities} />
+        <Canvas
+          shadows
+          gl={{ alpha: false }}
+          camera={{
+            position: [
+              playerTransform.position.x - 5,
+              5,
+              playerTransform.position.y - 5,
+            ],
+          }}>
           <Sky sunPosition={[100, 20, 100]} />
           <ambientLight intensity={1} />
           <pointLight
@@ -71,10 +108,12 @@ export default function Game() {
             intensity={100000}
             position={[100, 100, 100]}
           />
-          <Ground />
+          <color attach="background" args={['#f0f0f0']} />
           <fog attach="fog" args={['#f0f0f0', 0, 75]} />
           <Stats />
-          <Controls />
+          <Ground />
+          <Players entityIds={playerEntities} />
+          <Mines entityIds={mineEntities} />
         </Canvas>
       </KeyboardControls>
       <Cargo />

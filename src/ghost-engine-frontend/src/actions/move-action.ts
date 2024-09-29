@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PositionComponent } from '../components';
+import { MoveTargetComponent } from '../components';
 import { Connection } from '../connection';
 import { sleep } from '../utils';
 import { World } from '../world';
@@ -23,7 +23,7 @@ export default class MoveAction {
     });
 
     // Add the components to the ecs entity
-    const position = new PositionComponent(args.position);
+    const position = new MoveTargetComponent(args.position);
 
     // Sleep for a bit to reduce perceived latency
     sleep(250).then(() => {

@@ -1,7 +1,7 @@
 import { ThreeEvent } from '@react-three/fiber';
 import { HealthComponent, TransformComponent } from '.';
 import * as THREE from 'three';
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import AttackAction from '../actions/attack-action';
 import SetTargetAction from '../actions/set-target';
 import { useWorld } from '../context/WorldProvider';
@@ -19,63 +19,51 @@ export default function Mine({ entityId }: { entityId: number }) {
   const isDead = health.amount <= 0;
   const color = isDead ? 'black' : 'blue';
 
-  const handleLeftClick = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
+  const handleLeftClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
 
-    if (!playerEntityId) {
-      console.error('Player entity not found');
-      return;
-    }
+      if (!playerEntityId) {
+        console.error('Player entity not found');
+        return;
+      }
 
-    console.log('Left click on Mine!');
+      console.log('Left click on Mine!');
 
-    // Set target id
-    const setTarget = new SetTargetAction(world);
-    setTarget.handle({
-      entityId: playerEntityId,
-      targetEntityId: entityId,
-    });
-  };
+      const setTarget = new SetTargetAction(world);
+      setTarget.handle({
+        entityId: playerEntityId,
+        targetEntityId: entityId,
+      });
+    },
+    [playerEntityId, world, entityId],
+  );
 
-  const handleRightClick = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
+  const handleRightClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
 
-    if (!playerEntityId) {
-      console.error('Player entity not found');
-      return;
-    }
+      if (!playerEntityId) {
+        console.error('Player entity not found');
+        return;
+      }
 
-    // Set target id
-    const setTarget = new SetTargetAction(world);
-    setTarget.handle({
-      entityId: playerEntityId,
-      targetEntityId: entityId,
-    });
+      const setTarget = new SetTargetAction(world);
+      setTarget.handle({
+        entityId: playerEntityId,
+        targetEntityId: entityId,
+      });
 
-    const playerTransform = world.getEntity(playerEntityId);
-    if (!playerTransform) {
-      console.error('Player transform not found');
-      return;
-    }
+      const attackAction = new AttackAction(world, connection);
+      attackAction.handle({
+        entityId: playerEntityId,
+        targetEntityId: entityId,
+      });
 
-    // Range check
-    const distance = serverTransform.position.distanceTo(
-      playerTransform.getComponent(TransformComponent).position,
-    );
-    if (distance > 3) {
-      console.error('Mine is too far away');
-      return;
-    }
-
-    // Handle attack click
-    const attackAction = new AttackAction(world, connection);
-    attackAction.handle({
-      entityId: playerEntityId,
-      targetEntityId: entityId,
-    });
-
-    console.log('Right click on Mine!');
-  };
+      console.log('Right click on Mine!');
+    },
+    [playerEntityId, world, entityId, connection],
+  );
 
   return (
     <mesh
