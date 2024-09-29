@@ -8,8 +8,7 @@ This is a simple game engine that uses the Internet Computer as a backend. The b
 
 Clone the repository and run the following commands:
 
-```
-cd ghost-engine
+```sh
 npm install
 mops install
 dfx start
