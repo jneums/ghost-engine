@@ -6,7 +6,7 @@ This is a simple game engine that uses the Internet Computer as a backend. The b
 
 ## Deployed canister
 
-The canister is deployed at `https://yjprz-siaaa-aaaai-qpkaq-cai.icp0.io`.
+The canister is deployed at [https://yjprz-siaaa-aaaai-qpkaq-cai.icp0.io](https://yjprz-siaaa-aaaai-qpkaq-cai.icp0.io).
 
 ## How to run
 
