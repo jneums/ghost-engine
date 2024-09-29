@@ -4,6 +4,10 @@
 
 This is a simple game engine that uses the Internet Computer as a backend. The backend is an authoritative server that runs the game logic and sends updates to the client. The client is a web app that renders the game and sends user input to the server, and uses React and Threejs.
 
+## Deployed canister
+
+The canister is deployed at `https://yjprz-siaaa-aaaai-qpkaq-cai.icp0.io`.
+
 ## How to run
 
 Clone the repository and run the following commands:
