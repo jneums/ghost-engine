@@ -10,7 +10,9 @@ The canister is deployed at `https://yjprz-siaaa-aaaai-qpkaq-cai.icp0.io`.
 
 ## How to run
 
-Clone the repository and run the following commands:
+This project uses the ICWebsocket integration, so you need to have that running first locally. You can find the instructions [here](https://github.com/omnia-network/ic-websocket-gateway).
+
+After the websockets server is running, clone this repository and run the following commands:
 
 ```sh
 npm install
