@@ -2,10 +2,9 @@ import { Canvas } from '@react-three/fiber';
 import { Stats, Sky, KeyboardControls } from '@react-three/drei';
 import Players from '../components/Players';
 import { useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import Ground from '../components/Ground';
 import Mines from '../components/Mines';
-import Cargo from '../components/Cargo';
 import PlayerCard from '../components/PlayerCard';
 import TargetCard from '../components/TargetCard';
 import { useWorld } from '../context/WorldProvider';
@@ -17,6 +16,8 @@ import {
 import { useDialog } from '../context/DialogProvider';
 import Respawn from '../components/Respawn';
 import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
+import GameStats from '../components/GameStats';
+import PlayerStats from '../components/PlayerStats';
 
 export default function Game() {
   const {
@@ -110,15 +111,15 @@ export default function Game() {
           />
           <color attach="background" args={['#f0f0f0']} />
           <fog attach="fog" args={['#f0f0f0', 0, 75]} />
-          <Stats />
           <Ground />
           <Players entityIds={playerEntities} />
           <Mines entityIds={mineEntities} />
         </Canvas>
       </KeyboardControls>
-      <Cargo />
+      <PlayerStats />
       <PlayerCard />
       <TargetCard />
+      <GameStats />
     </>
   );
 }

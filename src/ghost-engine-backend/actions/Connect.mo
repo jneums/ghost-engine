@@ -57,24 +57,23 @@ module {
       #TransformComponent(newTransform),
     );
 
-    // Get old cargo if exists
-    let oldCargo = ECS.World.getComponent(ctx, entity, "CargoComponent");
-    let newCargo = switch (oldCargo) {
-      case (? #CargoComponent(cargo)) {
-        cargo;
+    // Get old wallet if exists
+    let oldFungible = ECS.World.getComponent(ctx, entity, "FungibleComponent");
+    let newFungible = switch (oldFungible) {
+      case (? #FungibleComponent(fungible)) {
+        fungible;
       };
       case (_) {
         {
-          capacity = 100;
-          current = 0;
+          tokens = [];
         };
       };
     };
     ECS.World.addComponent(
       ctx,
       entity,
-      "CargoComponent",
-      #CargoComponent(newCargo),
+      "FungibleComponent",
+      #FungibleComponent(newFungible),
     );
 
     // Get old health if it exists

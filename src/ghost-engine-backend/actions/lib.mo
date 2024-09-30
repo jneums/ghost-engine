@@ -7,6 +7,7 @@ import Debug "mo:base/Debug";
 import Attack "Attack";
 import Respawn "Respawn";
 import Components "../components";
+import Redeem "Redeem";
 
 module {
   public let Types = T;
@@ -21,6 +22,7 @@ module {
     #Move : Move.Args;
     #Attack : Attack.Args;
     #Respawn : Respawn.Args;
+    #Redeem : Redeem.Args;
   };
 
   // Add action handler functions here
@@ -40,6 +42,9 @@ module {
       };
       case (#Respawn(args)) {
         Respawn.Handler.handle(ctx, args);
+      };
+      case (#Redeem(args)) {
+        Redeem.Handler.handle(ctx, args);
       };
       case (#Updates(_)) {
         Debug.print("These actions are sent to the clients...");

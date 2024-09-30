@@ -4,5 +4,8 @@
   },
   "ghost-engine-frontend": {
     "ic": "yjprz-siaaa-aaaai-qpkaq-cai"
+  },
+  "icrc1_ledger_canister": {
+    "ic": "5hs4f-vqaaa-aaaai-qpk4a-cai"
   }
 }

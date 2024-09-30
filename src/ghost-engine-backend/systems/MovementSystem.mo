@@ -5,7 +5,7 @@ import Components "../components";
 import Math "../math";
 
 module {
-  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : () {
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, deltaTime : Time.Time) : async () {
     switch (ECS.World.getComponent(ctx, entityId, "MoveTargetComponent"), ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
       case (? #MoveTargetComponent(position), ? #TransformComponent(transform)) {
         let defaultVelocity = 2.0;

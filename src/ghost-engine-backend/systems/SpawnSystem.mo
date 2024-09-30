@@ -3,12 +3,15 @@ import Time "mo:base/Time";
 import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
 import Debug "mo:base/Debug";
+import Principal "mo:base/Principal";
 import Components "../components";
 import Math "../math";
 import Random "mo:noise/Random";
+import env "../env";
+import Tokens "../utils/Tokens";
 
 module {
-  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : () {
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : async () {
     switch (ECS.World.getComponent(ctx, entityId, "RespawnComponent")) {
       case (? #RespawnComponent(respawn)) {
         let currentTime = Time.now();
@@ -42,7 +45,7 @@ module {
             scale = { x = 1.0; y = 1.0; z = 1.0 };
           });
 
-          // Reset transform
+          // Set transform
           ECS.World.addComponent(ctx, entityId, "TransformComponent", newNodeTransform);
 
           // Reset health
@@ -53,10 +56,17 @@ module {
             case (_) {};
           };
 
-          // If has a resource component, reset the cargo
+          // If has a resource component, reset the fungible
           switch (ECS.World.getComponent(ctx, entityId, "ResourceComponent")) {
             case (? #ResourceComponent(_)) {
-              ECS.World.addComponent(ctx, entityId, "CargoComponent", #CargoComponent({ capacity = 1; current = 1 }));
+              let updated = #FungibleComponent({
+                tokens = [{
+                  symbol = "tENGINE";
+                  amount = Tokens.toE8s(1);
+                  cid = Principal.fromText(env.CANISTER_ID_ICRC1_LEDGER_CANISTER);
+                }];
+              });
+              ECS.World.addComponent(ctx, entityId, "FungibleComponent", updated);
             };
             case (_) {};
           };

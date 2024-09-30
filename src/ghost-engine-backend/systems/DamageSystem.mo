@@ -1,17 +1,20 @@
 import ECS "mo:geecs";
 import Time "mo:base/Time";
+import Option "mo:base/Option";
+import Array "mo:base/Array";
 import Components "../components";
+import Tokens "../utils/Tokens";
 
 module {
-  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : () {
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
     switch (
       ECS.World.getComponent(ctx, entityId, "DamageComponent"),
-      ECS.World.getComponent(ctx, entityId, "CargoComponent"),
+      ECS.World.getComponent(ctx, entityId, "FungibleComponent"),
       ECS.World.getComponent(ctx, entityId, "HealthComponent"),
     ) {
       case (
         ? #DamageComponent(damage),
-        ? #CargoComponent(cargo),
+        ? #FungibleComponent(cargo),
         ? #HealthComponent(health),
       ) {
         // Update the target's health
@@ -24,31 +27,26 @@ module {
 
         if (hasDied) {
           // Get the source entity's cargo
-          let sourceCargo = ECS.World.getComponent(ctx, damage.sourceEntityId, "CargoComponent");
-          let newSourceCargo = switch (sourceCargo) {
-            case (? #CargoComponent(sourceCargo)) {
-              let current = if (sourceCargo.current + cargo.current > sourceCargo.capacity) {
-                sourceCargo.capacity;
-              } else {
-                sourceCargo.current + cargo.current;
-              };
+          let sourceFungible = ECS.World.getComponent(ctx, damage.sourceEntityId, "FungibleComponent");
+          let newSourceFungible = Option.get(sourceFungible, #FungibleComponent({ tokens = [] }));
 
-              #CargoComponent({
-                capacity = sourceCargo.capacity;
-                current = current;
+          // Combine the source and target's cargo
+          let combined = switch (newSourceFungible) {
+            case (#FungibleComponent(fungible)) {
+              #FungibleComponent({
+                tokens = Tokens.mergeTokens(fungible.tokens, cargo.tokens);
               });
             };
             case (_) {
-              #CargoComponent({
-                capacity = 100;
-                current = cargo.current;
-              });
+              #FungibleComponent({ tokens = cargo.tokens });
             };
           };
-          ECS.World.addComponent(ctx, damage.sourceEntityId, "CargoComponent", newSourceCargo);
+
+          // Update the source entity's cargo
+          ECS.World.addComponent(ctx, damage.sourceEntityId, "FungibleComponent", combined);
 
           // Reset the target's cargo
-          ECS.World.addComponent(ctx, entityId, "CargoComponent", #CargoComponent({ capacity = cargo.capacity; current = 0 }));
+          ECS.World.addComponent(ctx, entityId, "FungibleComponent", #FungibleComponent({ tokens = [] }));
 
           // If the entity has a resource component, create a respawn timer
           switch (ECS.World.getComponent(ctx, entityId, "ResourceComponent")) {
@@ -72,7 +70,7 @@ module {
 
   public let DamageSystem : ECS.Types.System<Components.Component> = {
     systemType = "DamageSystem";
-    archetype = ["DamageComponent", "CargoComponent", "HealthComponent"];
+    archetype = ["DamageComponent", "FungibleComponent", "HealthComponent"];
     update = update;
   };
 };

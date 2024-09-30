@@ -48,8 +48,10 @@ export class CombatComponent {
   ) {}
 }
 
-export class CargoComponent {
-  constructor(public capacity: number, public current: number) {}
+export class FungibleComponent {
+  constructor(
+    public tokens: { cid: Principal; symbol: string; amount: bigint }[],
+  ) {}
 }
 
 export class ResourceComponent {
@@ -58,6 +60,14 @@ export class ResourceComponent {
 
 export class RespawnComponent {
   constructor(public duration: number, public deathTime: number) {}
+}
+
+export class RedeemTokensComponent {
+  constructor(
+    public startAt: number,
+    public duration: number,
+    public to: Principal,
+  ) {}
 }
 
 // Client side only
@@ -118,8 +128,8 @@ export function createComponentClass(data: Component) {
         );
       },
     )
-    .with({ CargoComponent: P.select() }, ({ capacity, current }) => {
-      return new CargoComponent(Number(capacity), Number(current));
+    .with({ FungibleComponent: P.select() }, ({ tokens }) => {
+      return new FungibleComponent(tokens);
     })
     .with({ ResourceComponent: P.select() }, ({ resourceType }) => {
       return new ResourceComponent(resourceType);
@@ -130,6 +140,12 @@ export function createComponentClass(data: Component) {
     .with({ DamageComponent: P.select() }, ({ sourceEntityId, amount }) => {
       return new DamageComponent(Number(sourceEntityId), Number(amount));
     })
+    .with(
+      { RedeemTokensComponent: P.select() },
+      ({ startAt, duration, to }) => {
+        return new RedeemTokensComponent(Number(startAt), Number(duration), to);
+      },
+    )
     .exhaustive();
 }
 
@@ -140,9 +156,10 @@ export const ComponentConstructors: Record<string, Function> = {
   TransformComponent: TransformComponent,
   ConnectionComponent: ConnectionComponent,
   DamageComponent: DamageComponent,
-  CargoComponent: CargoComponent,
+  FungibleComponent: FungibleComponent,
   RespawnComponent: RespawnComponent,
   ResourceComponent: ResourceComponent,
   CombatComponent: CombatComponent,
   HealthComponent: HealthComponent,
+  RedeemTokensComponent: RedeemTokensComponent,
 };

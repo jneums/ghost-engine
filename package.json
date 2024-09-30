@@ -10,8 +10,10 @@
     "pretest": "npm run prebuild --workspaces --if-present",
     "start": "npm start --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
+    "deploy:local": "dfx deploy --output-env-file .env.local",
     "deploy:ic": "dfx deploy --network ic --output-env-file .env.production",
-    "deploy:local": "dfx deploy --output-env-file .env.local"
+    "bootstrap:local": "./scripts/bootstrap.sh local && npm run deploy:local",
+    "bootstrap:ic": "./scripts/bootstrap.sh ic && npm run deploy:ic"
   },
   "type": "module",
   "workspaces": [

@@ -51,13 +51,22 @@ module {
     startAt : Time.Time;
   };
 
-  public type CargoComponent = {
-    capacity : Nat;
-    current : Nat;
+  public type FungibleComponent = {
+    tokens : [{
+      symbol : Text;
+      cid : Principal;
+      amount : Nat;
+    }];
   };
 
   public type ResourceComponent = {
     resourceType : Text;
+  };
+
+  public type RedeemTokensComponent = {
+    startAt : Time.Time;
+    duration : Time.Time;
+    to : Principal;
   };
 
   // Register component data types here...
@@ -67,12 +76,13 @@ module {
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
     #ConnectionComponent : ConnectionComponent;
-    #CargoComponent : CargoComponent;
+    #FungibleComponent : FungibleComponent;
     #ResourceComponent : ResourceComponent;
     #NameableComponent : NameableComponent;
     #HealthComponent : HealthComponent;
     #CombatComponent : CombatComponent;
     #DamageComponent : DamageComponent;
     #RespawnComponent : RespawnComponent;
+    #RedeemTokensComponent : RedeemTokensComponent;
   };
 };

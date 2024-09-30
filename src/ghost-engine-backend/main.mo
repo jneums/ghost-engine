@@ -3,6 +3,7 @@ import Timer "mo:base/Timer";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
 import Array "mo:base/Array";
+import Principal "mo:base/Principal";
 import Vector "mo:vector";
 import Map "mo:stable-hash-map/Map/Map";
 import IcWebSocketCdk "mo:ic-websocket-cdk";
@@ -15,6 +16,7 @@ import { MovementSystem } "systems/MovementSystem";
 import { CombatSystem } "systems/CombatSystem";
 import { DamageSystem } "systems/DamageSystem";
 import { SpawnSystem } "systems/SpawnSystem";
+import { RewardSystem } "systems/RewardSystem";
 import Components "components";
 import Updates "utils/Updates";
 
@@ -34,17 +36,20 @@ actor {
 
   // Context is mutable and shared between all systems
   let ctx : ECS.Types.Context<Components.Component> and Messages.Types.Context = {
+    // ECS context
     entities = entities;
     systemsEntities = systemsEntities;
     registeredSystems = registeredSystems;
     updatedComponents = updatedComponents;
-    wsState = wsState;
 
     // Incrementing entity counter for ids.
     nextEntityId = func() : Nat {
       entityCounter += 1;
       entityCounter;
     };
+
+    // messages context
+    wsState = wsState;
   };
 
   // Register systems here
@@ -52,6 +57,7 @@ actor {
   ECS.World.addSystem(ctx, SpawnSystem);
   ECS.World.addSystem(ctx, CombatSystem);
   ECS.World.addSystem(ctx, DamageSystem);
+  ECS.World.addSystem(ctx, RewardSystem);
 
   // Add some mining nodes
   let MAX_MINES = 5;
@@ -67,10 +73,9 @@ actor {
 
   while (minesNeeded > 0) {
     let entityId = ECS.World.addEntity(ctx);
-    ECS.World.addComponent(ctx, entityId, "ResourceComponent", #ResourceComponent({ resourceType = "tGENG" }));
+    ECS.World.addComponent(ctx, entityId, "ResourceComponent", #ResourceComponent({ resourceType = "tENGINE" }));
     ECS.World.addComponent(ctx, entityId, "NameableComponent", #NameableComponent({ name = "Mining Node" }));
     ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent({ amount = 3; max = 3 }));
-    ECS.World.addComponent(ctx, entityId, "CargoComponent", #CargoComponent({ capacity = 1; current = 1 }));
     ECS.World.addComponent(ctx, entityId, "RespawnComponent", #RespawnComponent({ deathTime = Time.now(); duration = 0 }));
     minesNeeded -= 1;
   };
@@ -78,8 +83,9 @@ actor {
   // Game loop runs all the systems
   func gameLoop() : async () {
     // Process all systems and save delta time
-    let thisTick = ECS.World.update(ctx, lastTick);
+    let thisTick = Time.now();
     let deltaTime = thisTick - lastTick;
+    await ECS.World.update(ctx, deltaTime);
     lastTick := thisTick;
 
     // Iterate through the players and send them the updates

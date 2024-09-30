@@ -24,7 +24,7 @@ export default function EntityCard({
           gap={2}>
           <Stack justifyContent="space-between" gap={1} width="100%">
             <Typography
-              level="body-lg"
+              level="body-sm"
               sx={{
                 // clamp to 1 line
                 display: '-webkit-box',

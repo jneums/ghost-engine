@@ -2,7 +2,12 @@
   "canisters": {
     "ghost-engine-backend": {
       "main": "src/ghost-engine-backend/main.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "remote": {
+        "id": {
+          "ic": "yjprz-siaaa-aaaai-qpkaq-cai"
+        }
+      }
     },
     "ghost-engine-frontend": {
       "dependencies": ["ghost-engine-backend"],
@@ -20,6 +25,11 @@
       },
       "type": "custom",
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
+    },
+    "icrc1_ledger_canister": {
+      "type": "custom",
+      "candid": "https://raw.githubusercontent.com/dfinity/ic/c87abf70cf6f0f81f7f16d9f517c3ff0db1fab1e/rs/rosetta-api/icrc1/ledger/ledger.did",
+      "wasm": "https://download.dfinity.systems/ic/c87abf70cf6f0f81f7f16d9f517c3ff0db1fab1e/canisters/ic-icrc1-ledger.wasm.gz"
     }
   },
   "defaults": {

@@ -6,7 +6,7 @@ import Components "../components";
 import Math "../math";
 
 module {
-  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : () {
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
     switch (
       ECS.World.getComponent(ctx, entityId, "CombatComponent"),
       ECS.World.getComponent(ctx, entityId, "TransformComponent"),
@@ -52,7 +52,7 @@ module {
 
   public let CombatSystem : ECS.Types.System<Components.Component> = {
     systemType = "CombatSystem";
-    archetype = ["PrincipalComponent", "CombatComponent", "CargoComponent", "TransformComponent"];
+    archetype = ["CombatComponent", "TransformComponent"];
     update = update;
   };
 };
