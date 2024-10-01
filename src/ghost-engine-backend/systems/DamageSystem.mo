@@ -26,6 +26,10 @@ module {
         ECS.World.addComponent(ctx, entityId, "HealthComponent", newHealth);
 
         if (hasDied) {
+          // Remove the combatants from combat
+          ECS.World.removeComponent(ctx, entityId, "CombatComponent");
+          ECS.World.removeComponent(ctx, damage.sourceEntityId, "CombatComponent");
+
           // Get the source entity's cargo
           let sourceFungible = ECS.World.getComponent(ctx, damage.sourceEntityId, "FungibleComponent");
           let newSourceFungible = Option.get(sourceFungible, #FungibleComponent({ tokens = [] }));

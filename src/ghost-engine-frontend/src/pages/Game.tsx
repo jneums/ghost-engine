@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { Stats, Sky, KeyboardControls } from '@react-three/drei';
+import { Sky } from '@react-three/drei';
 import Players from '../components/Players';
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -18,6 +18,8 @@ import Respawn from '../components/Respawn';
 import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
 import GameStats from '../components/GameStats';
 import PlayerStats from '../components/PlayerStats';
+import LogoutButton from '../components/LogoutButton';
+import ErrorMessage from '../components/ErrorMessage';
 
 export default function Game() {
   const {
@@ -54,6 +56,15 @@ export default function Game() {
     return <Navigate to="/" />;
   }
 
+  if (!playerEntityId) {
+    return (
+      <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
+        <CircularProgress />
+        <Typography level="h4">Creating account...</Typography>
+      </Stack>
+    );
+  }
+
   if (!isConnected) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
@@ -74,52 +85,23 @@ export default function Game() {
     TransformComponent,
   ]);
 
-  if (!playerEntityId) {
-    return null;
-  }
-
-  // Player entity
-  const playerEntity = world.getEntity(playerEntityId);
-  const playerTransform = playerEntity.getComponent(TransformComponent);
-
   return (
     <>
-      <KeyboardControls
-        map={[
-          { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
-          { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
-          { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
-          { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
-          { name: 'jump', keys: ['Space'] },
-        ]}>
-        <Canvas
-          shadows
-          gl={{ alpha: false }}
-          camera={{
-            position: [
-              playerTransform.position.x - 5,
-              5,
-              playerTransform.position.y - 5,
-            ],
-          }}>
-          <Sky sunPosition={[100, 20, 100]} />
-          <ambientLight intensity={1} />
-          <pointLight
-            castShadow
-            intensity={100000}
-            position={[100, 100, 100]}
-          />
-          <color attach="background" args={['#f0f0f0']} />
-          <fog attach="fog" args={['#f0f0f0', 0, 75]} />
-          <Ground />
-          <Players entityIds={playerEntities} />
-          <Mines entityIds={mineEntities} />
-        </Canvas>
-      </KeyboardControls>
+      <Canvas shadows gl={{ alpha: false }}>
+        <Sky sunPosition={[100, 20, 100]} />
+        <ambientLight intensity={1} />
+        <pointLight castShadow intensity={100000} position={[100, 100, 100]} />
+        <color attach="background" args={['#f0f0f0']} />
+        <fog attach="fog" args={['#f0f0f0', 0, 75]} />
+        <Ground />
+        <Players entityIds={playerEntities} />
+        <Mines entityIds={mineEntities} />
+      </Canvas>
       <PlayerStats />
       <PlayerCard />
       <TargetCard />
       <GameStats />
+      <LogoutButton />
     </>
   );
 }

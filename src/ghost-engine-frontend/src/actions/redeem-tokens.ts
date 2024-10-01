@@ -4,7 +4,11 @@ import { Connection } from '../connection';
 import { World } from '../world';
 
 export default class RedeemTokensAction {
-  constructor(private world: World, private connection: Connection) {}
+  constructor(
+    private world: World,
+    private connection: Connection,
+    private setErrorMessage: (message: string) => void,
+  ) {}
 
   public handle(args: { entityId: number; principal: Principal }) {
     console.log('RedeemTokens action');
@@ -13,6 +17,7 @@ export default class RedeemTokensAction {
 
     const inCombat = entity.getComponent(CombatComponent);
     if (inCombat) {
+      this.setErrorMessage('You cannot do that now');
       console.error('Cannot redeem tokens while in combat');
       return;
     }
@@ -20,6 +25,7 @@ export default class RedeemTokensAction {
     const isDead = health.amount <= 0;
 
     if (isDead) {
+      this.setErrorMessage('You are dead');
       console.error('Cannot redeem tokens while dead');
       return;
     }

@@ -11,6 +11,7 @@ import { fromE8s } from '../utils';
 import { useWorld } from '../context/WorldProvider';
 import { RedeemTokensComponent } from '.';
 import { match, P } from 'ts-pattern';
+import CopyId from './CopyId';
 
 const icrc1Id = process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER!;
 const gameId = process.env.CANISTER_ID_GHOST_ENGINE_BACKEND!;
@@ -47,6 +48,7 @@ export default function GameStats() {
       owner: gameServer,
     });
     setBalance(data);
+    console.log('Game balance:', fromE8s(data));
   };
 
   const fetchMetadata = async () => {
@@ -66,11 +68,7 @@ export default function GameStats() {
       canisterId: Principal.fromText(icrc1Id),
     });
 
-    console.log('Fetching metadata');
-
     const metadata = await icrc1.metadata({});
-
-    console.log(metadata);
     setMetadata(metadata);
   };
 
@@ -90,14 +88,13 @@ export default function GameStats() {
   return (
     <Stack position="absolute" top={0} left={0} padding={2}>
       <Stack>
-        <Typography level="body-sm" sx={{ color: 'black' }}>
-          {process.env.CANISTER_ID_GHOST_ENGINE_BACKEND}
-        </Typography>
-        {symbol && (
-          <Typography level="body-xs" sx={{ color: 'black' }}>
-            {symbol} {fromE8s(balance)}
+        {symbol && <Typography level="body-xs">{symbol}</Typography>}
+        <Stack direction="row" gap={1} justifyContent="flex-end">
+          <Typography maxWidth="200px" noWrap level="body-xs">
+            {process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER! || 'Unknown'}
           </Typography>
-        )}
+          <CopyId id={process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER! || ''} />
+        </Stack>
       </Stack>
     </Stack>
   );

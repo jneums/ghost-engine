@@ -12,10 +12,10 @@ export default function EntityCard({
     <Stack
       position="absolute"
       padding={2}
-      maxWidth="45%"
+      maxWidth="50%"
       width="420px"
       {...stackProps}>
-      <Card size="sm">
+      <Card size="sm" variant="soft">
         <Stack
           width="100%"
           direction="row"
@@ -39,17 +39,16 @@ export default function EntityCard({
               determinate
               variant="outlined"
               color="neutral"
-              size="sm"
-              thickness={24}
+              thickness={22}
               value={Number(hitpoints)}
               sx={{
-                '--LinearProgress-radius': '20px',
-                '--LinearProgress-thickness': '24px',
+                '--LinearProgress-radius': '16px',
+                '--LinearProgress-thickness': '22px',
               }}>
               <Typography
                 level="body-xs"
                 textColor="common.white"
-                sx={{ fontWeight: 'xl', mixBlendMode: 'difference' }}>
+                sx={{ fontWeight: 'md', mixBlendMode: 'difference' }}>
                 HP {`${hitpoints}%`}
               </Typography>
             </LinearProgress>

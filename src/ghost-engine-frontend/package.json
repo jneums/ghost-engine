@@ -42,6 +42,7 @@
     "@types/react": "^18.3.9",
     "@types/react-dom": "^18.3.0",
     "camera-controls": "^2.9.0",
+    "greenlet": "^1.1.0",
     "ic-use-internet-identity": "^0.0.11",
     "ic-websocket-js": "^0.4.0",
     "lil-gui": "^0.19.2",

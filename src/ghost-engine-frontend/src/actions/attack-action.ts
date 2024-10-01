@@ -8,7 +8,11 @@ import { sleep } from '../utils';
 import { World } from '../world';
 
 export default class AttackAction {
-  constructor(private world: World, private connection: Connection) {}
+  constructor(
+    private world: World,
+    private connection: Connection,
+    private setErrorMessage: (message: string) => void,
+  ) {}
 
   public handle(args: { entityId: number; targetEntityId: number }) {
     console.log('Attack action');
@@ -17,6 +21,7 @@ export default class AttackAction {
 
     const inCombat = entity.getComponent(CombatComponent);
     if (inCombat) {
+      this.setErrorMessage('Already attacking');
       console.error('Already attacking');
       return;
     }
@@ -24,7 +29,8 @@ export default class AttackAction {
     const isDead = health.amount <= 0;
 
     if (isDead) {
-      console.error('Cannot attack while dead');
+      this.setErrorMessage('You are dead');
+      console.error('You are dead');
       return;
     }
 
@@ -39,7 +45,8 @@ export default class AttackAction {
 
     const isTargetDead = targetHealth.amount <= 0;
     if (isTargetDead) {
-      console.error('Cannot attack a dead entity');
+      this.setErrorMessage('They are already dead');
+      console.error('They are already dead');
       return;
     }
 
@@ -54,7 +61,8 @@ export default class AttackAction {
       targetTransform.position,
     );
     if (distance > 10) {
-      console.error('Target is too far away');
+      this.setErrorMessage('You must get closer');
+      console.error('You must get closer');
       return;
     }
 

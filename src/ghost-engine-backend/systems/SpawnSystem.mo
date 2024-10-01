@@ -2,7 +2,6 @@ import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
-import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Components "../components";
 import Math "../math";
@@ -16,7 +15,7 @@ module {
       case (? #RespawnComponent(respawn)) {
         let currentTime = Time.now();
         let elapsedTime = currentTime - respawn.deathTime;
-        Debug.print("\nElapsed time: " # debug_show (elapsedTime));
+
         if (elapsedTime >= respawn.duration) {
           // 1 minute in microseconds
           // Respawn the node

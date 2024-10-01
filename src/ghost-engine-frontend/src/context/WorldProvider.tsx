@@ -9,10 +9,11 @@ import React, {
 import { World } from '../world';
 import { Connection } from '../connection';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { SignIdentity } from '@dfinity/agent';
 import { findPlayersEntityId } from '../utils';
 import { HealthComponent, PrincipalComponent } from '../components';
 import { Principal } from '@dfinity/principal';
+import ConnectAction from '../actions/connect-action';
+import DisconnectAction from '../actions/disconnect-action';
 
 export interface WorldState {
   world: World;
@@ -21,6 +22,7 @@ export interface WorldState {
   playerPrincipalId?: Principal;
   isPlayerDead: boolean;
   connect: () => void;
+  disconnect: () => void;
   isConnected: boolean;
   isConnecting: boolean;
 }
@@ -32,6 +34,7 @@ const initialState: WorldState = {
   playerPrincipalId: undefined,
   isPlayerDead: false,
   connect: () => {},
+  disconnect: () => {},
   isConnected: false,
   isConnecting: false,
 };
@@ -39,7 +42,7 @@ const initialState: WorldState = {
 const WorldContext = createContext<WorldState>(initialState);
 
 export const WorldProvider = ({ children }: { children: ReactNode }) => {
-  const { identity } = useInternetIdentity();
+  const { identity, clear } = useInternetIdentity();
   const worldRef = useRef<World>(new World());
   const connectionRef = useRef<Connection>(new Connection());
   const [tick, setTick] = useState(0);
@@ -71,18 +74,46 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
   }, [playerEntityId, worldRef.current, tick]);
 
   const connect = () => {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
     connectionRef.current.initialize(
-      identity as SignIdentity,
       worldRef.current,
       setIsConnected,
       setIsConnecting,
     );
+
+    const connectAction = new ConnectAction(
+      worldRef.current,
+      connectionRef.current,
+    );
+    connectAction.handle({ principal: identity.getPrincipal() });
+  };
+
+  const disconnect = () => {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
+    connectionRef.current.disconnect();
+    clear();
+
+    const connectAction = new DisconnectAction(
+      worldRef.current,
+      connectionRef.current,
+    );
+    connectAction.handle({ principal: identity.getPrincipal() });
   };
 
   useEffect(() => {
     if (identity) {
       connect();
     }
+
+    return () => {
+      connectionRef.current.disconnect();
+    };
   }, [identity]);
 
   useEffect(() => {
@@ -102,6 +133,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
         playerPrincipalId: identity?.getPrincipal(),
         isPlayerDead,
         connect,
+        disconnect,
         isConnected,
         isConnecting,
       }}>

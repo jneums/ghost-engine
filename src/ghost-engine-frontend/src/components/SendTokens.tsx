@@ -12,11 +12,13 @@ import { useDialog } from '../context/DialogProvider';
 import RedeemTokensAction from '../actions/redeem-tokens';
 import React from 'react';
 import { Principal } from '@dfinity/principal';
+import { useErrorMessage } from '../context/ErrorProvider';
 
 export default function SendTokens() {
   const { world, connection, playerEntityId } = useWorld();
   const { closeDialog } = useDialog();
   const [principalId, setPrincipalId] = React.useState('');
+  const { setErrorMessage } = useErrorMessage();
 
   const handleRedeemTokens = () => {
     console.log('Redeem tokens');
@@ -27,7 +29,11 @@ export default function SendTokens() {
 
     const principal = Principal.fromText(principalId);
 
-    const redeemTokensAction = new RedeemTokensAction(world, connection);
+    const redeemTokensAction = new RedeemTokensAction(
+      world,
+      connection,
+      setErrorMessage,
+    );
     redeemTokensAction.handle({
       entityId: playerEntityId,
       principal,
@@ -36,9 +42,9 @@ export default function SendTokens() {
   };
 
   return (
-    <Stack minWidth="420px" gap={4}>
+    <Stack gap={4}>
       <Stack gap={2}>
-        <Typography level="title-md">Transfer all your tokens</Typography>
+        <Typography level="title-md">Transfer your tokens</Typography>
 
         <FormControl>
           <FormLabel htmlFor="principal">Principal</FormLabel>

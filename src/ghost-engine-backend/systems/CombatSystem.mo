@@ -39,11 +39,9 @@ module {
 
         // Check if the combat is complete
         let elapsedInSeconds = Float.fromInt(elapsedTime) / 1_000_000_000.0;
-        Debug.print("\nElapsed time: " # debug_show (elapsedInSeconds));
         if (elapsedInSeconds >= combat.speed) {
           // Trigger damage application
           ECS.World.addComponent(ctx, combat.targetEntityId, "DamageComponent", #DamageComponent({ sourceEntityId = entityId; amount = 1 }));
-          ECS.World.removeComponent(ctx, entityId, "CombatComponent");
         };
       };
       case (_) {};

@@ -5,6 +5,7 @@ import Game from './pages/Game';
 import { CssBaseline, CssVarsProvider } from '@mui/joy';
 import { WorldProvider } from './context/WorldProvider';
 import { DialogProvider } from './context/DialogProvider';
+import { ErrorMessageProvider } from './context/ErrorProvider';
 
 export default function App() {
   return (
@@ -13,13 +14,15 @@ export default function App() {
       <InternetIdentityProvider>
         <WorldProvider>
           <DialogProvider>
-            <Router>
-              <Routes>
-                <Route path="/" element={<Menu />} />
-                <Route path="/game" element={<Game />} />
-                <Route path="*" element={<h1>404</h1>} />
-              </Routes>
-            </Router>
+            <ErrorMessageProvider>
+              <Router>
+                <Routes>
+                  <Route path="/" element={<Menu />} />
+                  <Route path="/game" element={<Game />} />
+                  <Route path="*" element={<h1>404</h1>} />
+                </Routes>
+              </Router>
+            </ErrorMessageProvider>
           </DialogProvider>
         </WorldProvider>
       </InternetIdentityProvider>

@@ -2,12 +2,7 @@
   "canisters": {
     "ghost-engine-backend": {
       "main": "src/ghost-engine-backend/main.mo",
-      "type": "motoko",
-      "remote": {
-        "id": {
-          "ic": "yjprz-siaaa-aaaai-qpkaq-cai"
-        }
-      }
+      "type": "motoko"
     },
     "ghost-engine-frontend": {
       "dependencies": ["ghost-engine-backend"],

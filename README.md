@@ -2,7 +2,7 @@
 
 ## Description
 
-This is a simple game engine that uses the Internet Computer as a backend. The backend is an authoritative server written in Motoko that runs the game logic and sends updates to the client using the ICWebsocket integration. The client is a web app that renders the game and sends user input to the server, and uses React and Threejs.
+This is a simple game engine that uses the Internet Computer as a backend. The backend is an authoritative server written in Motoko that runs the game logic and serves updates to clients. The client is a web app that renders the game and sends user input to the server, and uses React and Threejs.
 
 ## Deployed canister
 
@@ -10,13 +10,9 @@ The canister is deployed at [https://yjprz-siaaa-aaaai-qpkaq-cai.icp0.io](https:
 
 ## How to run
 
-### Setting up Websockets server
-
-This project uses the ICWebsocket integration, so you need to have that running first locally. You can find the instructions [here](https://github.com/omnia-network/ic-websocket-gateway).
-
 ### Installing canisters
 
-After the websockets server is running, clone this repository and run the following commands:
+Run the following commands to install the canisters:
 
 ```sh
 npm install

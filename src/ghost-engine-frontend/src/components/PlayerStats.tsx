@@ -1,15 +1,17 @@
 import { Card, IconButton, Stack, Typography } from '@mui/joy';
 import { fromE8s } from '../utils';
 import { useWorld } from '../context/WorldProvider';
-import { FungibleComponent } from '.';
+import { FungibleComponent, RedeemTokensComponent } from '.';
 import { Send } from '@mui/icons-material';
 import { useDialog } from '../context/DialogProvider';
 import SendTokens from './SendTokens';
-import CopyId from './CopyId';
+import { useEffect } from 'react';
+import React from 'react';
 
 export default function PlayerStats() {
-  const { world, playerEntityId, playerPrincipalId } = useWorld();
+  const { world, playerEntityId } = useWorld();
   const { openDialog } = useDialog();
+  const [isLoading, setIsLoading] = React.useState(false);
 
   if (!playerEntityId) {
     return null;
@@ -20,13 +22,27 @@ export default function PlayerStats() {
   const fungible = entity.getComponent(FungibleComponent);
   const tokens = fungible?.tokens || [];
 
+  const redeem = entity.getComponent(RedeemTokensComponent);
+
+  useEffect(() => {
+    if (redeem) {
+      setIsLoading(true);
+    } else {
+      setIsLoading(false);
+    }
+  }, [redeem]);
+
   const handleSendClick = () => {
     openDialog(<SendTokens />);
   };
 
+  if (!tokens.length) {
+    return null;
+  }
+
   return (
     <Stack position="absolute" bottom="84px" left={0} padding={2}>
-      <Card size="sm">
+      <Card size="sm" variant="soft">
         {tokens.map((token) => (
           <Stack
             key={token.cid.toString()}
@@ -37,6 +53,7 @@ export default function PlayerStats() {
             <Stack direction="row" gap={1}>
               <Typography level="body-xs">{fromE8s(token.amount)}</Typography>
               <IconButton
+                disabled={isLoading}
                 size="sm"
                 sx={{ p: 0, m: 0, minWidth: 0, minHeight: 0 }}
                 onClick={handleSendClick}>
@@ -45,12 +62,6 @@ export default function PlayerStats() {
             </Stack>
           </Stack>
         ))}
-        <Stack direction="row" gap={1} justifyContent="flex-end">
-          <Typography maxWidth="200px" noWrap level="body-xs">
-            {playerPrincipalId?.toText() || 'Unknown'}
-          </Typography>
-          <CopyId id={playerPrincipalId?.toText() || ''} />
-        </Stack>
       </Card>
     </Stack>
   );

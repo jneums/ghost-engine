@@ -1,6 +1,7 @@
 import ECS "mo:geecs";
 import Components "../components";
 import Vector "mo:vector";
+import Time "mo:base/Time";
 
 module {
   public func filterUpdatesForClient(components : Vector.Vector<ECS.Types.Update<Components.Component>>) : Vector.Vector<ECS.Types.Update<Components.Component>> {
@@ -28,6 +29,25 @@ module {
         };
       };
       Vector.add(updates, update);
+    };
+    updates;
+  };
+
+  public func filterByTimestamp(components : Vector.Vector<ECS.Types.Update<Components.Component>>, since : Time.Time) : Vector.Vector<ECS.Types.Update<Components.Component>> {
+    let updates = Vector.new<ECS.Types.Update<Components.Component>>();
+    for (component in Vector.vals(components)) {
+      let timestamp = switch (component) {
+        case (#Insert({ timestamp })) {
+          timestamp;
+        };
+        case (#Delete({ timestamp })) {
+          timestamp;
+        };
+      };
+
+      if (timestamp > since) {
+        Vector.add(updates, component);
+      };
     };
     updates;
   };

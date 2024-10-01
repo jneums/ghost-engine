@@ -13,6 +13,7 @@ module {
   func handle(ctx : T.Context<Components.Component>, args : Args) {
     Debug.print("\nBegin attacking: " # debug_show (args.entityId) # " target " # debug_show (args.targetEntityId));
     let mining = #CombatComponent({
+      createdAt = Time.now();
       targetEntityId = args.targetEntityId;
       startAt = Time.now();
       speed = 1.0;
