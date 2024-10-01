@@ -27,7 +27,7 @@ export default function PlayerCard() {
 
   const health = entity.getComponent(HealthComponent);
   if (!health) {
-    throw new Error('Health component not found');
+    return null;
   }
 
   const principal = entity.getComponent(PrincipalComponent);

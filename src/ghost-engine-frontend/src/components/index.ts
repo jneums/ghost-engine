@@ -31,8 +31,16 @@ export class TransformComponent {
   ) {}
 }
 
+export class OfflineTransformComponent {
+  constructor(
+    public position: THREE.Vector3,
+    public rotation: THREE.Quaternion,
+    public scale: THREE.Vector3,
+  ) {}
+}
+
 export class ConnectionComponent {
-  constructor(public offline_since: number) {}
+  constructor(public offlineSince: number) {}
 }
 
 export class DamageComponent {
@@ -114,8 +122,18 @@ export function createComponentClass(data: Component) {
         );
       },
     )
-    .with({ ConnectionComponent: P.select() }, ({ offline_since }) => {
-      return new ConnectionComponent(Number(offline_since));
+    .with(
+      { OfflineTransformComponent: P.select() },
+      ({ position, rotation, scale }) => {
+        return new OfflineTransformComponent(
+          new THREE.Vector3(position.x, position.y, position.z),
+          new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+          new THREE.Vector3(scale.x, scale.y, scale.z),
+        );
+      },
+    )
+    .with({ ConnectionComponent: P.select() }, ({ offlineSince }) => {
+      return new ConnectionComponent(Number(offlineSince));
     })
     .with(
       { CombatComponent: P.select() },

@@ -7,7 +7,6 @@ import Array "mo:base/Array";
 import Principal "mo:base/Principal";
 import Components "../components";
 import ICRC2 "mo:icrc2-types";
-import Tokens "../utils/Tokens";
 import env "../env";
 
 module {

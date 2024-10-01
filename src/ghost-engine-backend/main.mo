@@ -12,6 +12,8 @@ import { CombatSystem } "systems/CombatSystem";
 import { DamageSystem } "systems/DamageSystem";
 import { SpawnSystem } "systems/SpawnSystem";
 import { RewardSystem } "systems/RewardSystem";
+import { ConnectSystem } "systems/ConnectSystem";
+import { DisconnectSystem } "systems/DisconnectSystem";
 import Components "components";
 import Updates "utils/Updates";
 
@@ -45,6 +47,8 @@ actor {
   ECS.World.addSystem(ctx, CombatSystem);
   ECS.World.addSystem(ctx, DamageSystem);
   ECS.World.addSystem(ctx, RewardSystem);
+  ECS.World.addSystem(ctx, ConnectSystem);
+  ECS.World.addSystem(ctx, DisconnectSystem);
 
   // Add some mining nodes
   let MAX_MINES = 5;
@@ -61,7 +65,7 @@ actor {
   while (minesNeeded > 0) {
     let entityId = ECS.World.addEntity(ctx);
     ECS.World.addComponent(ctx, entityId, "ResourceComponent", #ResourceComponent({ resourceType = "tENGINE" }));
-    ECS.World.addComponent(ctx, entityId, "NameableComponent", #NameableComponent({ name = "Mining Node" }));
+    ECS.World.addComponent(ctx, entityId, "NameableComponent", #NameableComponent({ name = "tENGINE Block" }));
     ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent({ amount = 3; max = 3 }));
     ECS.World.addComponent(ctx, entityId, "RespawnComponent", #RespawnComponent({ deathTime = Time.now(); duration = 0 }));
     minesNeeded -= 1;
@@ -91,7 +95,7 @@ actor {
   // Get state
   public shared query func getState() : async [ECS.Types.Update<Components.Component>] {
     // Send client the current state as an #Updates message
-    let updatedComponents = Vector.new<ECS.Types.Update<Components.Component>>();
+    let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
     for ((entityId, components) in Map.entries(ctx.entities)) {
       for (component in Map.vals(components)) {
         let update = #Insert({
@@ -99,12 +103,12 @@ actor {
           entityId = entityId;
           component = component;
         });
-        Vector.add(updatedComponents, update);
+        Vector.add(currentState, update);
       };
     };
 
     // Filter out server only components
-    let updates = Updates.filterUpdatesForClient(updatedComponents);
+    let updates = Updates.filterUpdatesForClient(currentState);
     Vector.toArray(updates);
   };
 

@@ -40,8 +40,7 @@ export default function Ground() {
     <mesh
       position={[0, -0.5, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
-      onClick={handleRightClick}
-      onContextMenu={handleRightClick}>
+      onClick={handleRightClick}>
       <planeGeometry args={[120, 120, 120, 120]} />
       <meshBasicMaterial color={0xfefae0} side={THREE.DoubleSide} wireframe />
     </mesh>

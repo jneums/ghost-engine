@@ -41,7 +41,7 @@ export default function PlayerStats() {
   }
 
   return (
-    <Stack position="absolute" bottom="84px" left={0} padding={2}>
+    <Stack position="absolute" bottom="76px" left={0} padding={2}>
       <Card size="sm" variant="soft">
         {tokens.map((token) => (
           <Stack

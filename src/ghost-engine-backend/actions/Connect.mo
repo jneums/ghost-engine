@@ -2,7 +2,6 @@ import ECS "mo:geecs";
 import T "Types";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
-import Option "mo:base/Option";
 import Player "../utils/Player";
 import Components "../components";
 
@@ -15,13 +14,19 @@ module {
     Debug.print("\nPlayer connected: " # debug_show (args.principal));
 
     // Check if the player already has entityId
-    let entityId = Player.findPlayersEntityId(ctx, args.principal);
-    let entity = Option.get(entityId, ECS.World.addEntity(ctx));
+    let entityId = switch (Player.findPlayersEntityId(ctx, args.principal)) {
+      case (?exists) {
+        exists;
+      };
+      case (null) {
+        ECS.World.addEntity(ctx);
+      };
+    };
 
     // Add the principal and connection components
     ECS.World.addComponent(
       ctx,
-      entity,
+      entityId,
       "PrincipalComponent",
       #PrincipalComponent({
         principal = args.principal;
@@ -29,73 +34,12 @@ module {
     );
     ECS.World.addComponent(
       ctx,
-      entity,
+      entityId,
       "ConnectionComponent",
       #ConnectionComponent({
-        offline_since = 0;
+        offlineSince = 0;
       }),
     );
-
-    // Get old transform if exists
-    let oldTransform = ECS.World.getComponent(ctx, entity, "TransformComponent");
-    let newTransform = switch (oldTransform) {
-      case (? #TransformComponent(transform)) {
-        transform;
-      };
-      case (_) {
-        {
-          scale = { x = 1.0; y = 1.0; z = 1.0 };
-          rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
-          position = { x = 0.0; y = 0.0; z = 0.0 };
-        };
-      };
-    };
-    ECS.World.addComponent(
-      ctx,
-      entity,
-      "TransformComponent",
-      #TransformComponent(newTransform),
-    );
-
-    // Get old wallet if exists
-    let oldFungible = ECS.World.getComponent(ctx, entity, "FungibleComponent");
-    let newFungible = switch (oldFungible) {
-      case (? #FungibleComponent(fungible)) {
-        fungible;
-      };
-      case (_) {
-        {
-          tokens = [];
-        };
-      };
-    };
-    ECS.World.addComponent(
-      ctx,
-      entity,
-      "FungibleComponent",
-      #FungibleComponent(newFungible),
-    );
-
-    // Get old health if it exists
-    let oldHealth = ECS.World.getComponent(ctx, entity, "HealthComponent");
-    let newHealth = switch (oldHealth) {
-      case (? #HealthComponent(health)) {
-        health;
-      };
-      case (_) {
-        {
-          amount = 10;
-          max = 10;
-        };
-      };
-    };
-    ECS.World.addComponent(
-      ctx,
-      entity,
-      "HealthComponent",
-      #HealthComponent(newHealth),
-    );
-
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {

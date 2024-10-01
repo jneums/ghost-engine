@@ -36,7 +36,7 @@ module {
   };
 
   public type ConnectionComponent = {
-    offline_since : Time.Time;
+    offlineSince : Time.Time;
   };
 
   public type DamageComponent = {
@@ -75,6 +75,7 @@ module {
     #MoveTargetComponent : MoveTargetComponent;
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
+    #OfflineTransformComponent : TransformComponent;
     #ConnectionComponent : ConnectionComponent;
     #FungibleComponent : FungibleComponent;
     #ResourceComponent : ResourceComponent;

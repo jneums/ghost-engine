@@ -18,12 +18,13 @@ module {
     // Remove the player from the simulation
     switch (entityId) {
       case (?exists) {
+        // Update the player's connection status
         ECS.World.addComponent(
           ctx,
           exists,
           "ConnectionComponent",
           #ConnectionComponent({
-            offline_since = Time.now();
+            offlineSince = Time.now();
           }),
         );
       };

@@ -3,7 +3,7 @@ import {
   IcrcTokenMetadataResponse,
 } from '@dfinity/ledger-icrc';
 import { Principal } from '@dfinity/principal';
-import { Stack, Typography } from '@mui/joy';
+import { Card, Stack, Typography } from '@mui/joy';
 import { createAgent } from '@dfinity/utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import React from 'react';
@@ -87,15 +87,15 @@ export default function GameStats() {
 
   return (
     <Stack position="absolute" top={0} left={0} padding={2}>
-      <Stack>
-        {symbol && <Typography level="body-xs">{symbol}</Typography>}
+      <Card size="sm" variant="soft" sx={{ gap: 0 }}>
+        <Typography level="body-xs">{symbol || 'Loading...'}</Typography>
         <Stack direction="row" gap={1} justifyContent="flex-end">
           <Typography maxWidth="200px" noWrap level="body-xs">
             {process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER! || 'Unknown'}
           </Typography>
           <CopyId id={process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER! || ''} />
         </Stack>
-      </Stack>
+      </Card>
     </Stack>
   );
 }

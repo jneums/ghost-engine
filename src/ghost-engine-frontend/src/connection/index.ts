@@ -50,7 +50,7 @@ export class Connection {
       } catch (error) {
         console.log('Error fetching updates:', error);
       }
-    }, 350);
+    }, 300);
   }
 
   private setLastUpdate(time: bigint) {

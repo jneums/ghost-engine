@@ -8,30 +8,19 @@ import Mines from '../components/Mines';
 import PlayerCard from '../components/PlayerCard';
 import TargetCard from '../components/TargetCard';
 import { useWorld } from '../context/WorldProvider';
-import {
-  PrincipalComponent,
-  ResourceComponent,
-  TransformComponent,
-} from '../components';
 import { useDialog } from '../context/DialogProvider';
 import Respawn from '../components/Respawn';
 import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
 import GameStats from '../components/GameStats';
 import PlayerStats from '../components/PlayerStats';
 import LogoutButton from '../components/LogoutButton';
-import ErrorMessage from '../components/ErrorMessage';
+import { useInternetIdentity } from 'ic-use-internet-identity';
 
 export default function Game() {
-  const {
-    world,
-    isPlayerDead,
-    playerEntityId,
-    playerPrincipalId,
-    connect,
-    isConnected,
-    isConnecting,
-  } = useWorld();
+  const { isPlayerDead, playerEntityId, connect, isConnected, isConnecting } =
+    useWorld();
   const { openDialog } = useDialog();
+  const { identity } = useInternetIdentity();
 
   const onReconnectClick = () => {
     connect();
@@ -52,7 +41,7 @@ export default function Game() {
     );
   }
 
-  if (!playerPrincipalId) {
+  if (!identity) {
     return <Navigate to="/" />;
   }
 
@@ -76,15 +65,6 @@ export default function Game() {
     );
   }
 
-  const mineEntities = world.getEntitiesByArchetype([
-    ResourceComponent,
-    TransformComponent,
-  ]);
-  const playerEntities = world.getEntitiesByArchetype([
-    PrincipalComponent,
-    TransformComponent,
-  ]);
-
   return (
     <>
       <Canvas shadows gl={{ alpha: false }}>
@@ -94,8 +74,8 @@ export default function Game() {
         <color attach="background" args={['#f0f0f0']} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         <Ground />
-        <Players entityIds={playerEntities} />
-        <Mines entityIds={mineEntities} />
+        <Players />
+        <Mines />
       </Canvas>
       <PlayerStats />
       <PlayerCard />

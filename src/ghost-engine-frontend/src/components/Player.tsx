@@ -23,6 +23,13 @@ const followDirection = new THREE.Vector3();
 const direction = new THREE.Vector3();
 const targetQuaternion = new THREE.Quaternion();
 const rotationMatrix = new THREE.Matrix4();
+const arrowHelperDirection = new THREE.Vector3(0, 0, 1);
+const arowHelperOrigin = new THREE.Vector3(0, 0, 0);
+const behindOffset = new THREE.Vector3(
+  0,
+  CAMERA_HEIGHT,
+  -CAMERA_FOLLOW_DISTANCE,
+);
 
 export default function Player({ entityId }: { entityId: number }) {
   const { world, playerEntityId, connection } = useWorld();
@@ -39,7 +46,7 @@ export default function Player({ entityId }: { entityId: number }) {
   if (!entity) return null;
 
   const serverTransform = entity.getComponent(TransformComponent);
-  const position = entity.getComponent(MoveTargetComponent);
+  const moveTarget = entity.getComponent(MoveTargetComponent);
   let clientTransform = entity.getComponent(ClientTransformComponent);
 
   if (!clientTransform) {
@@ -97,8 +104,8 @@ export default function Player({ entityId }: { entityId: number }) {
   }, [combat]);
 
   useFrame((state, delta) => {
-    const updatedPosition = position
-      ? position.position
+    const updatedPosition = moveTarget
+      ? moveTarget.position
       : serverTransform.position;
 
     updatePosition(clientTransform, updatedPosition, delta, velocity, epsilon);
@@ -118,8 +125,8 @@ export default function Player({ entityId }: { entityId: number }) {
       const targetPosition = getCombatTargetPosition();
       const lookTarget = targetPosition
         ? targetPosition
-        : position
-        ? position.position
+        : moveTarget
+        ? moveTarget.position
         : serverTransform.position;
       smoothLookAt(meshRef.current, lookTarget, delta);
     }
@@ -134,7 +141,7 @@ export default function Player({ entityId }: { entityId: number }) {
     }
   });
 
-  const getCombatTargetPosition = () => {
+  const getCombatTargetPosition = useCallback(() => {
     if (combatTargetId) {
       const target = world.getEntity(combatTargetId);
       if (target) {
@@ -147,15 +154,13 @@ export default function Player({ entityId }: { entityId: number }) {
       }
     }
     return null;
-  };
+  }, [combatTargetId, world]);
+
+  const name = entityId.toString();
 
   return (
     <>
-      <mesh
-        name={entityId.toString()}
-        ref={meshRef}
-        onClick={handleRightClick}
-        onContextMenu={handleRightClick}>
+      <mesh name={name} ref={meshRef} onClick={handleRightClick}>
         <boxGeometry args={[1, 1, 1]} />
         <meshPhongMaterial color={color} />
         {isPlayer && (
@@ -168,12 +173,7 @@ export default function Player({ entityId }: { entityId: number }) {
       </mesh>
       <arrowHelper
         ref={arrowHelperRef}
-        args={[
-          new THREE.Vector3(0, 0, 1),
-          new THREE.Vector3(0, 0, 0),
-          2,
-          0xffff00,
-        ]}
+        args={[arrowHelperDirection, arowHelperOrigin, 2, 0xffff00]}
       />
       {combatTargetId && (
         <LightningBeam
@@ -213,15 +213,11 @@ function updateCamera(
   adjustedTargetPosition.y += CAMERA_HEIGHT;
 
   // Calculate the desired camera position behind the player
-  const behindOffset = new THREE.Vector3(
-    0,
-    CAMERA_HEIGHT,
-    -CAMERA_FOLLOW_DISTANCE,
-  );
-  behindOffset.applyEuler(targetRotation);
+  const newBehindOffset = behindOffset.clone();
+  newBehindOffset.applyEuler(targetRotation);
   const desiredCameraPosition = adjustedTargetPosition
     .clone()
-    .add(behindOffset);
+    .add(newBehindOffset);
 
   // Smoothly transition the camera to the desired position
   const distanceToTarget = cameraPosition.distanceTo(desiredCameraPosition);
@@ -252,7 +248,8 @@ function smoothLookAt(
 }
 
 function updateArrowHelper(arrowHelper: THREE.ArrowHelper, mesh: THREE.Mesh) {
-  const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(mesh.quaternion);
+  const direction = arrowHelperDirection.clone();
+  direction.applyQuaternion(mesh.quaternion);
   arrowHelper.setDirection(direction);
   arrowHelper.position.copy(mesh.position);
 }
