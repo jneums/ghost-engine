@@ -35,10 +35,8 @@ module {
     ECS.World.addComponent(
       ctx,
       entityId,
-      "ConnectionComponent",
-      #ConnectionComponent({
-        offlineSince = 0;
-      }),
+      "ConnectComponent",
+      #ConnectComponent({}),
     );
   };
 

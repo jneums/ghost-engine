@@ -15,6 +15,8 @@ import AttackAction from '../actions/attack-action';
 import { MapControls as DreiMapControls } from '@react-three/drei';
 import { MapControls } from 'three-stdlib';
 import { useErrorMessage } from '../context/ErrorProvider';
+import { getPlayerEntityId } from '../utils';
+import { useInternetIdentity } from 'ic-use-internet-identity';
 
 const CAMERA_FOLLOW_DISTANCE = 7; // Distance threshold for the camera to start following
 const CAMERA_HEIGHT = 1.5; // Fixed height for the camera
@@ -32,7 +34,8 @@ const behindOffset = new THREE.Vector3(
 );
 
 export default function Player({ entityId }: { entityId: number }) {
-  const { world, playerEntityId, connection } = useWorld();
+  const { world, connection } = useWorld();
+  const { identity } = useInternetIdentity();
   const entity = world.getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
   const controlsRef = useRef<MapControls>(null);
@@ -61,6 +64,11 @@ export default function Player({ entityId }: { entityId: number }) {
   const combat = entity.getComponent(CombatComponent);
   const health = entity.getComponent(HealthComponent);
 
+  if (!identity) {
+    throw new Error('Identity not found');
+  }
+
+  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
   const isPlayer = entityId === playerEntityId;
   const isDead = health.amount <= 0;
   const color = isDead ? 'black' : isPlayer ? 'green' : 'red';

@@ -4,6 +4,7 @@ import Principal "mo:base/Principal";
 import Time "mo:base/Time";
 import ECS "mo:geecs";
 import Player "../utils/Player";
+import Const "../utils/Const";
 import Components "../components";
 
 module {
@@ -22,9 +23,10 @@ module {
         ECS.World.addComponent(
           ctx,
           exists,
-          "ConnectionComponent",
-          #ConnectionComponent({
-            offlineSince = Time.now();
+          "DisconnectComponent",
+          #DisconnectComponent({
+            startAt = Time.now();
+            duration = Const.DISCONNECT_DURATION;
           }),
         );
       };

@@ -1,4 +1,4 @@
-import { ghost_engine_backend } from '../declarations/ghost-engine-backend';
+import { canisterId, createActor } from '../declarations/ghost-engine-backend';
 import {
   _SERVICE,
   Action,
@@ -7,22 +7,42 @@ import {
 import { ComponentConstructors, createComponentClass } from '../components';
 import { World } from '../world';
 import { match, P } from 'ts-pattern';
+import { HttpAgent, Identity } from '@dfinity/agent';
 
 export class Connection {
   private pollingInterval: number | null = null;
   private lastUpdate = 0n;
+  private server: _SERVICE | null = null;
 
   public async send(message: Action) {
+    if (!this.server) {
+      throw new Error('Not connected to the canister');
+    }
     // Implement the send logic if needed for polling
-    await ghost_engine_backend.putAction(message);
+    await this.server.putAction(message);
   }
 
   public initialize(
+    identity: Identity,
     world: World,
     setIsConnected: (isConnected: boolean) => void,
     setIsConnecting: (isConnecting: boolean) => void,
   ) {
     setIsConnecting(true);
+
+    const host =
+      process.env.DFX_NETWORK === 'local'
+        ? 'http://127.0.0.1:4943'
+        : 'https://icp-api.io';
+
+    const agent = HttpAgent.createSync({
+      identity,
+      host,
+      verifyQuerySignatures: false,
+    });
+
+    this.server = createActor(canisterId, { agent });
+
     this.loadState(world).then(() => {
       setIsConnecting(false);
       this.startPolling(world);
@@ -31,17 +51,22 @@ export class Connection {
   }
 
   private async loadState(world: World) {
+    if (this.server === null) {
+      throw new Error('Not connected to the canister');
+    }
     // Replace this with the actual call to your backend to fetch the initial state
-    const updates = await ghost_engine_backend.getState();
+    const updates = await this.server.getState();
     this.handleUpdates(world, updates);
   }
 
   private startPolling(world: World) {
+    if (this.server === null) {
+      throw new Error('Not connected to the canister');
+    }
+
     this.pollingInterval = window.setInterval(async () => {
       try {
-        const updates = await ghost_engine_backend.getUpdates(
-          BigInt(this.lastUpdate),
-        );
+        const updates = await this.server!.getUpdates(BigInt(this.lastUpdate));
 
         if (updates.length > 0) {
           console.log(updates);

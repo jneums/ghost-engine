@@ -11,6 +11,7 @@ import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColorSchemeToggle from '../components/ColorSchemeToggle';
+import { useWorld } from '../context/WorldProvider';
 
 export default function Menu() {
   const navigate = useNavigate();

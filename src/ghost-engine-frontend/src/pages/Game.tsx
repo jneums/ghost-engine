@@ -15,12 +15,15 @@ import GameStats from '../components/GameStats';
 import PlayerStats from '../components/PlayerStats';
 import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
+import { getIsPlayerDead, getPlayerEntityId } from '../utils';
+import { SessionComponent } from '../components';
 
 export default function Game() {
-  const { isPlayerDead, playerEntityId, connect, isConnected, isConnecting } =
-    useWorld();
+  const { world, connect, isConnected, isConnecting } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
+
+  const isPlayerDead = getIsPlayerDead(world);
 
   const onReconnectClick = () => {
     connect();
@@ -45,6 +48,7 @@ export default function Game() {
     return <Navigate to="/" />;
   }
 
+  const playerEntityId = getPlayerEntityId(world, identity?.getPrincipal());
   if (!playerEntityId) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
@@ -54,7 +58,11 @@ export default function Game() {
     );
   }
 
-  if (!isConnected) {
+  const session = world
+    .getEntity(playerEntityId)
+    ?.getComponent(SessionComponent);
+
+  if (!isConnected || !session) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
         <Typography level="h4">Disconnected</Typography>

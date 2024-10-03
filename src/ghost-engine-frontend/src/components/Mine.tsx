@@ -6,9 +6,12 @@ import AttackAction from '../actions/attack-action';
 import SetTargetAction from '../actions/set-target';
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
+import { getPlayerEntityId } from '../utils';
+import { useInternetIdentity } from 'ic-use-internet-identity';
 
 export default function Mine({ entityId }: { entityId: number }) {
-  const { world, connection, playerEntityId } = useWorld();
+  const { world, connection } = useWorld();
+  const { identity } = useInternetIdentity();
   const entity = world.getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
   const { setErrorMessage } = useErrorMessage();
@@ -24,6 +27,12 @@ export default function Mine({ entityId }: { entityId: number }) {
   const handleClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation();
+
+      if (!identity) {
+        throw new Error('Identity not found');
+      }
+
+      const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
 
       if (!playerEntityId) {
         console.error('Player entity not found');
@@ -44,7 +53,7 @@ export default function Mine({ entityId }: { entityId: number }) {
 
       console.log('Click on Mine!');
     },
-    [playerEntityId, world, entityId, connection],
+    [world, entityId, connection],
   );
 
   return (

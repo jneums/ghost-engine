@@ -3,91 +3,75 @@ import Time "mo:base/Time";
 import Components "../components";
 
 module {
+  // Private function to handle TransformComponent logic
+  private func handleTransformComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
+    let transform = switch (ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
+      case (? #TransformComponent(transform)) {
+        transform;
+      };
+      case (_) {
+        // Check for a snapshot of the player's transform
+        switch (ECS.World.getComponent(ctx, entityId, "OfflineTransformComponent")) {
+          case (? #OfflineTransformComponent(transform)) {
+            transform;
+          };
+          case (_) {
+            {
+              scale = { x = 1.0; y = 1.0; z = 1.0 };
+              rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
+              position = { x = 0.0; y = 0.0; z = 0.0 };
+            };
+          };
+        };
+      };
+    };
+    ECS.World.addComponent(ctx, entityId, "TransformComponent", #TransformComponent(transform));
+  };
+
+  // Private function to handle FungibleComponent logic
+  private func handleFungibleComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
+    let fungible = switch (ECS.World.getComponent(ctx, entityId, "FungibleComponent")) {
+      case (? #FungibleComponent(fungible)) {
+        fungible;
+      };
+      case (_) {
+        {
+          tokens = [];
+        };
+      };
+    };
+    ECS.World.addComponent(ctx, entityId, "FungibleComponent", #FungibleComponent(fungible));
+  };
+
+  // Private function to handle HealthComponent logic
+  private func handleHealthComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
+    let health = switch (ECS.World.getComponent(ctx, entityId, "HealthComponent")) {
+      case (? #HealthComponent(health)) {
+        health;
+      };
+      case (_) {
+        {
+          amount = 10;
+          max = 10;
+        };
+      };
+    };
+    ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent(health));
+  };
 
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : async () {
-    switch (ECS.World.getComponent(ctx, entityId, "ConnectionComponent")) {
-      case (? #ConnectionComponent(connection)) {
-        // Don't do anything if the player is disconnecting
-        if (connection.offlineSince != 0) {
-          return;
-        };
+    switch (ECS.World.getComponent(ctx, entityId, "ConnectComponent")) {
+      case (? #ConnectComponent(_)) {
+        handleTransformComponent(ctx, entityId);
+        handleFungibleComponent(ctx, entityId);
+        handleHealthComponent(ctx, entityId);
 
-        // Get old transform if exists, otherwise get the offline transform.
-        // If no transform exists, create a new one.
-        switch (ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
-          case (? #TransformComponent(transform)) {
-            ECS.World.addComponent(
-              ctx,
-              entityId,
-              "TransformComponent",
-              #TransformComponent(transform),
-            );
-          };
-          case (_) {
-            // Otherwise, check for a snapshot of the player's transform
-            let offlineTransform = ECS.World.getComponent(ctx, entityId, "OfflineTransformComponent");
-            let newTransform = switch (offlineTransform) {
-              case (? #OfflineTransformComponent(transform)) {
-                transform;
-              };
-              case (_) {
-                {
-                  scale = { x = 1.0; y = 1.0; z = 1.0 };
-                  rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
-                  position = { x = 0.0; y = 0.0; z = 0.0 };
-                };
-              };
-            };
-            ECS.World.addComponent(
-              ctx,
-              entityId,
-              "TransformComponent",
-              #TransformComponent(newTransform),
-            );
-          };
-        };
+        // Start a session
+        let session = #SessionComponent({ lastAction = Time.now() });
+        ECS.World.addComponent(ctx, entityId, "SessionComponent", session);
 
-        // Get old wallet if exists
-        let oldFungible = ECS.World.getComponent(ctx, entityId, "FungibleComponent");
-        let newFungible = switch (oldFungible) {
-          case (? #FungibleComponent(fungible)) {
-            fungible;
-          };
-          case (_) {
-            {
-              tokens = [];
-            };
-          };
-        };
-        ECS.World.addComponent(
-          ctx,
-          entityId,
-          "FungibleComponent",
-          #FungibleComponent(newFungible),
-        );
-
-        // Get old health if it exists
-        let oldHealth = ECS.World.getComponent(ctx, entityId, "HealthComponent");
-        let newHealth = switch (oldHealth) {
-          case (? #HealthComponent(health)) {
-            health;
-          };
-          case (_) {
-            {
-              amount = 10;
-              max = 10;
-            };
-          };
-        };
-        ECS.World.addComponent(
-          ctx,
-          entityId,
-          "HealthComponent",
-          #HealthComponent(newHealth),
-        );
-
-        ECS.World.removeComponent(ctx, entityId, "ConnectionComponent");
-
+        // Remove the connect component
+        ECS.World.removeComponent(ctx, entityId, "ConnectComponent");
       };
       case (_) {};
     };
@@ -95,7 +79,7 @@ module {
 
   public let ConnectSystem : ECS.Types.System<Components.Component> = {
     systemType = "ConnectSystem";
-    archetype = ["ConnectionComponent"];
+    archetype = ["ConnectComponent"];
     update = update;
   };
 };

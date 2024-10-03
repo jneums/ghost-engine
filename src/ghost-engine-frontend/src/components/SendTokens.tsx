@@ -13,15 +13,23 @@ import RedeemTokensAction from '../actions/redeem-tokens';
 import React from 'react';
 import { Principal } from '@dfinity/principal';
 import { useErrorMessage } from '../context/ErrorProvider';
+import { getPlayerEntityId } from '../utils';
+import { useInternetIdentity } from 'ic-use-internet-identity';
 
 export default function SendTokens() {
-  const { world, connection, playerEntityId } = useWorld();
+  const { world, connection } = useWorld();
+  const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
   const [principalId, setPrincipalId] = React.useState('');
   const { setErrorMessage } = useErrorMessage();
 
+  if (!identity) {
+    throw new Error('Identity not found');
+  }
+
   const handleRedeemTokens = () => {
     console.log('Redeem tokens');
+    const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
     if (!playerEntityId) {
       console.error('Player id not found');
       return;

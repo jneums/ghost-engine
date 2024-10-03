@@ -4,12 +4,20 @@ import MoveAction from '../actions/move-action';
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useCallback } from 'react';
+import { getIsPlayerDead, getPlayerEntityId } from '../utils';
+import { useInternetIdentity } from 'ic-use-internet-identity';
 
 const DRAG_THRESHOLD = 5;
 
 export default function Ground() {
-  const { world, connection, playerEntityId, isPlayerDead } = useWorld();
+  const { world, connection } = useWorld();
+  const { identity } = useInternetIdentity();
   const { setErrorMessage } = useErrorMessage();
+  if (!identity) {
+    throw new Error('Identity not found');
+  }
+
+  const principal = identity.getPrincipal();
 
   const handleRightClick = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
@@ -17,12 +25,16 @@ export default function Ground() {
       if (e.delta > DRAG_THRESHOLD) return;
       console.log('Floor RIGHT clicked!');
 
+      console.log(principal.toText());
+
+      const playerEntityId = getPlayerEntityId(world, principal);
+
       if (!playerEntityId) {
         console.error('Player entity not found');
         return;
       }
 
-      if (isPlayerDead) {
+      if (getIsPlayerDead(world, playerEntityId)) {
         console.error('You are dead!');
         setErrorMessage('You are dead!');
         return;
@@ -33,7 +45,7 @@ export default function Ground() {
         position: new THREE.Vector3(e.point.x, 0, e.point.z),
       });
     },
-    [world, connection, playerEntityId, isPlayerDead, setErrorMessage],
+    [world, connection, setErrorMessage],
   );
 
   return (

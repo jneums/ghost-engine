@@ -1,11 +1,13 @@
 import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Float "mo:base/Float";
-import Debug "mo:base/Debug";
 import Components "../components";
 import Math "../math";
 
 module {
+  // Constant for nanoseconds to seconds conversion
+  let NANOS_PER_SECOND = 1_000_000_000.0;
+
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
     switch (
       ECS.World.getComponent(ctx, entityId, "CombatComponent"),
@@ -20,11 +22,10 @@ module {
         let elapsedTime = currentTime - combat.startAt;
 
         // Range check (must be within range of the target)
-        let nodeTransform = ECS.World.getComponent(ctx, combat.targetEntityId, "TransformComponent");
-        let isInRange = switch (nodeTransform) {
-          case (? #TransformComponent(nodeTransform)) {
-            let distance = Math.distance(transform.position, nodeTransform.position);
-            Debug.print("\nDistance: " # debug_show (distance));
+        let targetTransform = ECS.World.getComponent(ctx, combat.targetEntityId, "TransformComponent");
+        let isInRange = switch (targetTransform) {
+          case (? #TransformComponent(targetTransform)) {
+            let distance = Math.distance(transform.position, targetTransform.position);
             distance <= combat.range;
           };
           case (_) { false };
@@ -32,13 +33,12 @@ module {
 
         // If not in range, stop combat
         if (not isInRange) {
-          Debug.print("\nCombat stopped, not in range: " # debug_show (isInRange));
           ECS.World.removeComponent(ctx, entityId, "CombatComponent");
           return;
         };
 
         // Check if the combat is complete
-        let elapsedInSeconds = Float.fromInt(elapsedTime) / 1_000_000_000.0;
+        let elapsedInSeconds = Float.fromInt(elapsedTime) / NANOS_PER_SECOND;
         if (elapsedInSeconds >= combat.speed) {
           // Trigger damage application
           ECS.World.addComponent(ctx, combat.targetEntityId, "DamageComponent", #DamageComponent({ sourceEntityId = entityId; amount = 1 }));

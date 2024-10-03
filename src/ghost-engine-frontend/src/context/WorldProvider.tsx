@@ -1,26 +1,20 @@
 import React, {
   createContext,
   ReactNode,
+  useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
 import { World } from '../world';
 import { Connection } from '../connection';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { findPlayersEntityId } from '../utils';
-import { HealthComponent, PrincipalComponent } from '../components';
-import { Principal } from '@dfinity/principal';
 import ConnectAction from '../actions/connect-action';
 import DisconnectAction from '../actions/disconnect-action';
 
 export interface WorldState {
   world: World;
   connection: Connection;
-  playerEntityId?: number;
-  playerPrincipalId?: Principal;
-  isPlayerDead: boolean;
   connect: () => void;
   disconnect: () => void;
   isConnected: boolean;
@@ -30,9 +24,6 @@ export interface WorldState {
 const initialState: WorldState = {
   world: new World(),
   connection: new Connection(),
-  playerEntityId: undefined,
-  playerPrincipalId: undefined,
-  isPlayerDead: false,
   connect: () => {},
   disconnect: () => {},
   isConnected: false,
@@ -45,40 +36,19 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const { identity, clear } = useInternetIdentity();
   const worldRef = useRef<World>(new World());
   const connectionRef = useRef<Connection>(new Connection());
-  const [tick, setTick] = useState(0);
+  const [_, setTick] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  const playerEntityId = useMemo(() => {
-    if (!identity) {
-      return;
-    }
-    const playerEntityId = findPlayersEntityId(
-      worldRef.current,
-      worldRef.current.getEntitiesByArchetype([PrincipalComponent]),
-      identity.getPrincipal(),
-    );
-    return playerEntityId;
-  }, [worldRef.current, identity, tick]);
-
-  const isPlayerDead = useMemo(() => {
-    if (!playerEntityId) {
-      return false;
-    }
-    const entity = worldRef.current.getEntity(playerEntityId);
-    if (!entity) {
-      return true;
-    }
-    const health = entity.getComponent(HealthComponent);
-    return health?.amount <= 0;
-  }, [playerEntityId, worldRef.current, tick]);
-
-  const connect = () => {
+  const connect = useCallback(() => {
     if (!identity) {
       throw new Error('Identity not found');
     }
 
+    worldRef.current = new World();
+
     connectionRef.current.initialize(
+      identity,
       worldRef.current,
       setIsConnected,
       setIsConnecting,
@@ -89,9 +59,9 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
       connectionRef.current,
     );
     connectAction.handle({ principal: identity.getPrincipal() });
-  };
+  }, [identity]);
 
-  const disconnect = () => {
+  const disconnect = useCallback(() => {
     if (!identity) {
       throw new Error('Identity not found');
     }
@@ -104,7 +74,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
       connectionRef.current,
     );
     connectAction.handle({ principal: identity.getPrincipal() });
-  };
+  }, [identity]);
 
   useEffect(() => {
     if (identity) {
@@ -129,9 +99,6 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
       value={{
         world: worldRef.current,
         connection: connectionRef.current,
-        playerEntityId,
-        playerPrincipalId: identity?.getPrincipal(),
-        isPlayerDead,
         connect,
         disconnect,
         isConnected,

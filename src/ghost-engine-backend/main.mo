@@ -6,20 +6,22 @@ import Array "mo:base/Array";
 import Vector "mo:vector";
 import Map "mo:stable-hash-map/Map/Map";
 import ECS "mo:geecs";
+
 import Actions "actions";
-import { MovementSystem } "systems/MovementSystem";
-import { CombatSystem } "systems/CombatSystem";
-import { DamageSystem } "systems/DamageSystem";
-import { SpawnSystem } "systems/SpawnSystem";
-import { RewardSystem } "systems/RewardSystem";
-import { ConnectSystem } "systems/ConnectSystem";
-import { DisconnectSystem } "systems/DisconnectSystem";
 import Components "components";
+
 import Updates "utils/Updates";
+import Player "utils/Player";
+import Systems "utils/Systems";
+import Mines "utils/Mines";
 
 actor {
   // ECS state
   private stable var lastTick : Time.Time = Time.now();
+  private stable var gameLoopTimer : ?Timer.TimerId = null;
+  private stable var gameLoopUpdatedAt : Time.Time = Time.now();
+  private stable var totalGameTime : Time.Time = 0;
+  private stable var totalSleepTime : Time.Time = 0;
   private stable var entityCounter : Nat = 0;
   private stable var entities = ECS.State.Entities.new<Components.Component>();
   private var registeredSystems = ECS.State.SystemRegistry.new<Components.Component>();
@@ -41,39 +43,13 @@ actor {
     };
   };
 
-  // Register systems here
-  ECS.World.addSystem(ctx, MovementSystem);
-  ECS.World.addSystem(ctx, SpawnSystem);
-  ECS.World.addSystem(ctx, CombatSystem);
-  ECS.World.addSystem(ctx, DamageSystem);
-  ECS.World.addSystem(ctx, RewardSystem);
-  ECS.World.addSystem(ctx, ConnectSystem);
-  ECS.World.addSystem(ctx, DisconnectSystem);
-
-  // Add some mining nodes
-  let MAX_MINES = 5;
-
-  // Get current number of mines
-  let mines = ECS.World.getEntitiesByArchetype(ctx, ["ResourceComponent"]);
-  let numMines = Array.size(mines);
-  var minesNeeded = if (MAX_MINES > numMines) { MAX_MINES - numMines : Nat } else {
-    0;
-  };
-
-  Debug.print("Current mines: " # debug_show (numMines) # " Mines needed: " # debug_show (minesNeeded));
-
-  while (minesNeeded > 0) {
-    let entityId = ECS.World.addEntity(ctx);
-    ECS.World.addComponent(ctx, entityId, "ResourceComponent", #ResourceComponent({ resourceType = "tENGINE" }));
-    ECS.World.addComponent(ctx, entityId, "NameableComponent", #NameableComponent({ name = "tENGINE Block" }));
-    ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent({ amount = 3; max = 3 }));
-    ECS.World.addComponent(ctx, entityId, "RespawnComponent", #RespawnComponent({ deathTime = Time.now(); duration = 0 }));
-    minesNeeded -= 1;
-  };
+  // Initialization
+  Systems.register(ctx);
+  Mines.initialize(ctx);
 
   // Game loop runs all the systems
-  func gameLoop() : async () {
-    // Process all systems and save delta time
+  private func gameLoop() : async () {
+    // Run all registered systems
     let thisTick = Time.now();
     let deltaTime = thisTick - lastTick;
     await ECS.World.update(ctx, deltaTime);
@@ -87,14 +63,45 @@ actor {
     for (update in Vector.vals(updated)) {
       Vector.add(ctx.updatedComponents, update);
     };
+
+    // Stop game loop if no active players
+    let { total } = Player.getActiveSessions(ctx);
+    if (total < 1) {
+      stopGameLoop();
+    };
   };
 
-  let gameTick = #nanoseconds(1_000_000_000 / 60);
-  ignore Timer.recurringTimer<system>(gameTick, gameLoop);
+  private func stopGameLoop() {
+    switch (gameLoopTimer) {
+      case (?timer) {
+        Debug.print("Stopping game loop. Total run time was " # debug_show (Time.now() - gameLoopUpdatedAt) # " nanoseconds");
+        Timer.cancelTimer(timer);
+        gameLoopTimer := null;
+        totalGameTime += Time.now() - gameLoopUpdatedAt;
+        gameLoopUpdatedAt := Time.now();
+      };
+      case (_) {};
+    };
+  };
 
-  // Get state
+  private func startGameLoop<system>() {
+    let gameTick = #nanoseconds(1_000_000_000 / 60);
+    switch (gameLoopTimer) {
+      case (null) {
+        Debug.print("Starting game loop. Total sleep time was " # debug_show (Time.now() - gameLoopUpdatedAt) # " nanoseconds");
+        gameLoopTimer := ?Timer.recurringTimer<system>(gameTick, gameLoop);
+        gameLoopUpdatedAt := Time.now();
+        totalSleepTime += Time.now() - gameLoopUpdatedAt;
+      };
+      case (?exists) {
+        Timer.cancelTimer(exists);
+        gameLoopTimer := ?Timer.recurringTimer<system>(gameTick, gameLoop);
+      };
+    };
+  };
+
+  // Queries
   public shared query func getState() : async [ECS.Types.Update<Components.Component>] {
-    // Send client the current state as an #Updates message
     let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
     for ((entityId, components) in Map.entries(ctx.entities)) {
       for (component in Map.vals(components)) {
@@ -107,22 +114,20 @@ actor {
       };
     };
 
-    // Filter out server only components
     let updates = Updates.filterUpdatesForClient(currentState);
     Vector.toArray(updates);
   };
 
   public shared query func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
-    // Send client the current state as an #Updates message
     let recent = Updates.filterByTimestamp(ctx.updatedComponents, since);
-
-    // Filter out server only components
     let updates = Updates.filterUpdatesForClient(recent);
     Vector.toArray(updates);
   };
 
-  // Actions
-  public shared func putAction(action : Actions.Action) : async () {
+  // Mutations
+  public shared ({ caller }) func putAction(action : Actions.Action) : async () {
+    startGameLoop<system>();
+    Player.updateSession(ctx, caller);
     Actions.handleAction(ctx, action);
   };
 };

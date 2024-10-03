@@ -39,8 +39,16 @@ export class OfflineTransformComponent {
   ) {}
 }
 
-export class ConnectionComponent {
-  constructor(public offlineSince: number) {}
+export class ConnectComponent {
+  constructor() {}
+}
+
+export class DisconnectComponent {
+  constructor(public startAt: number, public duration: number) {}
+}
+
+export class SessionComponent {
+  constructor(public lastAction: number) {}
 }
 
 export class DamageComponent {
@@ -132,8 +140,14 @@ export function createComponentClass(data: Component) {
         );
       },
     )
-    .with({ ConnectionComponent: P.select() }, ({ offlineSince }) => {
-      return new ConnectionComponent(Number(offlineSince));
+    .with({ ConnectComponent: P.select() }, () => {
+      return new ConnectComponent();
+    })
+    .with({ DisconnectComponent: P.select() }, ({ startAt, duration }) => {
+      return new DisconnectComponent(Number(startAt), Number(duration));
+    })
+    .with({ SessionComponent: P.select() }, ({ lastAction }) => {
+      return new SessionComponent(Number(lastAction));
     })
     .with(
       { CombatComponent: P.select() },
@@ -172,7 +186,9 @@ export const ComponentConstructors: Record<string, Function> = {
   MoveTargetComponent: MoveTargetComponent,
   VelocityComponent: VelocityComponent,
   TransformComponent: TransformComponent,
-  ConnectionComponent: ConnectionComponent,
+  ConnectComponent: ConnectComponent,
+  DisconnectComponent: DisconnectComponent,
+  SessionComponent: SessionComponent,
   DamageComponent: DamageComponent,
   FungibleComponent: FungibleComponent,
   RespawnComponent: RespawnComponent,

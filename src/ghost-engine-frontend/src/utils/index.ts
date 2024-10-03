@@ -1,5 +1,5 @@
 import { Principal } from '@dfinity/principal';
-import { PrincipalComponent } from '../components';
+import { HealthComponent, PrincipalComponent } from '../components';
 import { Entity } from '../world/entity';
 import { EntityId, World } from '../world';
 
@@ -20,13 +20,8 @@ export function getPrincipal(entity: Entity): Principal | undefined {
   return component?.principal;
 }
 
-export function findPlayersEntityId(
-  world: World,
-  entities: EntityId[],
-  principal: Principal,
-) {
-  if (!entities) return;
-
+export function getPlayerEntityId(world: World, principal: Principal) {
+  const entities = world.getEntitiesByArchetype([PrincipalComponent]);
   for (const entityId of entities.values()) {
     const entity = world.getEntity(entityId);
     const component = entity.getComponent(PrincipalComponent);
@@ -49,3 +44,15 @@ export const toE8s = (value: number) => value * 100_000_000;
  * @returns icp as a number
  */
 export const fromE8s = (value: bigint) => Number(value) / 100_000_000;
+
+export const getIsPlayerDead = (world: World, playerEntityId?: EntityId) => {
+  if (!playerEntityId) {
+    return false;
+  }
+  const entity = world.getEntity(playerEntityId);
+  if (!entity) {
+    return true;
+  }
+  const health = entity.getComponent(HealthComponent);
+  return health.amount <= 0;
+};

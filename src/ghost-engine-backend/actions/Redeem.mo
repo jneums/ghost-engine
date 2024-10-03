@@ -16,7 +16,7 @@ module {
     let redeem = #RedeemTokensComponent({
       to = args.to;
       startAt = Time.now();
-      duration = 10 * 1_000_000_000;
+      duration = 0;
     });
     World.addComponent(ctx, args.entityId, "RedeemTokensComponent", redeem);
   };

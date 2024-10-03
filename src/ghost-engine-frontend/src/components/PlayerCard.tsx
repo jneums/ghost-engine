@@ -2,7 +2,7 @@ import { HealthComponent, NameableComponent, PrincipalComponent } from '.';
 import EntityCard from './EntityCard';
 import { useWorld } from '../context/WorldProvider';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { findPlayersEntityId } from '../utils';
+import { getPlayerEntityId } from '../utils';
 
 export default function PlayerCard() {
   const { world } = useWorld();
@@ -11,11 +11,7 @@ export default function PlayerCard() {
     throw new Error('Identity not found');
   }
 
-  const playerEntityId = findPlayersEntityId(
-    world,
-    world.getEntitiesByArchetype([PrincipalComponent]),
-    identity.getPrincipal(),
-  );
+  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
   if (!playerEntityId) {
     return null;
   }

@@ -35,8 +35,15 @@ module {
     scale : Math.Types.Vector3;
   };
 
-  public type ConnectionComponent = {
-    offlineSince : Time.Time;
+  public type SessionComponent = {
+    lastAction : Time.Time;
+  };
+
+  public type ConnectComponent = {};
+
+  public type DisconnectComponent = {
+    startAt : Time.Time;
+    duration : Time.Time;
   };
 
   public type DamageComponent = {
@@ -76,7 +83,9 @@ module {
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
     #OfflineTransformComponent : TransformComponent;
-    #ConnectionComponent : ConnectionComponent;
+    #ConnectComponent : ConnectComponent;
+    #DisconnectComponent : DisconnectComponent;
+    #SessionComponent : SessionComponent;
     #FungibleComponent : FungibleComponent;
     #ResourceComponent : ResourceComponent;
     #NameableComponent : NameableComponent;

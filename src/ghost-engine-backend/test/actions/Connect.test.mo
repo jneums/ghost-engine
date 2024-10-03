@@ -38,7 +38,7 @@ suite(
         Connect.Handler.handle(ctx, args);
 
         // Check the entity has a position component
-        let position = ECS.World.getComponent(ctx, entityId, "TransformComponent");
+        let position = ECS.World.getComponent(ctx, entityId, "ConnectComponent");
         expect.option(position, Utils.componentToText, Utils.componentEqual).isSome();
       },
     );
