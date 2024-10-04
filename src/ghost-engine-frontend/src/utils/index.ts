@@ -54,5 +54,5 @@ export const getIsPlayerDead = (world: World, playerEntityId?: EntityId) => {
     return true;
   }
   const health = entity.getComponent(HealthComponent);
-  return health.amount <= 0;
+  return health?.amount <= 0;
 };

@@ -145,6 +145,7 @@ export default function Player({ entityId }: { entityId: number }) {
 
     if (isDead) {
       world.removeComponent(entityId, ClientTransformComponent);
+      world.removeComponent(entityId, TransformComponent);
       world.removeComponent(entityId, MoveTargetComponent);
     }
   });

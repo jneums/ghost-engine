@@ -23,11 +23,13 @@ export default function Game() {
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
 
-  const isPlayerDead = getIsPlayerDead(world);
-
   const onReconnectClick = () => {
     connect();
   };
+
+  const playerEntityId =
+    identity && getPlayerEntityId(world, identity.getPrincipal());
+  const isPlayerDead = playerEntityId && getIsPlayerDead(world, playerEntityId);
 
   useEffect(() => {
     if (isPlayerDead) {
@@ -48,7 +50,6 @@ export default function Game() {
     return <Navigate to="/" />;
   }
 
-  const playerEntityId = getPlayerEntityId(world, identity?.getPrincipal());
   if (!playerEntityId) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>

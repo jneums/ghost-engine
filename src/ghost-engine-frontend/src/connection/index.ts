@@ -64,6 +64,11 @@ export class Connection {
       throw new Error('Not connected to the canister');
     }
 
+    if (this.pollingInterval !== null) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+
     this.pollingInterval = window.setInterval(async () => {
       try {
         const updates = await this.server!.getUpdates(BigInt(this.lastUpdate));
@@ -75,7 +80,7 @@ export class Connection {
       } catch (error) {
         console.log('Error fetching updates:', error);
       }
-    }, 300);
+    }, 500);
   }
 
   private setLastUpdate(time: bigint) {
