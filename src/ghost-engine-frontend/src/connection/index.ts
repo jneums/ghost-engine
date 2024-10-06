@@ -98,6 +98,7 @@ export class Connection {
           world.addComponent(Number(action.entityId), component);
         })
         .with({ Delete: P.select() }, (action) => {
+          this.setLastUpdate(action.timestamp);
           const constructor = ComponentConstructors[action.componentType];
           world.removeComponent(Number(action.entityId), constructor);
         })

@@ -1,15 +1,16 @@
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
-import MoveAction from '../actions/move-action';
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useCallback } from 'react';
-import { getIsPlayerDead, getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
+import { getIsPlayerDead, getPlayerEntityId } from '../utils';
+import MoveAction from '../actions/move-action';
 
+const CHUNK_SIZE = 16;
 const DRAG_THRESHOLD = 5;
 
-export default function Ground() {
+export default function Chunk({ chunkId }: { chunkId: string }) {
   const { world, connection } = useWorld();
   const { identity } = useInternetIdentity();
   const { setErrorMessage } = useErrorMessage();
@@ -26,6 +27,7 @@ export default function Ground() {
       console.log('Floor RIGHT clicked!');
 
       console.log(principal.toText());
+      console.log(chunkId);
 
       const playerEntityId = getPlayerEntityId(world, principal);
 
@@ -48,10 +50,18 @@ export default function Ground() {
     [world, connection, setErrorMessage],
   );
 
+  // chunkId = '0.000000,0.000000,-3.000000';
+  const position = chunkId
+    .split(',')
+    .map((pos) => parseFloat(pos) * CHUNK_SIZE) as [number, number, number];
+
   return (
-    <mesh position={[0, 0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[120, 120, 120, 120]} />
-      <meshBasicMaterial color={0xfefae0} side={THREE.DoubleSide} wireframe />
+    <mesh
+      position={[position[0], -8, position[2]]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      onClick={handleRightClick}>
+      <boxGeometry args={[16, 16, 16, 16, 16, 16]} />
+      <meshBasicMaterial color={0xff0000} side={THREE.DoubleSide} wireframe />
     </mesh>
   );
 }

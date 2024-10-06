@@ -2,7 +2,7 @@ import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Float "mo:base/Float";
 import Components "../components";
-import Math "../math";
+import Vector3 "../math/Vector3";
 
 module {
   // Constant for nanoseconds to seconds conversion
@@ -25,7 +25,7 @@ module {
         let targetTransform = ECS.World.getComponent(ctx, combat.targetEntityId, "TransformComponent");
         let isInRange = switch (targetTransform) {
           case (? #TransformComponent(targetTransform)) {
-            let distance = Math.distance(transform.position, targetTransform.position);
+            let distance = Vector3.distance(transform.position, targetTransform.position);
             distance <= combat.range;
           };
           case (_) { false };

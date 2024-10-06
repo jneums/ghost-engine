@@ -17,6 +17,7 @@ import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { getIsPlayerDead, getPlayerEntityId } from '../utils';
 import { SessionComponent } from '../components';
+import Chunks from '../components/Chunks';
 
 export default function Game() {
   const { world, connect, isConnected, isConnecting } = useWorld();
@@ -82,7 +83,7 @@ export default function Game() {
         <pointLight castShadow intensity={100000} position={[100, 100, 100]} />
         <color attach="background" args={['#f0f0f0']} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
-        <Ground />
+        <Chunks />
         <Players />
         <Mines />
       </Canvas>

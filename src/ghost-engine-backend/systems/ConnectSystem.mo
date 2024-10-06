@@ -59,12 +59,53 @@ module {
     ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent(health));
   };
 
+  // Private function to handle PlayerViewComponent logic
+  private func handlePlayerViewComponent(
+    ctx : ECS.Types.Context<Components.Component>,
+    entityId : ECS.Types.EntityId,
+  ) {
+    let playerView = switch (ECS.World.getComponent(ctx, entityId, "PlayerViewComponent")) {
+      case (? #PlayerViewComponent(playerView)) {
+        playerView;
+      };
+      case (_) {
+        {
+          viewRadius = 16.0;
+        };
+      };
+    };
+    ECS.World.addComponent(ctx, entityId, "PlayerViewComponent", #PlayerViewComponent(playerView));
+  };
+
+  // Private function to handle ChunksComponent logic
+  private func handleChunksComponent(
+    ctx : ECS.Types.Context<Components.Component>,
+    entityId : ECS.Types.EntityId,
+  ) {
+    let chunks = switch (ECS.World.getComponent(ctx, entityId, "ChunksComponent")) {
+      case (? #ChunksComponent(chunks)) {
+        chunks;
+      };
+      case (_) {
+        {
+          chunks = [];
+        };
+      };
+    };
+    ECS.World.addComponent(ctx, entityId, "ChunksComponent", #ChunksComponent(chunks));
+  };
+
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : async () {
     switch (ECS.World.getComponent(ctx, entityId, "ConnectComponent")) {
       case (? #ConnectComponent(_)) {
         handleTransformComponent(ctx, entityId);
         handleFungibleComponent(ctx, entityId);
         handleHealthComponent(ctx, entityId);
+        handlePlayerViewComponent(ctx, entityId);
+        handleChunksComponent(ctx, entityId);
+
+        // Trigger terrain generation
+        ECS.World.addComponent(ctx, entityId, "UpdateChunksComponent", #UpdateChunksComponent({}));
 
         // Start a session
         let session = #SessionComponent({ lastAction = Time.now() });

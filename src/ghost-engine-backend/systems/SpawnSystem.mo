@@ -4,15 +4,16 @@ import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
 import Components "../components";
-import Math "../math";
 import Random "mo:noise/Random";
 import env "../env";
 import Tokens "../utils/Tokens";
+import Vector3 "../math/Vector3";
+import Quaternion "../math/Quaternion";
 
 module {
 
   // Private function to calculate a new spawn position
-  private func calculateSpawnPosition(entityId : ECS.Types.EntityId, currentTime : Time.Time) : Math.Types.Vector3 {
+  private func calculateSpawnPosition(entityId : ECS.Types.EntityId, currentTime : Time.Time) : Vector3.Vector3 {
     let xoro = Random.xSetSeed(Nat64.fromNat(Int.abs(currentTime) + entityId));
     let x = Random.xNextFloat(xoro);
     let z = Random.xNextFloat(xoro);
@@ -70,7 +71,7 @@ module {
 
       let newNodeTransform = #TransformComponent({
         position = newNodePosition;
-        rotation = Math.eulerToQuaternion({ x = 0.0; y = 0.0; z = 0.0 });
+        rotation = Quaternion.eulerToQuaternion({ x = 0.0; y = 0.0; z = 0.0 });
         scale = { x = 1.0; y = 1.0; z = 1.0 };
       });
 

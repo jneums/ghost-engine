@@ -1,13 +1,13 @@
 import T "Types";
-import Math "../math";
 import Components "../components";
 import Debug "mo:base/Debug";
 import World "mo:geecs/World";
+import Vector3 "../math/Vector3";
 
 module {
   public type Args = {
     entityId : Nat;
-    position : Math.Types.Vector3;
+    position : Vector3.Vector3;
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {

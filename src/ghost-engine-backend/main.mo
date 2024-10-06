@@ -14,6 +14,8 @@ import Updates "utils/Updates";
 import Player "utils/Player";
 import Systems "utils/Systems";
 import Mines "utils/Mines";
+import Entities "utils/Entities";
+import Blocks "utils/Blocks";
 
 actor {
   // ECS state
@@ -45,6 +47,7 @@ actor {
 
   // Initialization
   Systems.register(ctx);
+  Blocks.initialize(ctx);
   Mines.initialize(ctx);
 
   // Game loop runs all the systems
@@ -55,9 +58,9 @@ actor {
     await ECS.World.update(ctx, deltaTime);
     lastTick := thisTick;
 
-    // Remove all updates older than 5 seconds
-    let fiveSecondsAgo = thisTick - 30 * 1_000_000_000;
-    let updated = Updates.filterByTimestamp(ctx.updatedComponents, fiveSecondsAgo);
+    // Remove all updates older than 30 seconds
+    let expiresAfter = thisTick - 30 * 1_000_000_000;
+    let updated = Updates.filterByTimestamp(ctx.updatedComponents, expiresAfter);
     Vector.clear(ctx.updatedComponents);
 
     for (update in Vector.vals(updated)) {
@@ -101,27 +104,43 @@ actor {
   };
 
   // Queries
-  public shared query func getState() : async [ECS.Types.Update<Components.Component>] {
-    let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
-    for ((entityId, components) in Map.entries(ctx.entities)) {
-      for (component in Map.vals(components)) {
-        let update = #Insert({
-          timestamp = Time.now();
-          entityId = entityId;
-          component = component;
-        });
-        Vector.add(currentState, update);
-      };
-    };
+  public shared query ({ caller }) func getState() : async [ECS.Types.Update<Components.Component>] {
+    switch (Player.findPlayersEntityId(ctx, caller)) {
+      case (?exists) {
+        let entities = Entities.filterByRange(ctx, exists);
+        let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
+        for ((entityId, components) in Map.entries(ctx.entities)) {
+          for (component in Map.vals(components)) {
+            let update = #Insert({
+              timestamp = Time.now();
+              entityId = entityId;
+              component = component;
+            });
+            Vector.add(currentState, update);
+          };
+        };
 
-    let updates = Updates.filterUpdatesForClient(currentState);
-    Vector.toArray(updates);
+        let updates = Updates.filterUpdatesForClient(currentState);
+        Debug.print("Entities: " # debug_show (updates));
+        Vector.toArray(updates);
+
+      };
+      case (_) { [] };
+    };
   };
 
-  public shared query func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
-    let recent = Updates.filterByTimestamp(ctx.updatedComponents, since);
-    let updates = Updates.filterUpdatesForClient(recent);
-    Vector.toArray(updates);
+  public shared query ({ caller }) func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
+    switch (Player.findPlayersEntityId(ctx, caller)) {
+      case (?exists) {
+        let entities = Entities.filterByRange(ctx, exists);
+        let filtered = Updates.filterByEntities(ctx.updatedComponents, entities);
+        let recent = Updates.filterByTimestamp(filtered, since);
+        let updates = Updates.filterUpdatesForClient(recent);
+        Vector.toArray(updates);
+
+      };
+      case (_) { [] };
+    };
   };
 
   // Mutations

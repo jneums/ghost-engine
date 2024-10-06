@@ -99,6 +99,25 @@ export class TargetComponent {
   constructor(public targetEntityId: number) {}
 }
 
+export class PlayerViewComponent {
+  constructor(public viewRadius: number) {}
+}
+
+export class UpdateChunksComponent {
+  constructor() {}
+}
+
+export class ChunksComponent {
+  constructor(public chunks: string[]) {}
+}
+
+export class BlocksComponent {
+  constructor(
+    public blockData: (Uint8Array | number[])[],
+    public chunkPositions: string[],
+  ) {}
+}
+
 export function createComponentClass(data: Component) {
   return match(data)
     .with({ PrincipalComponent: P.select() }, ({ principal }) => {
@@ -178,6 +197,18 @@ export function createComponentClass(data: Component) {
         return new RedeemTokensComponent(Number(startAt), Number(duration), to);
       },
     )
+    .with({ PlayerViewComponent: P.select() }, ({ viewRadius }) => {
+      return new PlayerViewComponent(Number(viewRadius));
+    })
+    .with({ UpdateChunksComponent: P.select() }, () => {
+      return new UpdateChunksComponent();
+    })
+    .with({ ChunksComponent: P.select() }, ({ chunks }) => {
+      return new ChunksComponent(chunks);
+    })
+    .with({ BlocksComponent: P.select() }, ({ blockData, chunkPositions }) => {
+      return new BlocksComponent(blockData, chunkPositions);
+    })
     .exhaustive();
 }
 
@@ -196,4 +227,7 @@ export const ComponentConstructors: Record<string, Function> = {
   CombatComponent: CombatComponent,
   HealthComponent: HealthComponent,
   RedeemTokensComponent: RedeemTokensComponent,
+  ChunksComponent: ChunksComponent,
+  UpdateChunksComponent: UpdateChunksComponent,
+  PlayerViewComponent: PlayerViewComponent,
 };

@@ -7,7 +7,7 @@ module {
     debug_show (a);
   };
   public let componentEqual = func(a : Components.Component, b : Components.Component) : Bool {
-    a == b;
+    debug_show (a) == debug_show (b);
   };
 
   public let createContext = func(nextEntityId : () -> Nat) : ECS.Types.Context<Components.Component> {

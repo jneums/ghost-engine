@@ -1,5 +1,8 @@
-import Math "../math";
+import Vector3 "../math/Vector3";
 import Time "mo:base/Time";
+import Nat8 "mo:base/Nat8";
+import Map "mo:stable-hash-map/Map/Map";
+import Quaternion "../math/Quaternion";
 
 module {
   // Define new component data types here...
@@ -17,7 +20,7 @@ module {
   };
 
   public type MoveTargetComponent = {
-    position : Math.Types.Vector3;
+    position : Vector3.Vector3;
   };
 
   public type RespawnComponent = {
@@ -26,13 +29,13 @@ module {
   };
 
   public type VelocityComponent = {
-    velocity : Math.Types.Vector3;
+    velocity : Vector3.Vector3;
   };
 
   public type TransformComponent = {
-    position : Math.Types.Vector3;
-    rotation : Math.Types.Quaternion;
-    scale : Math.Types.Vector3;
+    position : Vector3.Vector3;
+    rotation : Quaternion.Quaternion;
+    scale : Vector3.Vector3;
   };
 
   public type SessionComponent = {
@@ -76,6 +79,22 @@ module {
     to : Principal;
   };
 
+  public type BlocksComponent = {
+    chunkPositions : [Text]; // Array of chunk position keys
+    blockData : [[Nat8]]; // Array of block data corresponding to each chunk position
+  };
+
+  public type ChunksComponent = {
+    chunks : [Text]; // List of chunk positions
+  };
+
+  // Define a tag component for updating player chunks
+  public type UpdateChunksComponent = {};
+
+  public type PlayerViewComponent = {
+    viewRadius : Float; // Radius around the player to load chunks
+  };
+
   // Register component data types here...
   public type Component = {
     #PrincipalComponent : PrincipalComponent;
@@ -94,5 +113,11 @@ module {
     #DamageComponent : DamageComponent;
     #RespawnComponent : RespawnComponent;
     #RedeemTokensComponent : RedeemTokensComponent;
+    #ChunksComponent : ChunksComponent;
+    #PlayerViewComponent : PlayerViewComponent;
+    #UpdateChunksComponent : UpdateChunksComponent;
+
+    // Global block store for backend only
+    #BlocksComponent : BlocksComponent;
   };
 };
