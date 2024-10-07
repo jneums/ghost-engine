@@ -6,12 +6,12 @@ import Components "../components";
 import Vector3 "../math/Vector3";
 import Quaternion "../math/Quaternion";
 import Const "../utils/Const";
-import Terrain "../utils/Terrain";
+import Chunks "../utils/Chunks";
 
 module {
 
   // Define a tag component for updating player chunks
-  type UpdateChunksComponent = {};
+  type UpdatePlayerChunksComponent = {};
 
   // Private function to calculate the new position
   private func calculateNewPosition(transform : Components.TransformComponent, position : Components.MoveTargetComponent, velocity : Float) : Vector3.Vector3 {
@@ -72,12 +72,12 @@ module {
     ECS.World.addComponent(ctx, entityId, "TransformComponent", newTransform);
 
     // Check if the player has crossed a chunk boundary
-    let previousChunkPos = Terrain.getChunkPosition(transform.position);
-    let currentChunkPos = Terrain.getChunkPosition(newPosition);
+    let previousChunkPos = Chunks.getChunkPosition(transform.position);
+    let currentChunkPos = Chunks.getChunkPosition(newPosition);
 
     if (currentChunkPos != previousChunkPos) {
-      // Add the UpdateChunksComponent tag
-      ECS.World.addComponent(ctx, entityId, "UpdateChunksComponent", #UpdateChunksComponent({}));
+      // Add the UpdatePlayerChunksComponent tag
+      ECS.World.addComponent(ctx, entityId, "UpdatePlayerChunksComponent", #UpdatePlayerChunksComponent({}));
     };
   };
 

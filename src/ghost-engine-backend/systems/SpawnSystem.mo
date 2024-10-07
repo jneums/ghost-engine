@@ -3,12 +3,14 @@ import Time "mo:base/Time";
 import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
 import Principal "mo:base/Principal";
+import Float "mo:base/Float";
 import Components "../components";
 import Random "mo:noise/Random";
 import env "../env";
 import Tokens "../utils/Tokens";
 import Vector3 "../math/Vector3";
 import Quaternion "../math/Quaternion";
+import Const "../utils/Const";
 
 module {
 
@@ -29,7 +31,7 @@ module {
 
     {
       x = spawnX;
-      y = 0.0;
+      y = Float.fromInt(Const.CHUNK_HEIGHT);
       z = spawnZ;
     };
   };

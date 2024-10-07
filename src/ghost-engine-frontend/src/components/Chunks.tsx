@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ChunksComponent } from '.';
+import { PlayerChunksComponent } from '.';
 import { useWorld } from '../context/WorldProvider';
 import Chunk from './Chunk';
 import { getPlayerEntityId } from '../utils';
@@ -22,7 +22,7 @@ export default function Chunks() {
     return null;
   }
 
-  const chunks = entity.getComponent(ChunksComponent);
+  const chunks = entity.getComponent(PlayerChunksComponent);
 
   const unitComponents = useMemo(
     () =>

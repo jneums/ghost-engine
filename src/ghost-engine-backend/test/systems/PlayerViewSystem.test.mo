@@ -5,13 +5,13 @@ import Principal "mo:base/Principal";
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";
 import Nat "mo:base/Nat";
+import Text "mo:base/Text";
 import Components "../../components";
-import { TerrainSystem } "../../systems/TerrainSystem";
+import { PlayerViewSystem } "../../systems/PlayerViewSystem";
 import Utils "../Utils";
-import Entities "../../utils/Entities";
 
 suite(
-  "Terrain System",
+  "Player View System",
   func() : async () {
 
     // Initialize the entity counter:
@@ -44,20 +44,32 @@ suite(
     });
     ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
+    let chunks = #PlayerChunksComponent({
+      chunks = [];
+    });
+    ECS.World.addComponent(ctx, entityId, "PlayerChunksComponent", chunks);
+
+    let updateChunks = #UpdatePlayerChunksComponent({});
+    ECS.World.addComponent(ctx, entityId, "UpdatePlayerChunksComponent", updateChunks);
+
     await test(
       "Can receive new chunks around origin when starting at 0,0",
       func() : async () {
 
-        // Run the TerrainSystem update
-        await TerrainSystem.update(ctx, entityId, 0);
+        // Run the PlayerViewSystem update
+        await PlayerViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allChunks = ECS.World.getEntitiesByArchetype(ctx, ["ChunkComponent"]);
-        expect.nat(Array.size(allChunks)).equal(9);
+        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
+        switch (allPlayerChunks) {
+          case (? #PlayerChunksComponent(chunks)) {
+            expect.nat(Array.size(chunks.chunks)).equal(9);
 
-        let visibleEntities = Entities.filterByRange(ctx, entityId);
-        expect.nat(Array.size(visibleEntities)).equal(10); // Add 1 for the player entity
-        expect.array(visibleEntities, Nat.toText, Nat.equal).equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+            let visibleChunks = ["-1,0,-1", "-1,0,0", "-1,0,1", "0,0,-1", "0,0,0", "0,0,1", "1,0,-1", "1,0,0", "1,0,1"];
+            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+          };
+          case (_) {};
+        };
       },
     );
 
@@ -72,16 +84,20 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the TerrainSystem update
-        await TerrainSystem.update(ctx, entityId, 0);
+        // Run the PlayerViewSystem update
+        await PlayerViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allChunks = ECS.World.getEntitiesByArchetype(ctx, ["ChunkComponent"]);
-        expect.nat(Array.size(allChunks)).equal(12);
+        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
+        switch (allPlayerChunks) {
+          case (? #PlayerChunksComponent(chunks)) {
+            expect.nat(Array.size(chunks.chunks)).equal(9);
 
-        let visibleEntities = Entities.filterByRange(ctx, entityId);
-        expect.nat(Array.size(visibleEntities)).equal(10);
-        expect.array(visibleEntities, Nat.toText, Nat.equal).equal([1, 3, 4, 6, 7, 9, 10, 11, 12, 13]);
+            let visibleChunks = ["-1,0,0", "-1,0,1", "-1,0,2", "0,0,0", "0,0,1", "0,0,2", "1,0,0", "1,0,1", "1,0,2"];
+            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+          };
+          case (_) {};
+        };
       },
     );
 
@@ -96,16 +112,21 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the TerrainSystem update
-        await TerrainSystem.update(ctx, entityId, 0);
+        // Run the PlayerViewSystem update
+        await PlayerViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allChunks = ECS.World.getEntitiesByArchetype(ctx, ["ChunkComponent"]);
-        expect.nat(Array.size(allChunks)).equal(12);
+        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
+        switch (allPlayerChunks) {
+          case (? #PlayerChunksComponent(chunks)) {
+            expect.nat(Array.size(chunks.chunks)).equal(9);
 
-        let visibleEntities = Entities.filterByRange(ctx, entityId);
-        expect.nat(Array.size(visibleEntities)).equal(10);
-        expect.array(visibleEntities, Nat.toText, Nat.equal).equal([1, 3, 4, 6, 7, 9, 10, 11, 12, 13]);
+            let visibleChunks = ["-1,0,1", "-1,0,2", "-1,0,3", "0,0,1", "0,0,2", "0,0,3", "1,0,1", "1,0,2", "1,0,3"];
+            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+          };
+          case (_) {};
+        };
+
       },
     );
 
@@ -120,16 +141,20 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the TerrainSystem update
-        await TerrainSystem.update(ctx, entityId, 0);
+        // Run the PlayerViewSystem update
+        await PlayerViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allChunks = ECS.World.getEntitiesByArchetype(ctx, ["ChunkComponent"]);
-        expect.nat(Array.size(allChunks)).equal(15);
+        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
+        switch (allPlayerChunks) {
+          case (? #PlayerChunksComponent(chunks)) {
+            expect.nat(Array.size(chunks.chunks)).equal(9);
 
-        let visibleEntities = Entities.filterByRange(ctx, entityId);
-        expect.nat(Array.size(visibleEntities)).equal(10);
-        expect.array(visibleEntities, Nat.toText, Nat.equal).equal([1, 5, 6, 7, 8, 9, 10, 14, 15, 16]);
+            let visibleChunks = ["0,0,-1", "0,0,0", "0,0,1", "1,0,-1", "1,0,0", "1,0,1", "2,0,-1", "2,0,0", "2,0,1"];
+            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+          };
+          case (_) {};
+        };
 
       },
     );
@@ -145,16 +170,20 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the TerrainSystem update
-        await TerrainSystem.update(ctx, entityId, 0);
+        // Run the PlayerViewSystem update
+        await PlayerViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allChunks = ECS.World.getEntitiesByArchetype(ctx, ["ChunkComponent"]);
-        expect.nat(Array.size(allChunks)).equal(18);
+        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
+        switch (allPlayerChunks) {
+          case (? #PlayerChunksComponent(chunks)) {
+            expect.nat(Array.size(chunks.chunks)).equal(9);
 
-        let visibleEntities = Entities.filterByRange(ctx, entityId);
-        expect.nat(Array.size(visibleEntities)).equal(10);
-        expect.array(visibleEntities, Nat.toText, Nat.equal).equal([1, 2, 3, 4, 5, 6, 7, 17, 18, 19]);
+            let visibleChunks = ["-2,0,-1", "-2,0,0", "-2,0,1", "-1,0,-1", "-1,0,0", "-1,0,1", "0,0,-1", "0,0,0", "0,0,1"];
+            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+          };
+          case (_) {};
+        };
       },
     );
   },

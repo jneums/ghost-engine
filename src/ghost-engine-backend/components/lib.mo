@@ -82,14 +82,15 @@ module {
   public type BlocksComponent = {
     chunkPositions : [Text]; // Array of chunk position keys
     blockData : [[Nat8]]; // Array of block data corresponding to each chunk position
+    chunkStatus : [Nat8]; // Array of status corresponding to each chunk position
   };
 
-  public type ChunksComponent = {
+  public type PlayerChunksComponent = {
     chunks : [Text]; // List of chunk positions
   };
 
   // Define a tag component for updating player chunks
-  public type UpdateChunksComponent = {};
+  public type UpdatePlayerChunksComponent = {};
 
   public type PlayerViewComponent = {
     viewRadius : Float; // Radius around the player to load chunks
@@ -113,9 +114,9 @@ module {
     #DamageComponent : DamageComponent;
     #RespawnComponent : RespawnComponent;
     #RedeemTokensComponent : RedeemTokensComponent;
-    #ChunksComponent : ChunksComponent;
+    #PlayerChunksComponent : PlayerChunksComponent;
     #PlayerViewComponent : PlayerViewComponent;
-    #UpdateChunksComponent : UpdateChunksComponent;
+    #UpdatePlayerChunksComponent : UpdatePlayerChunksComponent;
 
     // Global block store for backend only
     #BlocksComponent : BlocksComponent;

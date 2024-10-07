@@ -1,9 +1,8 @@
 import { Canvas } from '@react-three/fiber';
-import { Sky } from '@react-three/drei';
+import { Sky, Stats } from '@react-three/drei';
 import Players from '../components/Players';
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import Ground from '../components/Ground';
 import Mines from '../components/Mines';
 import PlayerCard from '../components/PlayerCard';
 import TargetCard from '../components/TargetCard';
@@ -16,7 +15,7 @@ import PlayerStats from '../components/PlayerStats';
 import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { getIsPlayerDead, getPlayerEntityId } from '../utils';
-import { SessionComponent } from '../components';
+import { SessionComponent, TransformComponent } from '../components';
 import Chunks from '../components/Chunks';
 
 export default function Game() {
@@ -75,12 +74,30 @@ export default function Game() {
     );
   }
 
+  const transform = world
+    .getEntity(playerEntityId)
+    ?.getComponent(TransformComponent);
+
+  if (!transform) {
+    return null;
+  }
+
   return (
     <>
-      <Canvas shadows gl={{ alpha: false }}>
-        <Sky sunPosition={[100, 20, 100]} />
-        <ambientLight intensity={1} />
-        <pointLight castShadow intensity={100000} position={[100, 100, 100]} />
+      <Canvas
+        onPointerMissed={(e) => console.log('missed: ', e)}
+        shadows
+        gl={{ alpha: false }}
+        camera={{
+          position: [
+            transform.position.x,
+            transform.position.y,
+            transform.position.x,
+          ],
+        }}>
+        <Sky sunPosition={[10, 200, 10]} />
+        <ambientLight intensity={0.1} />
+        <pointLight castShadow intensity={100000} position={[100, 500, 100]} />
         <color attach="background" args={['#f0f0f0']} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         <Chunks />
@@ -92,6 +109,7 @@ export default function Game() {
       <TargetCard />
       <GameStats />
       <LogoutButton />
+      <Stats />
     </>
   );
 }

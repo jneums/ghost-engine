@@ -18,8 +18,8 @@ import { useErrorMessage } from '../context/ErrorProvider';
 import { getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 
-const CAMERA_FOLLOW_DISTANCE = 7; // Distance threshold for the camera to start following
-const CAMERA_HEIGHT = 1.5; // Fixed height for the camera
+const CAMERA_FOLLOW_DISTANCE = 10; // Distance threshold for the camera to start following
+const CAMERA_HEIGHT = 10; // Fixed height for the camera
 
 const followDirection = new THREE.Vector3();
 const direction = new THREE.Vector3();
@@ -169,7 +169,12 @@ export default function Player({ entityId }: { entityId: number }) {
 
   return (
     <>
-      <mesh name={name} ref={meshRef} onClick={handleRightClick}>
+      <mesh
+        name={name}
+        ref={meshRef}
+        onClick={handleRightClick}
+        castShadow
+        receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshPhongMaterial color={color} />
         {isPlayer && (

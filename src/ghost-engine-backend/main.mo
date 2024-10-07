@@ -3,6 +3,7 @@ import Timer "mo:base/Timer";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
 import Array "mo:base/Array";
+import Nat8 "mo:base/Nat8";
 import Vector "mo:vector";
 import Map "mo:stable-hash-map/Map/Map";
 import ECS "mo:geecs";
@@ -137,10 +138,15 @@ actor {
         let recent = Updates.filterByTimestamp(filtered, since);
         let updates = Updates.filterUpdatesForClient(recent);
         Vector.toArray(updates);
-
       };
       case (_) { [] };
     };
+  };
+
+  // Get block data for a chunk
+  public shared query ({ caller }) func getChunk(chunkId : Text) : async [Nat8] {
+    // TODO: Check if the player is allowed to access this chunk
+    Blocks.getBlocks(ctx, chunkId);
   };
 
   // Mutations

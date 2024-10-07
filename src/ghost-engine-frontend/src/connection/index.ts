@@ -22,6 +22,13 @@ export class Connection {
     await this.server.putAction(message);
   }
 
+  public async getChunk(chunkId: string): Promise<Uint8Array | number[]> {
+    if (!this.server) {
+      throw new Error('Not connected to the canister');
+    }
+    return await this.server.getChunk(chunkId);
+  }
+
   public initialize(
     identity: Identity,
     world: World,
