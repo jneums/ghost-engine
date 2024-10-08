@@ -15,7 +15,7 @@ module {
       switch (update) {
         case (#Insert({ component })) {
           switch (component) {
-            case (#MoveTargetComponent(_) or #BlocksComponent(_)) {
+            case (#MoveTargetComponent(_) or #BlocksComponent(_) or #UpdateBlocksComponent(_)) {
               continue filterUpdates;
             };
             case (_) {};
@@ -23,7 +23,7 @@ module {
         };
         case (#Delete({ componentType })) {
           switch (componentType) {
-            case ("MoveTargetComponent") {
+            case ("MoveTargetComponent" or "UpdateBlocksComponent") {
               continue filterUpdates;
             };
             case (_) {};

@@ -10,7 +10,6 @@ import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
 
 const DRAG_THRESHOLD = 5;
 
-// Define the faces of a cube
 const FACES = [
   {
     dir: [-1, 0, 0],
@@ -68,9 +67,9 @@ const FACES = [
   },
 ];
 
-const geometry = new THREE.BufferGeometry();
+const geom = new THREE.BufferGeometry();
 
-export default function Chunk({ chunkId }: { chunkId: string }) {
+export default function Chunk({ x, z }: { x: number; z: number }) {
   const { world, connection } = useWorld();
   const { identity } = useInternetIdentity();
   const { setErrorMessage } = useErrorMessage();
@@ -82,7 +81,7 @@ export default function Chunk({ chunkId }: { chunkId: string }) {
 
   useEffect(() => {
     if (!blocks.length) {
-      connection.getChunk(chunkId).then((blocks) => {
+      connection.getChunk({ x, y: 0, z }).then((blocks) => {
         setBlocks(blocks);
       });
       setBlocks(blocks);
@@ -114,20 +113,19 @@ export default function Chunk({ chunkId }: { chunkId: string }) {
       const move = new MoveAction(world, connection);
       move.handle({
         entityId: playerEntityId,
-        position: new THREE.Vector3(e.point.x, CHUNK_HEIGHT, e.point.z),
+        position: new THREE.Vector3(e.point.x, e.point.y, e.point.z),
       });
     },
     [world, connection, setErrorMessage],
   );
-
   const generateVoxelGeometry = useCallback(() => {
     const positions = [];
     const normals = [];
     const indices = [];
 
     for (let y = 0; y < CHUNK_HEIGHT; ++y) {
-      for (let x = 0; x < CHUNK_SIZE; ++x) {
-        for (let z = 0; z < CHUNK_SIZE; ++z) {
+      for (let z = 0; z < CHUNK_SIZE; ++z) {
+        for (let x = 0; x < CHUNK_SIZE; ++x) {
           const index = x + z * CHUNK_SIZE + y * CHUNK_SIZE * CHUNK_SIZE;
           const voxel = blocks[index];
           if (voxel) {
@@ -135,20 +133,26 @@ export default function Chunk({ chunkId }: { chunkId: string }) {
               const neighborX = x + dir[0];
               const neighborY = y + dir[1];
               const neighborZ = z + dir[2];
-              const neighborIndex =
-                neighborX +
-                neighborZ * CHUNK_SIZE +
-                neighborY * CHUNK_SIZE * CHUNK_SIZE;
-              const neighbor =
-                neighborX >= 0 &&
-                neighborX < CHUNK_SIZE &&
-                neighborY >= 0 &&
-                neighborY < CHUNK_HEIGHT &&
-                neighborZ >= 0 &&
-                neighborZ < CHUNK_SIZE
-                  ? blocks[neighborIndex]
-                  : 0;
-              if (neighborY >= CHUNK_HEIGHT || !neighbor) {
+
+              // Check if the neighbor is outside the current chunk
+              const isOutsideChunk =
+                neighborX < 0 ||
+                neighborX >= CHUNK_SIZE ||
+                neighborY < 0 ||
+                neighborY >= CHUNK_HEIGHT ||
+                neighborZ < 0 ||
+                neighborZ >= CHUNK_SIZE;
+
+              let neighbor = 0;
+              if (!isOutsideChunk) {
+                const neighborIndex =
+                  neighborX +
+                  neighborZ * CHUNK_SIZE +
+                  neighborY * CHUNK_SIZE * CHUNK_SIZE;
+                neighbor = blocks[neighborIndex] || 0;
+              }
+
+              if (!neighbor) {
                 const ndx = positions.length / 3;
                 for (const pos of corners) {
                   positions.push(pos[0] + x, pos[1] + y, pos[2] + z);
@@ -168,7 +172,6 @@ export default function Chunk({ chunkId }: { chunkId: string }) {
   const geometry = useMemo(() => {
     const { positions, normals, indices } = generateVoxelGeometry();
 
-    const geom = new THREE.BufferGeometry();
     geom.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(positions, 3),
@@ -187,16 +190,18 @@ export default function Chunk({ chunkId }: { chunkId: string }) {
     return null;
   }
 
-  const position = chunkId
-    .split(',')
-    .map((pos) => parseFloat(pos) * CHUNK_SIZE) as [number, number, number];
+  const chunkPosition = [x * CHUNK_SIZE, 0, z * CHUNK_SIZE] as [
+    number,
+    number,
+    number,
+  ];
 
   return (
     <mesh
-      position={[position[0], 0, position[2]]} // Set Y position to 0 to align with the ground
+      position={chunkPosition} // Set Y position to 0 to align with the ground
       onClick={handleRightClick}
       geometry={geometry}>
-      <meshStandardMaterial roughness={1} color={0xaaaaaa} wireframe />
+      <meshStandardMaterial roughness={1} color={0xaaaaaa} />
     </mesh>
   );
 }

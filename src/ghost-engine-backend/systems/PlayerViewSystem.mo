@@ -12,8 +12,8 @@ import Vector3 "../math/Vector3";
 
 module {
   // Generate a list of chunk IDs around the player
-  func generateChunkIds(playerChunkPos : Vector3.Vector3, chunkRange : Int) : [Text] {
-    let chunks = Vector.new<Text>();
+  func generateChunkPositions(playerChunkPos : Vector3.Vector3, chunkRange : Int) : [Vector3.Vector3] {
+    let chunks = Vector.new<Vector3.Vector3>();
     var x : Int = -chunkRange;
     while (x <= chunkRange) {
       var z : Int = -chunkRange;
@@ -23,8 +23,7 @@ module {
           y = 0.0;
           z = (playerChunkPos.z + Float.fromInt(z));
         };
-        let chunkId = Blocks.blockIdFromVector3(chunkPos);
-        Vector.add(chunks, chunkId);
+        Vector.add(chunks, chunkPos);
         z += 1;
       };
       x += 1;
@@ -50,11 +49,23 @@ module {
         let playerChunkPos = Chunks.getChunkPosition(transform.position);
         let chunkRange = Float.toInt(playerView.viewRadius / floatChunkSize);
 
-        let newChunkIds = generateChunkIds(playerChunkPos, chunkRange);
-        let updatedChunks = #PlayerChunksComponent({ chunks = newChunkIds });
+        let newChunkPositions = generateChunkPositions(playerChunkPos, chunkRange);
+        let updatedChunks = #PlayerChunksComponent({
+          chunks = newChunkPositions;
+        });
 
         ECS.World.addComponent(ctx, entityId, "PlayerChunksComponent", updatedChunks);
         ECS.World.removeComponent(ctx, entityId, "UpdatePlayerChunksComponent");
+
+        // Trigger the BlcoksSystem to update the blocks
+        let blocksEntityId = Blocks.getEntityId(ctx);
+        Debug.print("Blocks entity ID: " # debug_show (blocksEntityId));
+        switch (blocksEntityId) {
+          case (?exists) {
+            ECS.World.addComponent(ctx, exists, "UpdateBlocksComponent", #UpdateBlocksComponent({}));
+          };
+          case (_) {};
+        };
       };
       case (_) {};
     };

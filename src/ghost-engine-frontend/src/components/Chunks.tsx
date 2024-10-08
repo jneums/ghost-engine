@@ -26,8 +26,8 @@ export default function Chunks() {
 
   const unitComponents = useMemo(
     () =>
-      chunks.chunks.map((entityId) => (
-        <Chunk key={entityId} chunkId={entityId} />
+      chunks.chunks.map((chunkPos, idx) => (
+        <Chunk key={idx} x={chunkPos.x} z={chunkPos.z} />
       )),
     [chunks.chunks],
   );

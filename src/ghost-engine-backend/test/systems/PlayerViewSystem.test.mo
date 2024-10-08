@@ -9,6 +9,7 @@ import Text "mo:base/Text";
 import Components "../../components";
 import { PlayerViewSystem } "../../systems/PlayerViewSystem";
 import Utils "../Utils";
+import Vector3 "../../math/Vector3";
 
 suite(
   "Player View System",
@@ -64,9 +65,18 @@ suite(
         switch (allPlayerChunks) {
           case (? #PlayerChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
-
-            let visibleChunks = ["-1,0,-1", "-1,0,0", "-1,0,1", "0,0,-1", "0,0,0", "0,0,1", "1,0,-1", "1,0,0", "1,0,1"];
-            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+            let visibleChunks = [
+              { x = -1.0; y = 0.0; z = -1.0 },
+              { x = -1.0; y = 0.0; z = 0.0 },
+              { x = -1.0; y = 0.0; z = 1.0 },
+              { x = 0.0; y = 0.0; z = -1.0 },
+              { x = 0.0; y = 0.0; z = 0.0 },
+              { x = 0.0; y = 0.0; z = 1.0 },
+              { x = 1.0; y = 0.0; z = -1.0 },
+              { x = 1.0; y = 0.0; z = 0.0 },
+              { x = 1.0; y = 0.0; z = 1.0 },
+            ];
+            expect.array(chunks.chunks, func(x : Vector3.Vector3) : Text { debug_show (x) }, Vector3.equal).equal(visibleChunks);
           };
           case (_) {};
         };
@@ -93,8 +103,18 @@ suite(
           case (? #PlayerChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
-            let visibleChunks = ["-1,0,0", "-1,0,1", "-1,0,2", "0,0,0", "0,0,1", "0,0,2", "1,0,0", "1,0,1", "1,0,2"];
-            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+            let visibleChunks = [
+              { x = -1.0; y = 0.0; z = 0.0 },
+              { x = -1.0; y = 0.0; z = 1.0 },
+              { x = -1.0; y = 0.0; z = 2.0 },
+              { x = 0.0; y = 0.0; z = 0.0 },
+              { x = 0.0; y = 0.0; z = 1.0 },
+              { x = 0.0; y = 0.0; z = 2.0 },
+              { x = 1.0; y = 0.0; z = 0.0 },
+              { x = 1.0; y = 0.0; z = 1.0 },
+              { x = 1.0; y = 0.0; z = 2.0 },
+            ];
+            expect.array(chunks.chunks, func(x : Vector3.Vector3) : Text { debug_show (x) }, Vector3.equal).equal(visibleChunks);
           };
           case (_) {};
         };
@@ -121,8 +141,18 @@ suite(
           case (? #PlayerChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
-            let visibleChunks = ["-1,0,1", "-1,0,2", "-1,0,3", "0,0,1", "0,0,2", "0,0,3", "1,0,1", "1,0,2", "1,0,3"];
-            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+            let visibleChunks = [
+              { x = -1.0; y = 0.0; z = 0.0 },
+              { x = -1.0; y = 0.0; z = 1.0 },
+              { x = -1.0; y = 0.0; z = 2.0 },
+              { x = 0.0; y = 0.0; z = 0.0 },
+              { x = 0.0; y = 0.0; z = 1.0 },
+              { x = 0.0; y = 0.0; z = 2.0 },
+              { x = 1.0; y = 0.0; z = 0.0 },
+              { x = 1.0; y = 0.0; z = 1.0 },
+              { x = 1.0; y = 0.0; z = 2.0 },
+            ];
+            expect.array(chunks.chunks, func(x : Vector3.Vector3) : Text { debug_show (x) }, Vector3.equal).equal(visibleChunks);
           };
           case (_) {};
         };
@@ -150,8 +180,18 @@ suite(
           case (? #PlayerChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
-            let visibleChunks = ["0,0,-1", "0,0,0", "0,0,1", "1,0,-1", "1,0,0", "1,0,1", "2,0,-1", "2,0,0", "2,0,1"];
-            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+            let visibleChunks = [
+              { x = 0.0; y = 0.0; z = -1.0 },
+              { x = 0.0; y = 0.0; z = 0.0 },
+              { x = 0.0; y = 0.0; z = 1.0 },
+              { x = 1.0; y = 0.0; z = -1.0 },
+              { x = 1.0; y = 0.0; z = 0.0 },
+              { x = 1.0; y = 0.0; z = 1.0 },
+              { x = 2.0; y = 0.0; z = -1.0 },
+              { x = 2.0; y = 0.0; z = 0.0 },
+              { x = 2.0; y = 0.0; z = 1.0 },
+            ];
+            expect.array(chunks.chunks, func(x : Vector3.Vector3) : Text { debug_show (x) }, Vector3.equal).equal(visibleChunks);
           };
           case (_) {};
         };
@@ -179,8 +219,18 @@ suite(
           case (? #PlayerChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
-            let visibleChunks = ["-2,0,-1", "-2,0,0", "-2,0,1", "-1,0,-1", "-1,0,0", "-1,0,1", "0,0,-1", "0,0,0", "0,0,1"];
-            expect.array(chunks.chunks, func(x : Text) : Text { x }, Text.equal).equal(visibleChunks);
+            let visibleChunks = [
+              { x = -2.0; y = 0.0; z = -1.0 },
+              { x = -2.0; y = 0.0; z = 0.0 },
+              { x = -2.0; y = 0.0; z = 1.0 },
+              { x = -1.0; y = 0.0; z = -1.0 },
+              { x = -1.0; y = 0.0; z = 0.0 },
+              { x = -1.0; y = 0.0; z = 1.0 },
+              { x = 0.0; y = 0.0; z = -1.0 },
+              { x = 0.0; y = 0.0; z = 0.0 },
+              { x = 0.0; y = 0.0; z = 1.0 },
+            ];
+            expect.array(chunks.chunks, func(x : Vector3.Vector3) : Text { debug_show (x) }, Vector3.equal).equal(visibleChunks);
           };
           case (_) {};
         };

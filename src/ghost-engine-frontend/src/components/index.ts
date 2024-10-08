@@ -108,14 +108,18 @@ export class UpdatePlayerChunksComponent {
 }
 
 export class PlayerChunksComponent {
-  constructor(public chunks: string[]) {}
+  constructor(public chunks: THREE.Vector3[]) {}
 }
 
 export class BlocksComponent {
   constructor(
     public blockData: (Uint8Array | number[])[],
-    public chunkPositions: string[],
+    public chunkPositions: THREE.Vector3[],
   ) {}
+}
+
+export class UpdateBlocksComponent {
+  constructor() {}
 }
 
 export function createComponentClass(data: Component) {
@@ -134,10 +138,8 @@ export function createComponentClass(data: Component) {
         new THREE.Vector3(position.x, position.y, position.z),
       );
     })
-    .with({ VelocityComponent: P.select() }, ({ velocity }) => {
-      return new VelocityComponent(
-        new THREE.Vector3(velocity.x, velocity.y, velocity.z),
-      );
+    .with({ VelocityComponent: P.select() }, ({ x, y, z }) => {
+      return new VelocityComponent(new THREE.Vector3(x, y, z));
     })
     .with(
       { TransformComponent: P.select() },
@@ -204,10 +206,18 @@ export function createComponentClass(data: Component) {
       return new UpdatePlayerChunksComponent();
     })
     .with({ PlayerChunksComponent: P.select() }, ({ chunks }) => {
-      return new PlayerChunksComponent(chunks);
+      return new PlayerChunksComponent(
+        chunks.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
+      );
     })
     .with({ BlocksComponent: P.select() }, ({ blockData, chunkPositions }) => {
-      return new BlocksComponent(blockData, chunkPositions);
+      return new BlocksComponent(
+        blockData,
+        chunkPositions.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
+      );
+    })
+    .with({ UpdateBlocksComponent: P.select() }, () => {
+      return new UpdateBlocksComponent();
     })
     .exhaustive();
 }

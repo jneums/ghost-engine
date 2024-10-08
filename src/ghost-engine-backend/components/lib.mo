@@ -1,7 +1,6 @@
 import Vector3 "../math/Vector3";
 import Time "mo:base/Time";
 import Nat8 "mo:base/Nat8";
-import Map "mo:stable-hash-map/Map/Map";
 import Quaternion "../math/Quaternion";
 
 module {
@@ -29,7 +28,9 @@ module {
   };
 
   public type VelocityComponent = {
-    velocity : Vector3.Vector3;
+    x : Float;
+    y : Float;
+    z : Float;
   };
 
   public type TransformComponent = {
@@ -80,13 +81,15 @@ module {
   };
 
   public type BlocksComponent = {
-    chunkPositions : [Text]; // Array of chunk position keys
+    chunkPositions : [Vector3.Vector3]; // Array of chunk positions
     blockData : [[Nat8]]; // Array of block data corresponding to each chunk position
     chunkStatus : [Nat8]; // Array of status corresponding to each chunk position
   };
 
+  public type UpdateBlocksComponent = {};
+
   public type PlayerChunksComponent = {
-    chunks : [Text]; // List of chunk positions
+    chunks : [Vector3.Vector3]; // List of chunk positions
   };
 
   // Define a tag component for updating player chunks
@@ -120,5 +123,6 @@ module {
 
     // Global block store for backend only
     #BlocksComponent : BlocksComponent;
+    #UpdateBlocksComponent : UpdateBlocksComponent;
   };
 };

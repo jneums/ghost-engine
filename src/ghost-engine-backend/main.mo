@@ -17,6 +17,7 @@ import Systems "utils/Systems";
 import Mines "utils/Mines";
 import Entities "utils/Entities";
 import Blocks "utils/Blocks";
+import Vector3 "math/Vector3";
 
 actor {
   // ECS state
@@ -144,9 +145,9 @@ actor {
   };
 
   // Get block data for a chunk
-  public shared query ({ caller }) func getChunk(chunkId : Text) : async [Nat8] {
+  public shared query ({ caller }) func getChunk(chunkPos : Vector3.Vector3) : async [Nat8] {
     // TODO: Check if the player is allowed to access this chunk
-    Blocks.getBlocks(ctx, chunkId);
+    Blocks.getBlocks(ctx, chunkPos);
   };
 
   // Mutations

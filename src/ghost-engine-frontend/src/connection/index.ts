@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { canisterId, createActor } from '../declarations/ghost-engine-backend';
 import {
   _SERVICE,
@@ -22,7 +23,11 @@ export class Connection {
     await this.server.putAction(message);
   }
 
-  public async getChunk(chunkId: string): Promise<Uint8Array | number[]> {
+  public async getChunk(chunkId: {
+    x: number;
+    y: number;
+    z: number;
+  }): Promise<Uint8Array | number[]> {
     if (!this.server) {
       throw new Error('Not connected to the canister');
     }

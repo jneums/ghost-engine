@@ -26,15 +26,23 @@ suite(
     // Create a new entity with a BlocksComponent
     let entityId = ECS.World.addEntity(ctx);
     let blocksComponent = #BlocksComponent({
-      chunkPositions = ["chunk1", "chunk2"];
+      chunkPositions = [{ x = 0.0; y = 0.0; z = 0.0 }, { x = 1.0; y = 0.0; z = 0.0 }];
       blockData = [[] : [Nat8], [] : [Nat8]];
-      chunkStatus = [1 : Nat8, 0 : Nat8];
+      chunkStatus = [0 : Nat8, 0 : Nat8];
     });
     ECS.World.addComponent(ctx, entityId, "BlocksComponent", blocksComponent);
 
+    let playerEntityId = ECS.World.addEntity(ctx);
+
     await test(
-      "Generates blocks for chunks with status 1",
+      "Generates blocks for chunks that player is in",
       func() : async () {
+        // Add player chunks component
+        let playerChunks = #PlayerChunksComponent({
+          chunks = [{ x = 0.0; y = 0.0; z = 0.0 }];
+        });
+        ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", playerChunks);
+
         // Run the BlocksSystem update
         await BlocksSystem.update(ctx, entityId, 0);
 
@@ -55,13 +63,11 @@ suite(
     await test(
       "Deletes blocks for chunks with status 0",
       func() : async () {
-        // Set status of chunk1 to 0 and chunk2 to 1
-        let blocks = #BlocksComponent({
-          chunkPositions = ["chunk1", "chunk2"];
-          blockData = [[] : [Nat8], [] : [Nat8]];
-          chunkStatus = [0 : Nat8, 1 : Nat8];
+        // Add player chunks component
+        let playerChunks = #PlayerChunksComponent({
+          chunks = [{ x = 1.0; y = 0.0; z = 0.0 }];
         });
-        ECS.World.addComponent(ctx, entityId, "BlocksComponent", blocks);
+        ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", playerChunks);
 
         // Run the BlocksSystem update
         await BlocksSystem.update(ctx, entityId, 0);
