@@ -18,21 +18,6 @@ import { useErrorMessage } from '../context/ErrorProvider';
 import { getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 
-const CAMERA_FOLLOW_DISTANCE = 10; // Distance threshold for the camera to start following
-const CAMERA_HEIGHT = 10; // Fixed height for the camera
-
-const followDirection = new THREE.Vector3();
-const direction = new THREE.Vector3();
-const targetQuaternion = new THREE.Quaternion();
-const rotationMatrix = new THREE.Matrix4();
-const arrowHelperDirection = new THREE.Vector3(0, 0, 1);
-const arowHelperOrigin = new THREE.Vector3(0, 0, 0);
-const behindOffset = new THREE.Vector3(
-  0,
-  CAMERA_HEIGHT,
-  -CAMERA_FOLLOW_DISTANCE,
-);
-
 export default function Player({ entityId }: { entityId: number }) {
   const { world, connection } = useWorld();
   const { identity } = useInternetIdentity();
@@ -42,6 +27,21 @@ export default function Player({ entityId }: { entityId: number }) {
   const arrowHelperRef = useRef<THREE.ArrowHelper>(null);
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const { setErrorMessage } = useErrorMessage();
+
+  const CAMERA_FOLLOW_DISTANCE = 10; // Distance threshold for the camera to start following
+  const CAMERA_HEIGHT = 10; // Fixed height for the camera
+
+  const followDirection = new THREE.Vector3();
+  const direction = new THREE.Vector3();
+  const targetQuaternion = new THREE.Quaternion();
+  const rotationMatrix = new THREE.Matrix4();
+  const arrowHelperDirection = new THREE.Vector3(0, 0, 1);
+  const arowHelperOrigin = new THREE.Vector3(0, 0, 0);
+  const behindOffset = new THREE.Vector3(
+    0,
+    CAMERA_HEIGHT,
+    -CAMERA_FOLLOW_DISTANCE,
+  );
 
   const velocity = 2; // units per second
   const epsilon = 0.05; // Small value to prevent shaking
@@ -197,73 +197,73 @@ export default function Player({ entityId }: { entityId: number }) {
       )}
     </>
   );
-}
 
-function updatePosition(
-  clientTransform: TransformComponent,
-  targetPosition: THREE.Vector3,
-  delta: number,
-  velocity: number,
-  epsilon: number,
-) {
-  direction.subVectors(targetPosition, clientTransform.position).normalize();
-  const distance = velocity * delta;
-  const moveVector = direction.multiplyScalar(distance);
+  function updatePosition(
+    clientTransform: TransformComponent,
+    targetPosition: THREE.Vector3,
+    delta: number,
+    velocity: number,
+    epsilon: number,
+  ) {
+    direction.subVectors(targetPosition, clientTransform.position).normalize();
+    const distance = velocity * delta;
+    const moveVector = direction.multiplyScalar(distance);
 
-  if (clientTransform.position.distanceTo(targetPosition) > epsilon) {
-    clientTransform.position.add(moveVector);
-  }
-}
-
-function updateCamera(
-  controls: MapControls,
-  targetPosition: THREE.Vector3,
-  targetRotation: THREE.Euler,
-  delta: number,
-  epsilon: number,
-) {
-  const cameraPosition = controls.object.position;
-  const adjustedTargetPosition = targetPosition.clone();
-  adjustedTargetPosition.y += CAMERA_HEIGHT;
-
-  // Calculate the desired camera position behind the player
-  const newBehindOffset = behindOffset.clone();
-  newBehindOffset.applyEuler(targetRotation);
-  const desiredCameraPosition = adjustedTargetPosition
-    .clone()
-    .add(newBehindOffset);
-
-  // Smoothly transition the camera to the desired position
-  const distanceToTarget = cameraPosition.distanceTo(desiredCameraPosition);
-  if (distanceToTarget > epsilon) {
-    followDirection
-      .subVectors(desiredCameraPosition, cameraPosition)
-      .normalize();
-    const followDistance = distanceToTarget * delta;
-    const followVector = followDirection.multiplyScalar(followDistance);
-
-    cameraPosition.add(followVector);
-    controls.update();
+    if (clientTransform.position.distanceTo(targetPosition) > epsilon) {
+      clientTransform.position.add(moveVector);
+    }
   }
 
-  // Ensure the camera is looking at the player
-  controls.object.lookAt(targetPosition);
-}
+  function updateCamera(
+    controls: MapControls,
+    targetPosition: THREE.Vector3,
+    targetRotation: THREE.Euler,
+    delta: number,
+    epsilon: number,
+  ) {
+    const cameraPosition = controls.object.position;
+    const adjustedTargetPosition = targetPosition.clone();
+    adjustedTargetPosition.y += CAMERA_HEIGHT;
 
-function smoothLookAt(
-  mesh: THREE.Mesh,
-  targetPosition: THREE.Vector3,
-  delta: number,
-) {
-  rotationMatrix.lookAt(targetPosition, mesh.position, mesh.up);
-  const step = 10 * delta;
-  targetQuaternion.setFromRotationMatrix(rotationMatrix);
-  mesh.quaternion.rotateTowards(targetQuaternion, step);
-}
+    // Calculate the desired camera position behind the player
+    const newBehindOffset = behindOffset.clone();
+    newBehindOffset.applyEuler(targetRotation);
+    const desiredCameraPosition = adjustedTargetPosition
+      .clone()
+      .add(newBehindOffset);
 
-function updateArrowHelper(arrowHelper: THREE.ArrowHelper, mesh: THREE.Mesh) {
-  const direction = arrowHelperDirection.clone();
-  direction.applyQuaternion(mesh.quaternion);
-  arrowHelper.setDirection(direction);
-  arrowHelper.position.copy(mesh.position);
+    // Smoothly transition the camera to the desired position
+    const distanceToTarget = cameraPosition.distanceTo(desiredCameraPosition);
+    if (distanceToTarget > epsilon) {
+      followDirection
+        .subVectors(desiredCameraPosition, cameraPosition)
+        .normalize();
+      const followDistance = distanceToTarget * delta;
+      const followVector = followDirection.multiplyScalar(followDistance);
+
+      cameraPosition.add(followVector);
+      controls.update();
+    }
+
+    // Ensure the camera is looking at the player
+    controls.object.lookAt(targetPosition);
+  }
+
+  function smoothLookAt(
+    mesh: THREE.Mesh,
+    targetPosition: THREE.Vector3,
+    delta: number,
+  ) {
+    rotationMatrix.lookAt(targetPosition, mesh.position, mesh.up);
+    const step = 10 * delta;
+    targetQuaternion.setFromRotationMatrix(rotationMatrix);
+    mesh.quaternion.rotateTowards(targetQuaternion, step);
+  }
+
+  function updateArrowHelper(arrowHelper: THREE.ArrowHelper, mesh: THREE.Mesh) {
+    const direction = arrowHelperDirection.clone();
+    direction.applyQuaternion(mesh.quaternion);
+    arrowHelper.setDirection(direction);
+    arrowHelper.position.copy(mesh.position);
+  }
 }

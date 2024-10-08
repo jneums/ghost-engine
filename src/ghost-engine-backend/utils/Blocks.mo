@@ -5,6 +5,9 @@ import Nat8 "mo:base/Nat8";
 import Float "mo:base/Float";
 import Iter "mo:base/Iter";
 import Int "mo:base/Int";
+import Int64 "mo:base/Int64";
+import Noise "mo:noise/Noise";
+import Random "mo:noise/Random";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Const "Const";
@@ -21,6 +24,7 @@ module {
     let entityId = ECS.World.addEntity(ctx);
 
     let newBlocks = #BlocksComponent({
+      seed = 0 : Nat64;
       chunkPositions = [];
       blockData = [];
       chunkStatus = [];
@@ -34,6 +38,7 @@ module {
       case (null) {
         // Add new entry
         {
+          seed = blocksComponent.seed;
           chunkPositions = Array.append(blocksComponent.chunkPositions, [chunkPos]);
           blockData = Array.append(blocksComponent.blockData, [blocks]);
           chunkStatus = Array.append(blocksComponent.chunkStatus, [0 : Nat8]);
@@ -44,6 +49,7 @@ module {
         var newBlockData = Array.thaw<[Nat8]>(blocksComponent.blockData);
         newBlockData[i] := blocks;
         {
+          seed = blocksComponent.seed;
           chunkPositions = blocksComponent.chunkPositions;
           blockData = Array.freeze(newBlockData);
           chunkStatus = blocksComponent.chunkStatus;
@@ -64,6 +70,7 @@ module {
         var newBlockData = Array.thaw<[Nat8]>(blocksComponent.blockData);
         newBlockData[i] := [];
         {
+          seed = blocksComponent.seed;
           chunkPositions = blocksComponent.chunkPositions;
           blockData = Array.freeze(newBlockData);
           chunkStatus = blocksComponent.chunkStatus;
@@ -156,6 +163,7 @@ module {
             var newChunkStatus = Array.thaw<Nat8>(blocks.chunkStatus);
             newChunkStatus[i] := status;
             let updatedBlocksComponent = #BlocksComponent({
+              seed = blocks.seed;
               chunkPositions = blocks.chunkPositions;
               blockData = blocks.blockData;
               chunkStatus = Array.freeze(newChunkStatus);
@@ -193,24 +201,38 @@ module {
         let blockCount = Const.CHUNK_SIZE * Const.CHUNK_HEIGHT * Const.CHUNK_SIZE;
         var newBlocks = Array.init<Nat8>(blockCount, 0 : Nat8); // Initialize all blocks to type 0
 
-        // Generate blocks based on a continuous sine wave across chunks
-        for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
-          for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
-            for (x in Iter.range(0, Const.CHUNK_SIZE - 1)) {
-              let amplitude = 2.0; // Adjust this value to change the wave height
-              let offset = 100.0; // This is the offset to shift the wave up
+        // Initialize noise layers
+        let xr = Random.xSetSeed(blocks.seed);
 
-              // Calculate global x and z positions
-              let globalX = Float.fromInt(x + Float.toInt(chunkPos.x) * Const.CHUNK_SIZE);
-              let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
+        let continentalness = Noise.xDoublePerlinInit(xr, [1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0], -9, 9, 9);
+        let erosion = Noise.xDoublePerlinInit(xr, [1.0, 1.0, 0, 1.0, 1.0], -9, 5, 5);
+        let weirdness = Noise.xDoublePerlinInit(xr, [1, 2, 1, 0, 0, 0], -7, 6, 6);
 
-              let height = (
-                Float.sin(globalX / (Float.fromInt(Const.CHUNK_SIZE)) * Float.pi) * 1.5 +
-                Float.sin(globalZ / (Float.fromInt(Const.CHUNK_SIZE)) * Float.pi) * 1.5
-              ) * amplitude + offset;
+        // Generate blocks based on noise, optimizing by filling columns
+        for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
+          for (x in Iter.range(0, Const.CHUNK_SIZE - 1)) {
+            // Calculate global x and z positions
+            let globalX = Float.fromInt(x + Float.toInt(chunkPos.x) * Const.CHUNK_SIZE);
+            let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
 
-              // Set blocks if the height is greater than y
-              if (Float.fromInt(y) < height + 1.0) {
+            // Sample noise from each layer
+            let continentalnesSample = Noise.sampleDoublePerlinNoise(continentalness, globalX, 0.0, globalZ);
+            let erosionSample = Noise.sampleDoublePerlinNoise(erosion, globalX, 0.0, globalZ);
+            let weirdnessSample = Noise.sampleDoublePerlinNoise(weirdness, globalX, 0.0, globalZ);
+
+            // Combine noise values
+            let combinedHeight = (continentalnesSample + erosionSample + weirdnessSample) / 3.0;
+
+            // Map and floor the combined noise value
+            let mappedNoiseValue = map(0.0, 128.0, -1.0, 1.0, combinedHeight);
+            let height = fastFloor(mappedNoiseValue);
+
+            Debug.print("Height: " # debug_show (height));
+            Debug.print("Mapped noise value: " # debug_show (mappedNoiseValue));
+
+            // Fill blocks from the terrain height downwards
+            for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
+              if (y <= height) {
                 let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE +
                 z * Const.CHUNK_SIZE +
                 x;
@@ -229,6 +251,16 @@ module {
         Debug.print("BlocksComponent not found");
       };
     };
+  };
+
+  // Helper function to map noise values
+  func map(min : Float, max : Float, omin : Float, omax : Float, value : Float) : Float {
+    return min + (max - min) * ((value - omin) / (omax - omin));
+  };
+
+  // Helper function to floor a float value
+  func fastFloor(f : Float) : Int {
+    return if (f >= 0.0) Float.toInt(f) else Float.toInt(f) - 1;
   };
 
   // Function to get the highest solid block y-value at a given position

@@ -113,6 +113,7 @@ export class PlayerChunksComponent {
 
 export class BlocksComponent {
   constructor(
+    public seed: number,
     public blockData: (Uint8Array | number[])[],
     public chunkPositions: THREE.Vector3[],
   ) {}
@@ -210,12 +211,16 @@ export function createComponentClass(data: Component) {
         chunks.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
       );
     })
-    .with({ BlocksComponent: P.select() }, ({ blockData, chunkPositions }) => {
-      return new BlocksComponent(
-        blockData,
-        chunkPositions.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
-      );
-    })
+    .with(
+      { BlocksComponent: P.select() },
+      ({ seed, blockData, chunkPositions }) => {
+        return new BlocksComponent(
+          Number(seed),
+          blockData,
+          chunkPositions.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
+        );
+      },
+    )
     .with({ UpdateBlocksComponent: P.select() }, () => {
       return new UpdateBlocksComponent();
     })

@@ -67,8 +67,6 @@ const FACES = [
   },
 ];
 
-const geom = new THREE.BufferGeometry();
-
 export default function Chunk({ x, z }: { x: number; z: number }) {
   const { world, connection } = useWorld();
   const { identity } = useInternetIdentity();
@@ -171,6 +169,7 @@ export default function Chunk({ x, z }: { x: number; z: number }) {
 
   const geometry = useMemo(() => {
     const { positions, normals, indices } = generateVoxelGeometry();
+    const geom = new THREE.BufferGeometry();
 
     geom.setAttribute(
       'position',

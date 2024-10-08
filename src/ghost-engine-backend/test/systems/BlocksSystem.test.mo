@@ -26,6 +26,7 @@ suite(
     // Create a new entity with a BlocksComponent
     let entityId = ECS.World.addEntity(ctx);
     let blocksComponent = #BlocksComponent({
+      seed = 0 : Nat64;
       chunkPositions = [{ x = 0.0; y = 0.0; z = 0.0 }, { x = 1.0; y = 0.0; z = 0.0 }];
       blockData = [[] : [Nat8], [] : [Nat8]];
       chunkStatus = [0 : Nat8, 0 : Nat8];

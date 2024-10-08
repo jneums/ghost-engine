@@ -42,7 +42,6 @@ module {
 
         // Update chunk statuses based on active chunks
         for (chunkStatus in Map.vals(chunks)) {
-          Debug.print("Chunk: " # debug_show (chunkStatus.position) # " is active: " # debug_show (chunkStatus.isActive));
           if (chunkStatus.isActive) {
             // Generate blocks if they don't exist
             if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) == 0) {

@@ -81,6 +81,7 @@ module {
   };
 
   public type BlocksComponent = {
+    seed : Nat64; // Seed for generating terrain
     chunkPositions : [Vector3.Vector3]; // Array of chunk positions
     blockData : [[Nat8]]; // Array of block data corresponding to each chunk position
     chunkStatus : [Nat8]; // Array of status corresponding to each chunk position

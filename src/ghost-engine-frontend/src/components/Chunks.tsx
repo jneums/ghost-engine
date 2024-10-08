@@ -27,7 +27,7 @@ export default function Chunks() {
   const unitComponents = useMemo(
     () =>
       chunks.chunks.map((chunkPos, idx) => (
-        <Chunk key={idx} x={chunkPos.x} z={chunkPos.z} />
+        <Chunk key={JSON.stringify(chunkPos)} x={chunkPos.x} z={chunkPos.z} />
       )),
     [chunks.chunks],
   );

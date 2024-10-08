@@ -123,7 +123,6 @@ actor {
         };
 
         let updates = Updates.filterUpdatesForClient(currentState);
-        Debug.print("Entities: " # debug_show (updates));
         Vector.toArray(updates);
 
       };
