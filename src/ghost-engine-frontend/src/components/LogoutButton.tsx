@@ -1,12 +1,17 @@
 import { IconButton, Stack } from '@mui/joy';
-import { useWorld } from '../context/WorldProvider';
 import { Logout } from '@mui/icons-material';
 import ColorSchemeToggle from './ColorSchemeToggle';
+import { useConnection } from '../context/ConnectionProvider';
+import { useInternetIdentity } from 'ic-use-internet-identity';
 
 export default function LogoutButton() {
-  const { disconnect } = useWorld();
+  const { disconnect } = useConnection();
+  const { identity } = useInternetIdentity();
 
   const handleLogoutClick = () => {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
     disconnect();
   };
 

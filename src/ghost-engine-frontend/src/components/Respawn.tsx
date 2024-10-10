@@ -1,13 +1,14 @@
 import { Button, Typography } from '@mui/joy';
 import RespawnAction from '../actions/respawn';
-import { useWorld } from '../context/WorldProvider';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useDialog } from '../context/DialogProvider';
 import React, { useEffect } from 'react';
-import { getIsPlayerDead, getPlayerEntityId } from '../utils';
+import { useWorld } from '../context/WorldProvider';
+import { useConnection } from '../context/ConnectionProvider';
 
 export default function Respawn() {
-  const { world, connection } = useWorld();
+  const { getPlayerEntityId, getIsPlayerDead } = useWorld();
+  const { send } = useConnection();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -16,8 +17,8 @@ export default function Respawn() {
     throw new Error('Identity not found');
   }
 
-  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
-  const isPlayerDead = identity && getIsPlayerDead(world, playerEntityId);
+  const playerEntityId = getPlayerEntityId(identity.getPrincipal());
+  const isPlayerDead = identity && getIsPlayerDead(playerEntityId);
 
   useEffect(() => {
     if (!isPlayerDead) {
@@ -30,7 +31,7 @@ export default function Respawn() {
       throw new Error('Identity not found');
     }
     setIsLoading(true);
-    const respawnAction = new RespawnAction(world, connection);
+    const respawnAction = new RespawnAction(send);
     respawnAction.handle({ principal: identity.getPrincipal() });
   };
 

@@ -45,17 +45,13 @@ module {
           if (chunkStatus.isActive) {
             // Generate blocks if they don't exist
             if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) == 0) {
-              Debug.print("Generating blocks for chunk: " # debug_show (chunkStatus.position));
               Blocks.generateBlocks(ctx, chunkStatus.position);
             };
-            Blocks.setStatus(ctx, chunkStatus.position, 1);
           } else {
             // Delete blocks for this chunk
             if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) > 0) {
-              Debug.print("Deleting blocks for chunk: " # debug_show (chunkStatus.position));
               Blocks.deleteBlocks(ctx, chunkStatus.position);
             };
-            Blocks.setStatus(ctx, chunkStatus.position, 0);
           };
         };
 

@@ -1,7 +1,6 @@
 import { Principal } from '@dfinity/principal';
-import { HealthComponent, PrincipalComponent } from '../components';
-import { Entity } from '../world/entity';
-import { EntityId, World } from '../world';
+import { PrincipalComponent } from '../components';
+import { Entity } from './entity';
 
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -20,17 +19,6 @@ export function getPrincipal(entity: Entity): Principal | undefined {
   return component?.principal;
 }
 
-export function getPlayerEntityId(world: World, principal: Principal) {
-  const entities = world.getEntitiesByArchetype([PrincipalComponent]);
-  for (const entityId of entities.values()) {
-    const entity = world.getEntity(entityId);
-    const component = entity.getComponent(PrincipalComponent);
-    if (component?.principal.compareTo(principal) === 'eq') {
-      return entity.id;
-    }
-  }
-}
-
 /**
  * Convert icp tothe  base unit used for processing ICP on the IC - e8s.
  * @param icp number
@@ -44,15 +32,3 @@ export const toE8s = (value: number) => value * 100_000_000;
  * @returns icp as a number
  */
 export const fromE8s = (value: bigint) => Number(value) / 100_000_000;
-
-export const getIsPlayerDead = (world: World, playerEntityId?: EntityId) => {
-  if (!playerEntityId) {
-    return false;
-  }
-  const entity = world.getEntity(playerEntityId);
-  if (!entity) {
-    return true;
-  }
-  const health = entity.getComponent(HealthComponent);
-  return health?.amount <= 0;
-};

@@ -109,7 +109,6 @@ actor {
   public shared query ({ caller }) func getState() : async [ECS.Types.Update<Components.Component>] {
     switch (Player.findPlayersEntityId(ctx, caller)) {
       case (?exists) {
-        let entities = Entities.filterByRange(ctx, exists);
         let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
         for ((entityId, components) in Map.entries(ctx.entities)) {
           for (component in Map.vals(components)) {
@@ -133,9 +132,9 @@ actor {
   public shared query ({ caller }) func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
     switch (Player.findPlayersEntityId(ctx, caller)) {
       case (?exists) {
-        let entities = Entities.filterByRange(ctx, exists);
-        let filtered = Updates.filterByEntities(ctx.updatedComponents, entities);
-        let recent = Updates.filterByTimestamp(filtered, since);
+        // let entities = Entities.filterByRange(ctx, exists);
+        // let filtered = Updates.filterByEntities(ctx.updatedComponents, entities);
+        let recent = Updates.filterByTimestamp(ctx.updatedComponents, since);
         let updates = Updates.filterUpdatesForClient(recent);
         Vector.toArray(updates);
       };

@@ -1,8 +1,10 @@
 import { TargetComponent } from '../components';
-import { World } from '../world';
+import { Component } from '../ecs';
 
 export default class SetTargetAction {
-  constructor(private world: World) {}
+  constructor(
+    private addComponent: (entityId: number, component: Component) => void,
+  ) {}
 
   public handle(args: { entityId: number; targetEntityId: number }) {
     console.log('Set target action');
@@ -11,6 +13,6 @@ export default class SetTargetAction {
     const target = new TargetComponent(args.targetEntityId);
 
     // Add the components to the ecs entity
-    this.world.addComponent(args.entityId, target);
+    this.addComponent(args.entityId, target);
   }
 }

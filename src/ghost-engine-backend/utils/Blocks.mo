@@ -7,11 +7,13 @@ import Iter "mo:base/Iter";
 import Int "mo:base/Int";
 import Int64 "mo:base/Int64";
 import Noise "mo:noise/Noise";
+import NoiseTypes "mo:noise/Types";
 import Random "mo:noise/Random";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Const "Const";
 import Chunks "Chunks";
+import Splines "Splines";
 
 module {
 
@@ -178,6 +180,84 @@ module {
     };
   };
 
+  public func initClimateSeed(seed : Nat64) : [NoiseTypes.DoublePerlinNoise] {
+    // Initialize noise layers
+    let xr = Random.xSetSeed(seed);
+
+    let xLow = Random.xNextNat64(xr);
+    let xHigh = Random.xNextNat64(xr);
+
+    let temperatureXr = {
+      var low = xLow ^ 0x5c7e6b29735f0d7f;
+      var high = xHigh ^ 0xf7d86f1bbc734988;
+    };
+    let temperatureAmps = [1.5, 0.0, 1.0, 0.0, 0.0, 0.0];
+    let temperature = Noise.xDoublePerlinInit(temperatureXr, temperatureAmps, -10, temperatureAmps.size(), -1);
+
+    let humidityXr = {
+      var low = xLow ^ 0x81bb4d22e8dc168e;
+      var high = xHigh ^ 0xf1c8b4bea16303cd;
+    };
+    let humidityAmps = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0];
+    let humidity = Noise.xDoublePerlinInit(humidityXr, humidityAmps, -8, humidityAmps.size(), -1);
+
+    let continentalnessXr = {
+      var low = xLow ^ 0x83886c9d0ae3a662;
+      var high = xHigh ^ 0xafa638a61b42e8ad;
+    };
+    let continentalnessAmps = [1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0];
+    let continentalness = Noise.xDoublePerlinInit(continentalnessXr, continentalnessAmps, -9, continentalnessAmps.size(), -1);
+
+    let erosionXr = {
+      var low = xLow ^ 0xd02491e6058f6fd8;
+      var high = xHigh ^ 0x4792512c94c17a80;
+    };
+    let erosionAmps = [1.0, 1.0, 0.0, 1.0, 1.0];
+    let erosion = Noise.xDoublePerlinInit(erosionXr, erosionAmps, -9, erosionAmps.size(), -1);
+
+    let peaksAndValleysXr = {
+      var low = xLow ^ 0x080518cf6af25384;
+      var high = xHigh ^ 0x3f3dfb40a54febd5;
+    };
+    let peaksAndValleysAmps = [1.0, 1.0, 1.0, 0.0];
+    let peaksAndValleys = Noise.xDoublePerlinInit(peaksAndValleysXr, peaksAndValleysAmps, -3, peaksAndValleysAmps.size(), -1);
+
+    let weirdnessXr = {
+      var low = xLow ^ 0xefc8ef4d36102b34;
+      var high = xHigh ^ 0x1beeeb324a0f24ea;
+    };
+    let weirdnessAmps = [1.0, 2.0, 1.0, 0.0, 0.0, 0.0];
+    let weirdness = Noise.xDoublePerlinInit(weirdnessXr, weirdnessAmps, -7, weirdnessAmps.size(), -1);
+
+    [
+      temperature,
+      humidity,
+      continentalness,
+      erosion,
+      peaksAndValleys,
+      weirdness,
+    ];
+  };
+
+  public func sampleClimateNoise(climate : [NoiseTypes.DoublePerlinNoise], climateType : Nat, x : Float, z : Float) : Float {
+    if (climateType == Const.Climate.PeaksAndValleys) {
+      let c = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Continentalness], x, 0.0, z);
+      let e = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Erosion], x, 0.0, z);
+      let w = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Weirdness], x, 0.0, z);
+      let newSamples = [c, e, -3.0 * (Float.abs(Float.abs(w) - 0.6666667) - 0.33333334), w];
+      let s = Splines.evaluateSpline(newSamples, Splines.initSpline());
+      let off = s + 0.015;
+
+      let y = 0 : Int64;
+      let d = 1.0 - Float.fromInt64(Int64.bitshiftLeft(y, 2)) / 128 - 83 / 160 + off;
+
+      return d;
+    };
+
+    let p = Noise.sampleDoublePerlinNoise(climate[climateType], x, 0.0, z);
+    return p;
+  };
+
   // Function to generate and store blocks for a given chunk position
   public func generateBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : () {
     // Retrieve the BlocksComponent
@@ -201,12 +281,7 @@ module {
         let blockCount = Const.CHUNK_SIZE * Const.CHUNK_HEIGHT * Const.CHUNK_SIZE;
         var newBlocks = Array.init<Nat8>(blockCount, 0 : Nat8); // Initialize all blocks to type 0
 
-        // Initialize noise layers
-        let xr = Random.xSetSeed(blocks.seed);
-
-        let continentalness = Noise.xDoublePerlinInit(xr, [1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0], -9, 9, 9);
-        let erosion = Noise.xDoublePerlinInit(xr, [1.0, 1.0, 0, 1.0, 1.0], -9, 5, 5);
-        let weirdness = Noise.xDoublePerlinInit(xr, [1, 2, 1, 0, 0, 0], -7, 6, 6);
+        let climate = initClimateSeed(blocks.seed);
 
         // Generate blocks based on noise, optimizing by filling columns
         for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
@@ -215,20 +290,17 @@ module {
             let globalX = Float.fromInt(x + Float.toInt(chunkPos.x) * Const.CHUNK_SIZE);
             let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
 
-            // Sample noise from each layer
-            let continentalnesSample = Noise.sampleDoublePerlinNoise(continentalness, globalX, 0.0, globalZ);
-            let erosionSample = Noise.sampleDoublePerlinNoise(erosion, globalX, 0.0, globalZ);
-            let weirdnessSample = Noise.sampleDoublePerlinNoise(weirdness, globalX, 0.0, globalZ);
+            // Sample noise from each map
+            let c = sampleClimateNoise(climate, Const.Climate.Continentalness, globalX, globalZ);
+            let e = sampleClimateNoise(climate, Const.Climate.Erosion, globalX, globalZ);
+            let d = sampleClimateNoise(climate, Const.Climate.PeaksAndValleys, globalX, globalZ);
 
-            // Combine noise values
-            let combinedHeight = (continentalnesSample + erosionSample + weirdnessSample) / 3.0;
+            // Combine spline values to determine the final height
+            let combinedHeight = (c + e + d) / 3.0;
 
-            // Map and floor the combined noise value
-            let mappedNoiseValue = map(0.0, 128.0, -1.0, 1.0, combinedHeight);
-            let height = fastFloor(mappedNoiseValue);
-
-            Debug.print("Height: " # debug_show (height));
-            Debug.print("Mapped noise value: " # debug_show (mappedNoiseValue));
+            // Map and floor the combined spline value
+            let mappedSplineValue = map(0.0, 128, -1.0, 1.0, combinedHeight);
+            let height = Const.CHUNK_HEIGHT - 128 : Nat + fastFloor(mappedSplineValue);
 
             // Fill blocks from the terrain height downwards
             for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
@@ -236,7 +308,13 @@ module {
                 let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE +
                 z * Const.CHUNK_SIZE +
                 x;
-                newBlocks[index] := 1; // Example: Set block type to 1
+
+                // If the block is below sea level, set it to water
+                if (y < Const.SEA_LEVEL) {
+                  newBlocks[index] := 2; // Example: Set block type to 2
+                } else {
+                  newBlocks[index] := 1; // Example: Set block type to 1
+                };
               };
             };
           };

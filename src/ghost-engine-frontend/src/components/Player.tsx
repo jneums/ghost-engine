@@ -10,26 +10,28 @@ import * as THREE from 'three';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import LightningBeam from './LightningBeam';
 import SetTargetAction from '../actions/set-target';
-import { useWorld } from '../context/WorldProvider';
 import AttackAction from '../actions/attack-action';
 import { MapControls as DreiMapControls } from '@react-three/drei';
 import { MapControls } from 'three-stdlib';
 import { useErrorMessage } from '../context/ErrorProvider';
-import { getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
+import { useWorld } from '../context/WorldProvider';
+import { useConnection } from '../context/ConnectionProvider';
 
 export default function Player({ entityId }: { entityId: number }) {
-  const { world, connection } = useWorld();
+  const { playerEntityId, getEntity, addComponent, removeComponent } =
+    useWorld();
+  const { send } = useConnection();
   const { identity } = useInternetIdentity();
-  const entity = world.getEntity(entityId);
+  const entity = getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
   const controlsRef = useRef<MapControls>(null);
   const arrowHelperRef = useRef<THREE.ArrowHelper>(null);
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const { setErrorMessage } = useErrorMessage();
 
-  const CAMERA_FOLLOW_DISTANCE = 10; // Distance threshold for the camera to start following
-  const CAMERA_HEIGHT = 10; // Fixed height for the camera
+  const CAMERA_FOLLOW_DISTANCE = 3; // Distance threshold for the camera to start following
+  const CAMERA_HEIGHT = 1; // Fixed height for the camera
 
   const followDirection = new THREE.Vector3();
   const direction = new THREE.Vector3();
@@ -68,10 +70,9 @@ export default function Player({ entityId }: { entityId: number }) {
     throw new Error('Identity not found');
   }
 
-  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
   const isPlayer = entityId === playerEntityId;
   const isDead = health.amount <= 0;
-  const color = isDead ? 'black' : isPlayer ? 'green' : 'red';
+  const color = isDead ? 'black' : isPlayer ? 'blue' : 'red';
 
   const handleRightClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
@@ -81,26 +82,24 @@ export default function Player({ entityId }: { entityId: number }) {
         return;
       }
 
-      const setTarget = new SetTargetAction(world);
+      const setTarget = new SetTargetAction(addComponent);
       setTarget.handle({
         entityId: playerEntityId,
         targetEntityId: entityId,
       });
 
-      const attackAction = new AttackAction(world, connection, setErrorMessage);
+      const attackAction = new AttackAction(
+        getEntity,
+        addComponent,
+        setErrorMessage,
+        send,
+      );
       attackAction.handle({
         entityId: playerEntityId,
         targetEntityId: entityId,
       });
     },
-    [
-      playerEntityId,
-      world,
-      entityId,
-      isDead,
-      serverTransform.position,
-      connection,
-    ],
+    [playerEntityId, entityId, isDead, serverTransform.position],
   );
 
   useEffect(() => {
@@ -144,15 +143,15 @@ export default function Player({ entityId }: { entityId: number }) {
     }
 
     if (isDead) {
-      world.removeComponent(entityId, ClientTransformComponent);
-      world.removeComponent(entityId, TransformComponent);
-      world.removeComponent(entityId, MoveTargetComponent);
+      removeComponent(entityId, ClientTransformComponent);
+      removeComponent(entityId, TransformComponent);
+      removeComponent(entityId, MoveTargetComponent);
     }
   });
 
   const getCombatTargetPosition = useCallback(() => {
     if (combatTargetId) {
-      const target = world.getEntity(combatTargetId);
+      const target = getEntity(combatTargetId);
       if (target) {
         const targetTransform = target.getComponent(ClientTransformComponent);
         if (targetTransform) {
@@ -163,7 +162,7 @@ export default function Player({ entityId }: { entityId: number }) {
       }
     }
     return null;
-  }, [combatTargetId, world]);
+  }, [combatTargetId]);
 
   const name = entityId.toString();
 

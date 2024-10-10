@@ -1,21 +1,12 @@
 import ECS "mo:geecs";
 import Time "mo:base/Time";
-import Float "mo:base/Float";
 import Components "../components";
 import Const "../utils/Const";
 
 module {
   // Private function to handle TransformComponent logic
   private func handleTransformComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
-    let defaultTransform = {
-      scale = { x = 1.0; y = 1.0; z = 1.0 };
-      rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
-      position = {
-        x = 0.0;
-        y = Float.fromInt(Const.CHUNK_HEIGHT);
-        z = 0.0;
-      };
-    };
+    let defaultTransform = Const.SpawnPoint;
 
     let transform = switch (ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
       case (? #TransformComponent(transform)) { transform };
@@ -88,6 +79,9 @@ module {
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : async () {
     switch (ECS.World.getComponent(ctx, entityId, "ConnectComponent")) {
       case (? #ConnectComponent(_)) {
+        // Remove DisconnectComponent if it exists
+        ECS.World.removeComponent(ctx, entityId, "DisconnectComponent");
+
         handleTransformComponent(ctx, entityId);
         handleFungibleComponent(ctx, entityId);
         handleHealthComponent(ctx, entityId);

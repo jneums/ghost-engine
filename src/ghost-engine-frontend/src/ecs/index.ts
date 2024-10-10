@@ -1,4 +1,24 @@
-import { Component, ComponentClass } from '.';
+/**
+ * An entity is just an ID. This is used to look up its associated
+ * Components.
+ */
+export type EntityId = number;
+
+/**
+ * A Component is a bundle of state. Each instance of a Component is
+ * associated with a single Entity.
+ *
+ * Components have no API to fulfill.
+ */
+export abstract class Component {}
+
+/**
+ * This type is so functions like the Entity's get(...) will
+ * automatically tell TypeScript the type of the Component returned. In
+ * other words, we can say get(Position) and TypeScript will know that an
+ * instance of Position was returned. This is amazingly helpful.
+ */
+export type ComponentClass<T extends Component> = new (...args: any[]) => T;
 
 /**
  * This custom entity is so that calling code can provide the

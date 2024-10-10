@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
-import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { getIsPlayerDead, getPlayerEntityId } from '../utils';
 import MoveAction from '../actions/move-action';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
+import { useWorld } from '../context/WorldProvider';
+import { useConnection } from '../context/ConnectionProvider';
 
 const DRAG_THRESHOLD = 5;
 
@@ -68,7 +68,8 @@ const FACES = [
 ];
 
 export default function Chunk({ x, z }: { x: number; z: number }) {
-  const { world, connection } = useWorld();
+  const { addComponent, playerEntityId, isPlayerDead } = useWorld();
+  const { getChunk, send } = useConnection();
   const { identity } = useInternetIdentity();
   const { setErrorMessage } = useErrorMessage();
   const [blocks, setBlocks] = useState<Uint8Array | number[]>([]);
@@ -79,12 +80,12 @@ export default function Chunk({ x, z }: { x: number; z: number }) {
 
   useEffect(() => {
     if (!blocks.length) {
-      connection.getChunk({ x, y: 0, z }).then((blocks) => {
+      getChunk({ x, y: 0, z }).then((blocks) => {
         setBlocks(blocks);
       });
       setBlocks(blocks);
     }
-  }, [blocks, connection]);
+  }, [blocks, getChunk, x, z]);
 
   const principal = identity.getPrincipal();
 
@@ -96,25 +97,23 @@ export default function Chunk({ x, z }: { x: number; z: number }) {
 
       console.log(principal.toText());
 
-      const playerEntityId = getPlayerEntityId(world, principal);
-
       if (!playerEntityId) {
         console.error('Player entity not found');
         return;
       }
 
-      if (getIsPlayerDead(world, playerEntityId)) {
+      if (isPlayerDead) {
         console.error('You are dead!');
         setErrorMessage('You are dead!');
         return;
       }
-      const move = new MoveAction(world, connection);
+      const move = new MoveAction(addComponent, send);
       move.handle({
         entityId: playerEntityId,
         position: new THREE.Vector3(e.point.x, e.point.y, e.point.z),
       });
     },
-    [world, connection, setErrorMessage],
+    [setErrorMessage],
   );
   const generateVoxelGeometry = useCallback(() => {
     const positions = [];
@@ -200,7 +199,7 @@ export default function Chunk({ x, z }: { x: number; z: number }) {
       position={chunkPosition} // Set Y position to 0 to align with the ground
       onClick={handleRightClick}
       geometry={geometry}>
-      <meshStandardMaterial roughness={1} color={0xaaaaaa} />
+      <meshStandardMaterial color={0xaaaaaa} />
     </mesh>
   );
 }

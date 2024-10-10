@@ -1,22 +1,20 @@
 import { HealthComponent, NameableComponent, TargetComponent } from '.';
-import EntityCard from './EntityCard';
 import { useWorld } from '../context/WorldProvider';
+import EntityCard from './EntityCard';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { getPlayerEntityId } from '../utils';
 
 export default function TargetCard() {
-  const { world } = useWorld();
+  const { playerEntityId, getEntity } = useWorld();
   const { identity } = useInternetIdentity();
   if (!identity) {
     throw new Error('Identity not found');
   }
 
-  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
   if (!playerEntityId) {
     return null;
   }
 
-  const entity = world.getEntity(playerEntityId);
+  const entity = getEntity(playerEntityId);
   if (!entity) {
     throw new Error('Entity not found');
   }
@@ -27,7 +25,7 @@ export default function TargetCard() {
   }
 
   // get target entity
-  const targetEntity = world.getEntity(targetComponent.targetEntityId);
+  const targetEntity = getEntity(targetComponent.targetEntityId);
   if (!targetEntity) {
     throw new Error('Target entity not found');
   }

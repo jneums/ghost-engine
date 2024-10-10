@@ -3,7 +3,6 @@ import { Sky, Stats } from '@react-three/drei';
 import Players from '../components/Players';
 import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import Mines from '../components/Mines';
 import PlayerCard from '../components/PlayerCard';
 import TargetCard from '../components/TargetCard';
 import { useWorld } from '../context/WorldProvider';
@@ -14,22 +13,27 @@ import GameStats from '../components/GameStats';
 import PlayerStats from '../components/PlayerStats';
 import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { getIsPlayerDead, getPlayerEntityId } from '../utils';
-import { SessionComponent, TransformComponent } from '../components';
+import { TransformComponent } from '../components';
 import Chunks from '../components/Chunks';
+import { useConnection } from '../context/ConnectionProvider';
 
 export default function Game() {
-  const { world, connect, isConnected, isConnecting } = useWorld();
+  const { connect, isConnecting, isConnected } = useConnection();
+  const { playerEntityId, isPlayerDead, getEntity, session } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
 
   const onReconnectClick = () => {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
     connect();
   };
 
-  const playerEntityId =
-    identity && getPlayerEntityId(world, identity.getPrincipal());
-  const isPlayerDead = playerEntityId && getIsPlayerDead(world, playerEntityId);
+  if (!identity) {
+    return <Navigate to="/" />;
+  }
 
   useEffect(() => {
     if (isPlayerDead) {
@@ -46,10 +50,6 @@ export default function Game() {
     );
   }
 
-  if (!identity) {
-    return <Navigate to="/" />;
-  }
-
   if (!playerEntityId) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
@@ -58,10 +58,6 @@ export default function Game() {
       </Stack>
     );
   }
-
-  const session = world
-    .getEntity(playerEntityId)
-    ?.getComponent(SessionComponent);
 
   if (!isConnected || !session) {
     return (
@@ -74,9 +70,7 @@ export default function Game() {
     );
   }
 
-  const transform = world
-    .getEntity(playerEntityId)
-    ?.getComponent(TransformComponent);
+  const transform = getEntity(playerEntityId).getComponent(TransformComponent);
 
   if (!transform) {
     return null;
@@ -102,14 +96,13 @@ export default function Game() {
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         <Chunks />
         <Players />
-        <Mines />
       </Canvas>
       <PlayerStats />
       <PlayerCard />
       <TargetCard />
       <GameStats />
       <LogoutButton />
-      <Stats />
+      {/* <Stats /> */}
     </>
   );
 }

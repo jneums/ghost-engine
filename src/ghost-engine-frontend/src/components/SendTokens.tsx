@@ -1,5 +1,4 @@
 import {
-  Box,
   Button,
   FormControl,
   FormLabel,
@@ -7,17 +6,16 @@ import {
   Stack,
   Typography,
 } from '@mui/joy';
-import { useWorld } from '../context/WorldProvider';
 import { useDialog } from '../context/DialogProvider';
 import RedeemTokensAction from '../actions/redeem-tokens';
 import React from 'react';
 import { Principal } from '@dfinity/principal';
 import { useErrorMessage } from '../context/ErrorProvider';
-import { getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
+import { useWorld } from '../context/WorldProvider';
 
 export default function SendTokens() {
-  const { world, connection } = useWorld();
+  const { getPlayerEntityId } = useWorld();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
   const [principalId, setPrincipalId] = React.useState('');
@@ -29,7 +27,7 @@ export default function SendTokens() {
 
   const handleRedeemTokens = () => {
     console.log('Redeem tokens');
-    const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
+    const playerEntityId = getPlayerEntityId(identity.getPrincipal());
     if (!playerEntityId) {
       console.error('Player id not found');
       return;

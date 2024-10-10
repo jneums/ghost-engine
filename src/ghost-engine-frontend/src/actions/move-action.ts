@@ -1,17 +1,20 @@
 import * as THREE from 'three';
 import { MoveTargetComponent } from '../components';
-import { Connection } from '../connection';
 import { sleep } from '../utils';
-import { World } from '../world';
+import { Component } from '../ecs';
+import { Action } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
 
 export default class MoveAction {
-  constructor(private world: World, private connection: Connection) {}
+  constructor(
+    private addComponent: (entityId: number, component: Component) => void,
+    private send: (action: Action) => void,
+  ) {}
 
   public handle(args: { entityId: number; position: THREE.Vector3 }) {
     console.log('Move action');
 
     // Notify the backend of the action
-    this.connection.send({
+    this.send({
       Move: {
         entityId: BigInt(args.entityId),
         position: {
@@ -28,7 +31,7 @@ export default class MoveAction {
     // Sleep for a bit to reduce perceived latency
     sleep(250).then(() => {
       // Add the components to the ecs entity
-      this.world.addComponent(args.entityId, position);
+      this.addComponent(args.entityId, position);
     });
   }
 }

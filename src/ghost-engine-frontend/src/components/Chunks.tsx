@@ -1,23 +1,21 @@
 import { useMemo } from 'react';
 import { PlayerChunksComponent } from '.';
-import { useWorld } from '../context/WorldProvider';
 import Chunk from './Chunk';
-import { getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
+import { useWorld } from '../context/WorldProvider';
 
 export default function Chunks() {
-  const { world } = useWorld();
+  const { playerEntityId, getEntity } = useWorld();
   const { identity } = useInternetIdentity();
   if (!identity) {
     throw new Error('Identity not found');
   }
 
-  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
   if (!playerEntityId) {
     throw new Error('Player entity not found');
   }
 
-  const entity = world.getEntity(playerEntityId);
+  const entity = getEntity(playerEntityId);
   if (!entity) {
     return null;
   }

@@ -1,6 +1,5 @@
 import { Card, IconButton, Stack, Typography } from '@mui/joy';
-import { fromE8s, getPlayerEntityId } from '../utils';
-import { useWorld } from '../context/WorldProvider';
+import { fromE8s } from '../utils';
 import { FungibleComponent, RedeemTokensComponent } from '.';
 import { Send } from '@mui/icons-material';
 import { useDialog } from '../context/DialogProvider';
@@ -8,9 +7,10 @@ import SendTokens from './SendTokens';
 import { useEffect } from 'react';
 import React from 'react';
 import { useInternetIdentity } from 'ic-use-internet-identity';
+import { useWorld } from '../context/WorldProvider';
 
 export default function PlayerStats() {
-  const { world } = useWorld();
+  const { playerEntityId, getEntity } = useWorld();
   const { identity } = useInternetIdentity();
   const { openDialog } = useDialog();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -18,13 +18,12 @@ export default function PlayerStats() {
   if (!identity) {
     throw new Error('Identity not found');
   }
-  const playerEntityId = getPlayerEntityId(world, identity.getPrincipal());
   if (!playerEntityId) {
     return null;
   }
 
   // Get any fungible token components
-  const entity = world.getEntity(playerEntityId);
+  const entity = getEntity(playerEntityId);
   const fungible = entity.getComponent(FungibleComponent);
   const tokens = fungible?.tokens || [];
 

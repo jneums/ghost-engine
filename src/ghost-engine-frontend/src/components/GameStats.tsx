@@ -8,23 +8,23 @@ import { createAgent } from '@dfinity/utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import React from 'react';
 import { fromE8s } from '../utils';
-import { useWorld } from '../context/WorldProvider';
 import { RedeemTokensComponent } from '.';
 import { match, P } from 'ts-pattern';
 import CopyId from './CopyId';
+import { useWorld } from '../context/WorldProvider';
 
 const icrc1Id = process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER!;
 const gameId = process.env.CANISTER_ID_GHOST_ENGINE_BACKEND!;
 const host = import.meta.env.VITE_IC_URL;
 
 export default function GameStats() {
-  const { world } = useWorld();
+  const { getEntitiesByArchetype } = useWorld();
   const { identity } = useInternetIdentity();
   const [balance, setBalance] = React.useState(0n);
   const [metadata, setMetadata] = React.useState<IcrcTokenMetadataResponse>([]);
 
   // Get any redeem token components
-  const redeem = world.getEntitiesByArchetype([RedeemTokensComponent]);
+  const redeem = getEntitiesByArchetype([RedeemTokensComponent]);
 
   const fetchBalance = async () => {
     if (!identity) {

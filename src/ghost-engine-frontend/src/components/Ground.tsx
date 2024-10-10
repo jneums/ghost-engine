@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import MoveAction from '../actions/move-action';
-import { useWorld } from '../context/WorldProvider';
+import { useWorld } from '../context/GameProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useCallback } from 'react';
 import { getIsPlayerDead, getPlayerEntityId } from '../utils';

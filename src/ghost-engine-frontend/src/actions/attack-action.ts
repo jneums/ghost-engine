@@ -3,20 +3,22 @@ import {
   HealthComponent,
   TransformComponent,
 } from '../components';
-import { Connection } from '../connection';
+import { Action } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
 import { sleep } from '../utils';
-import { World } from '../world';
+import { Component } from '../ecs';
+import { Entity } from '../utils/entity';
 
 export default class AttackAction {
   constructor(
-    private world: World,
-    private connection: Connection,
+    private getEntity: (entityId: number) => Entity,
+    private addComponent: (entityId: number, component: Component) => void,
     private setErrorMessage: (message: string) => void,
+    private send: (action: Action) => void,
   ) {}
 
   public handle(args: { entityId: number; targetEntityId: number }) {
     console.log('Attack action');
-    const entity = this.world.getEntity(args.entityId);
+    const entity = this.getEntity(args.entityId);
     const health = entity.getComponent(HealthComponent);
 
     const inCombat = entity.getComponent(CombatComponent);
@@ -40,7 +42,7 @@ export default class AttackAction {
       return;
     }
 
-    const targetEntity = this.world.getEntity(args.targetEntityId);
+    const targetEntity = this.getEntity(args.targetEntityId);
     const targetHealth = targetEntity.getComponent(HealthComponent);
 
     const isTargetDead = targetHealth.amount <= 0;
@@ -67,7 +69,7 @@ export default class AttackAction {
     }
 
     // Notify the backend of the action
-    this.connection.send({
+    this.send({
       Attack: {
         entityId: BigInt(args.entityId),
         targetEntityId: BigInt(args.targetEntityId),
@@ -80,7 +82,7 @@ export default class AttackAction {
     // Sleep for a bit to reduce perceived latency
     sleep(250).then(() => {
       // Add the components to the ecs entity
-      this.world.addComponent(args.entityId, combat);
+      this.addComponent(args.entityId, combat);
     });
   }
 }

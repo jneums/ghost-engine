@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ResourceComponent, TransformComponent } from '.';
-import { useWorld } from '../context/WorldProvider';
+import { useWorld } from '../context/GameProvider';
 import Mine from './Mine';
 
 export default function Mines() {

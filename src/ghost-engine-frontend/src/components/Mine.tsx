@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { useRef, useCallback } from 'react';
 import AttackAction from '../actions/attack-action';
 import SetTargetAction from '../actions/set-target';
-import { useWorld } from '../context/WorldProvider';
+import { useWorld } from '../context/GameProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { getPlayerEntityId } from '../utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
