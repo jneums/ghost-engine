@@ -1,7 +1,13 @@
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import { Sky, Stats } from '@react-three/drei';
+import {
+  AccumulativeShadows,
+  RandomizedLight,
+  Sky,
+  Stats,
+} from '@react-three/drei';
 import Players from '../components/Players';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import PlayerCard from '../components/PlayerCard';
 import TargetCard from '../components/TargetCard';
@@ -9,19 +15,24 @@ import { useWorld } from '../context/WorldProvider';
 import { useDialog } from '../context/DialogProvider';
 import Respawn from '../components/Respawn';
 import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
-import GameStats from '../components/GameStats';
 import PlayerStats from '../components/PlayerStats';
 import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { TransformComponent } from '../components';
-import Chunks from '../components/Chunks';
 import { useConnection } from '../context/ConnectionProvider';
+import { HealthComponent, TransformComponent } from '../components';
+import useChunks from '../hooks/useChunks';
+import Chunk from '../components/Chunk';
+import React from 'react';
+import MovementGrid from '../components/MovementGrid';
+
+const MemoizedChunk = React.memo(Chunk);
 
 export default function Game() {
   const { connect, isConnecting, isConnected } = useConnection();
-  const { playerEntityId, isPlayerDead, getEntity, session } = useWorld();
+  const { playerEntityId, getEntity } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
+  const { fetchedChunks, movementGrid } = useChunks();
 
   const onReconnectClick = () => {
     if (!identity) {
@@ -35,11 +46,23 @@ export default function Game() {
     return <Navigate to="/" />;
   }
 
+  const isPlayerDead = playerEntityId
+    ? getEntity(playerEntityId).getComponent(HealthComponent).amount <= 0
+    : false;
+
   useEffect(() => {
     if (isPlayerDead) {
       openDialog(<Respawn />);
     }
   }, [isPlayerDead]);
+
+  const chunks = useMemo(
+    () =>
+      fetchedChunks?.map(({ key, x, z, data }) => (
+        <MemoizedChunk key={key} x={x} z={z} data={data} />
+      )),
+    [fetchedChunks],
+  );
 
   if (isConnecting) {
     return (
@@ -59,7 +82,7 @@ export default function Game() {
     );
   }
 
-  if (!isConnected || !session) {
+  if (!isConnected) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
         <Typography level="h4">Disconnected</Typography>
@@ -71,9 +94,13 @@ export default function Game() {
   }
 
   const transform = getEntity(playerEntityId).getComponent(TransformComponent);
-
   if (!transform) {
-    return null;
+    return (
+      <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
+        <CircularProgress />
+        <Typography level="h4">Loading...</Typography>
+      </Stack>
+    );
   }
 
   return (
@@ -84,25 +111,25 @@ export default function Game() {
         gl={{ alpha: false }}
         camera={{
           position: [
-            transform.position.x,
-            transform.position.y,
-            transform.position.x,
+            transform.position.x + 5,
+            transform.position.y + 3,
+            transform.position.z + 5,
           ],
         }}>
         <Sky sunPosition={[10, 200, 10]} />
         <ambientLight intensity={0.1} />
-        <pointLight castShadow intensity={100000} position={[100, 500, 100]} />
+        <pointLight intensity={50000} position={[100, 500, 100]} />
         <color attach="background" args={['#f0f0f0']} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
-        <Chunks />
+        {chunks}
+        <MovementGrid movementGrid={movementGrid} />
         <Players />
       </Canvas>
       <PlayerStats />
       <PlayerCard />
       <TargetCard />
-      <GameStats />
       <LogoutButton />
-      {/* <Stats /> */}
+      <Stats />
     </>
   );
 }

@@ -2,20 +2,15 @@ import Debug "mo:base/Debug";
 import Timer "mo:base/Timer";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
-import Array "mo:base/Array";
 import Nat8 "mo:base/Nat8";
 import Vector "mo:vector";
 import Map "mo:stable-hash-map/Map/Map";
 import ECS "mo:geecs";
-
 import Actions "actions";
 import Components "components";
-
 import Updates "utils/Updates";
 import Player "utils/Player";
-import Systems "utils/Systems";
-import Mines "utils/Mines";
-import Entities "utils/Entities";
+import Systems "systems/Systems";
 import Blocks "utils/Blocks";
 import Vector3 "math/Vector3";
 
@@ -50,7 +45,6 @@ actor {
   // Initialization
   Systems.register(ctx);
   Blocks.initialize(ctx);
-  Mines.initialize(ctx);
 
   // Game loop runs all the systems
   private func gameLoop() : async () {
@@ -105,45 +99,35 @@ actor {
     };
   };
 
+  startGameLoop<system>();
+
   // Queries
-  public shared query ({ caller }) func getState() : async [ECS.Types.Update<Components.Component>] {
-    switch (Player.findPlayersEntityId(ctx, caller)) {
-      case (?exists) {
-        let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
-        for ((entityId, components) in Map.entries(ctx.entities)) {
-          for (component in Map.vals(components)) {
-            let update = #Insert({
-              timestamp = Time.now();
-              entityId = entityId;
-              component = component;
-            });
-            Vector.add(currentState, update);
-          };
-        };
-
-        let updates = Updates.filterUpdatesForClient(currentState);
-        Vector.toArray(updates);
-
+  public shared query func getState() : async [ECS.Types.Update<Components.Component>] {
+    let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
+    for ((entityId, components) in Map.entries(ctx.entities)) {
+      for (component in Map.vals(components)) {
+        let update = #Insert({
+          timestamp = Time.now();
+          entityId = entityId;
+          component = component;
+        });
+        Vector.add(currentState, update);
       };
-      case (_) { [] };
     };
+
+    let updates = Updates.filterUpdatesForClient(currentState);
+    Vector.toArray(updates);
+
   };
 
-  public shared query ({ caller }) func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
-    switch (Player.findPlayersEntityId(ctx, caller)) {
-      case (?exists) {
-        // let entities = Entities.filterByRange(ctx, exists);
-        // let filtered = Updates.filterByEntities(ctx.updatedComponents, entities);
-        let recent = Updates.filterByTimestamp(ctx.updatedComponents, since);
-        let updates = Updates.filterUpdatesForClient(recent);
-        Vector.toArray(updates);
-      };
-      case (_) { [] };
-    };
+  public shared query func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
+    let recent = Updates.filterByTimestamp(ctx.updatedComponents, since);
+    let updates = Updates.filterUpdatesForClient(recent);
+    Vector.toArray(updates);
   };
 
   // Get block data for a chunk
-  public shared query ({ caller }) func getChunk(chunkPos : Vector3.Vector3) : async [Nat8] {
+  public shared query func getChunk(chunkPos : Vector3.Vector3) : async [Nat8] {
     // TODO: Check if the player is allowed to access this chunk
     Blocks.getBlocks(ctx, chunkPos);
   };

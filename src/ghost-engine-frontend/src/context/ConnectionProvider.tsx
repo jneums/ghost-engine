@@ -159,7 +159,7 @@ export const ConnectionProvider = ({ children }: Props) => {
         console.log('Error fetching updates:', error);
         disconnect();
       }
-    }, 500);
+    }, 1000);
 
     setPollingInterval(interval);
   }, [createServer, disconnect]);

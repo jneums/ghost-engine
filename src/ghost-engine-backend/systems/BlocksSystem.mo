@@ -4,8 +4,11 @@ import Debug "mo:base/Debug";
 import Components "../components";
 import Blocks "../utils/Blocks";
 import Array "mo:base/Array";
+import Float "mo:base/Float";
 import Map "mo:stable-hash-map/Map/Map";
 import Vector3 "../math/Vector3";
+import Const "../utils/Const";
+import Chunks "../utils/Chunks";
 
 module {
   type ChunkStatus = {
@@ -22,9 +25,32 @@ module {
         // Track all chunks
         let chunks = Map.new<Text, ChunkStatus>(Map.thash);
 
-        // Add all chunks around the player as inactive chunks
+        // Add all chunks as inactive
         for (chunkId in blocksComponent.chunkPositions.vals()) {
           Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; isActive = false });
+        };
+
+        // Add the chunks with distance < 4 around the spawn point as active chunks
+        let spawnPoint = Chunks.getChunkPosition({
+          x = Const.SpawnPoint.position.x;
+          y = 0;
+          z = Const.SpawnPoint.position.z;
+        });
+        let chunkRange = Float.toInt(Const.DEFAULT_VIEW_RADIUS) / Const.CHUNK_SIZE;
+
+        var x : Int = -chunkRange;
+        while (x <= chunkRange) {
+          var z : Int = -chunkRange;
+          while (z <= chunkRange) {
+            let chunkPos = {
+              x = (spawnPoint.x + Float.fromInt(x));
+              y = 0.0;
+              z = (spawnPoint.z + Float.fromInt(z));
+            };
+            Map.set(chunks, Map.thash, debug_show (chunkPos), { position = chunkPos; isActive = true });
+            z += 1;
+          };
+          x += 1;
         };
 
         // Iterate over all entities with PlayerChunksComponent and set as active chunks

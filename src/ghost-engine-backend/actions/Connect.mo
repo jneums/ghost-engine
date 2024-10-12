@@ -23,20 +23,12 @@ module {
       };
     };
 
-    // Add the principal and connection components
-    ECS.World.addComponent(
-      ctx,
-      entityId,
-      "PrincipalComponent",
-      #PrincipalComponent({
-        principal = args.principal;
-      }),
-    );
+    // Add the connection component
     ECS.World.addComponent(
       ctx,
       entityId,
       "ConnectComponent",
-      #ConnectComponent({}),
+      #ConnectComponent({ principal = args.principal }),
     );
   };
 

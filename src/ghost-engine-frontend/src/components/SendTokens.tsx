@@ -13,9 +13,11 @@ import { Principal } from '@dfinity/principal';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
+import { useConnection } from '../context/ConnectionProvider';
 
 export default function SendTokens() {
-  const { getPlayerEntityId } = useWorld();
+  const { playerEntityId, getEntity } = useWorld();
+  const { send } = useConnection();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
   const [principalId, setPrincipalId] = React.useState('');
@@ -27,7 +29,6 @@ export default function SendTokens() {
 
   const handleRedeemTokens = () => {
     console.log('Redeem tokens');
-    const playerEntityId = getPlayerEntityId(identity.getPrincipal());
     if (!playerEntityId) {
       console.error('Player id not found');
       return;
@@ -36,8 +37,8 @@ export default function SendTokens() {
     const principal = Principal.fromText(principalId);
 
     const redeemTokensAction = new RedeemTokensAction(
-      world,
-      connection,
+      getEntity,
+      send,
       setErrorMessage,
     );
     redeemTokensAction.handle({

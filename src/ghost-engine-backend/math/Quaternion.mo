@@ -24,4 +24,24 @@ module {
       w = c1 * c2 * c3 - s1 * s2 * s3;
     };
   };
+
+  public func normalize(q : Quaternion) : Quaternion {
+    let magnitude = Float.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return {
+      x = q.x / magnitude;
+      y = q.y / magnitude;
+      z = q.z / magnitude;
+      w = q.w / magnitude;
+    };
+  };
+
+  // Zero
+  public func zero() : Quaternion {
+    {
+      x = 0.0;
+      y = 0.0;
+      z = 0.0;
+      w = 0.0;
+    };
+  };
 };

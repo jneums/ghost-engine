@@ -1,7 +1,7 @@
 import { Principal } from '@dfinity/principal';
 import { CombatComponent, HealthComponent } from '../components';
-import { Entity } from '../utils/entity';
 import { Action } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
+import { Entity } from '../ecs';
 
 export default class RedeemTokensAction {
   constructor(

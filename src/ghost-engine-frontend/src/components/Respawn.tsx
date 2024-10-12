@@ -5,10 +5,11 @@ import { useDialog } from '../context/DialogProvider';
 import React, { useEffect } from 'react';
 import { useWorld } from '../context/WorldProvider';
 import { useConnection } from '../context/ConnectionProvider';
+import { HealthComponent } from '.';
 
 export default function Respawn() {
-  const { getPlayerEntityId, getIsPlayerDead } = useWorld();
   const { send } = useConnection();
+  const { getEntity, playerEntityId } = useWorld();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -17,8 +18,9 @@ export default function Respawn() {
     throw new Error('Identity not found');
   }
 
-  const playerEntityId = getPlayerEntityId(identity.getPrincipal());
-  const isPlayerDead = identity && getIsPlayerDead(playerEntityId);
+  const isPlayerDead = playerEntityId
+    ? getEntity(playerEntityId).getComponent(HealthComponent).amount <= 0
+    : false;
 
   useEffect(() => {
     if (!isPlayerDead) {

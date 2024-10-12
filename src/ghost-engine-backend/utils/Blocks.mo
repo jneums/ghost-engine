@@ -32,6 +32,7 @@ module {
       chunkStatus = [];
     });
     ECS.World.addComponent(ctx, entityId, "BlocksComponent", newBlocks);
+    ECS.World.addComponent(ctx, entityId, "UpdateBlocksComponent", #UpdateBlocksComponent({}));
   };
 
   public func addOrUpdateBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat8]) : Components.BlocksComponent {

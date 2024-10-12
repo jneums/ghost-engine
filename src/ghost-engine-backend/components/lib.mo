@@ -43,7 +43,9 @@ module {
     lastAction : Time.Time;
   };
 
-  public type ConnectComponent = {};
+  public type ConnectComponent = {
+    principal : Principal;
+  };
 
   public type DisconnectComponent = {
     startAt : Time.Time;

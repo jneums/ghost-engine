@@ -18,15 +18,21 @@ export default class MoveAction {
       Move: {
         entityId: BigInt(args.entityId),
         position: {
-          x: args.position.x,
-          y: args.position.y,
-          z: args.position.z,
+          x: Math.floor(args.position.x),
+          y: Math.floor(args.position.y),
+          z: Math.floor(args.position.z),
         },
       },
     });
 
     // Add the components to the ecs entity
-    const position = new MoveTargetComponent(args.position);
+    const position = new MoveTargetComponent(
+      new THREE.Vector3(
+        Math.floor(args.position.x),
+        Math.floor(args.position.y),
+        Math.floor(args.position.z),
+      ),
+    );
 
     // Sleep for a bit to reduce perceived latency
     sleep(250).then(() => {

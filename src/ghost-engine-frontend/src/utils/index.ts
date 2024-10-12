@@ -1,6 +1,6 @@
 import { Principal } from '@dfinity/principal';
 import { PrincipalComponent } from '../components';
-import { Entity } from './entity';
+import { Entity } from '../ecs';
 
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));

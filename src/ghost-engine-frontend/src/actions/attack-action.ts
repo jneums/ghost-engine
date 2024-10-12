@@ -5,8 +5,7 @@ import {
 } from '../components';
 import { Action } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
 import { sleep } from '../utils';
-import { Component } from '../ecs';
-import { Entity } from '../utils/entity';
+import { Component, Entity } from '../ecs';
 
 export default class AttackAction {
   constructor(

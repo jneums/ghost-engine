@@ -1,24 +1,26 @@
 import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Components "../components";
+import Const "../utils/Const";
 
 module {
 
-  // Private function to get the current transform or a default one
-  private func getOfflineTransform(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) : Components.TransformComponent {
-    let transform = ECS.World.getComponent(ctx, entityId, "TransformComponent");
-    switch (transform) {
-      case (? #TransformComponent(transform)) {
-        transform;
-      };
+  // Private function to handle TransformComponent logic
+  private func handleTransformComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
+    let defaultTransform = Const.SpawnPoint;
+
+    let transform = switch (ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
+      case (? #TransformComponent(transform)) { transform };
       case (_) {
-        {
-          scale = { x = 1.0; y = 1.0; z = 1.0 };
-          rotation = { x = 0.0; y = 0.0; z = 0.0; w = 0.0 };
-          position = { x = 0.0; y = 0.0; z = 0.0 };
+        // Check for a snapshot of the player's transform
+        switch (ECS.World.getComponent(ctx, entityId, "OfflineTransformComponent")) {
+          case (? #OfflineTransformComponent(transform)) { transform };
+          case (_) { defaultTransform };
         };
       };
     };
+    ECS.World.addComponent(ctx, entityId, "OfflineTransformComponent", #OfflineTransformComponent(transform));
+    ECS.World.removeComponent(ctx, entityId, "TransformComponent");
   };
 
   // Private function to handle disconnection logic
@@ -28,11 +30,7 @@ module {
 
     if (elapsedTime >= disconnect.duration) {
       // Save a snapshot of the player's transform
-      let offlineTransform = getOfflineTransform(ctx, entityId);
-      ECS.World.addComponent(ctx, entityId, "OfflineTransformComponent", #OfflineTransformComponent(offlineTransform));
-
-      // Remove the player's transform
-      ECS.World.removeComponent(ctx, entityId, "TransformComponent");
+      handleTransformComponent(ctx, entityId);
 
       // Remove the player from the simulation
       ECS.World.removeComponent(ctx, entityId, "SessionComponent");

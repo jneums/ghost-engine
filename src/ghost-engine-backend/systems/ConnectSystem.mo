@@ -78,9 +78,12 @@ module {
 
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : async () {
     switch (ECS.World.getComponent(ctx, entityId, "ConnectComponent")) {
-      case (? #ConnectComponent(_)) {
+      case (? #ConnectComponent({ principal })) {
         // Remove DisconnectComponent if it exists
         ECS.World.removeComponent(ctx, entityId, "DisconnectComponent");
+
+        // Add the principal component
+        ECS.World.addComponent(ctx, entityId, "PrincipalComponent", #PrincipalComponent({ principal }));
 
         handleTransformComponent(ctx, entityId);
         handleFungibleComponent(ctx, entityId);

@@ -11,39 +11,27 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import LightningBeam from './LightningBeam';
 import SetTargetAction from '../actions/set-target';
 import AttackAction from '../actions/attack-action';
-import { MapControls as DreiMapControls } from '@react-three/drei';
-import { MapControls } from 'three-stdlib';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
 import { useConnection } from '../context/ConnectionProvider';
+import { useCamera } from '../context/CameraProvider';
 
 export default function Player({ entityId }: { entityId: number }) {
+  const { cameraAngle } = useCamera();
   const { playerEntityId, getEntity, addComponent, removeComponent } =
     useWorld();
   const { send } = useConnection();
   const { identity } = useInternetIdentity();
   const entity = getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
-  const controlsRef = useRef<MapControls>(null);
-  const arrowHelperRef = useRef<THREE.ArrowHelper>(null);
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const { setErrorMessage } = useErrorMessage();
 
-  const CAMERA_FOLLOW_DISTANCE = 3; // Distance threshold for the camera to start following
-  const CAMERA_HEIGHT = 1; // Fixed height for the camera
+  const CAMERA_DISTANCE = 10; // Distance from the player
+  const CAMERA_VERTICAL_ANGLE = Math.atan(1 / Math.sqrt(2)); // 35.264 degrees for isometric view
 
-  const followDirection = new THREE.Vector3();
   const direction = new THREE.Vector3();
-  const targetQuaternion = new THREE.Quaternion();
-  const rotationMatrix = new THREE.Matrix4();
-  const arrowHelperDirection = new THREE.Vector3(0, 0, 1);
-  const arowHelperOrigin = new THREE.Vector3(0, 0, 0);
-  const behindOffset = new THREE.Vector3(
-    0,
-    CAMERA_HEIGHT,
-    -CAMERA_FOLLOW_DISTANCE,
-  );
 
   const velocity = 2; // units per second
   const epsilon = 0.05; // Small value to prevent shaking
@@ -74,7 +62,7 @@ export default function Player({ entityId }: { entityId: number }) {
   const isDead = health.amount <= 0;
   const color = isDead ? 'black' : isPlayer ? 'blue' : 'red';
 
-  const handleRightClick = useCallback(
+  const handleClick = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation();
       if (!playerEntityId) {
@@ -115,31 +103,17 @@ export default function Player({ entityId }: { entityId: number }) {
       ? moveTarget.position
       : serverTransform.position;
 
+    // Start moving towards the target
     updatePosition(clientTransform, updatedPosition, delta, velocity, epsilon);
-    meshRef.current?.position.copy(clientTransform.position);
 
-    if (isPlayer && controlsRef.current && meshRef.current) {
-      updateCamera(
-        controlsRef.current,
-        clientTransform.position,
-        meshRef.current.rotation,
-        delta,
-        epsilon,
-      );
-    }
+    meshRef.current?.position.copy({
+      x: clientTransform.position.x + 0.5,
+      y: clientTransform.position.y + 0.5,
+      z: clientTransform.position.z + 0.5,
+    });
 
-    if (meshRef.current) {
-      const targetPosition = getCombatTargetPosition();
-      const lookTarget = targetPosition
-        ? targetPosition
-        : moveTarget
-        ? moveTarget.position
-        : serverTransform.position;
-      smoothLookAt(meshRef.current, lookTarget, delta);
-    }
-
-    if (arrowHelperRef.current && meshRef.current) {
-      updateArrowHelper(arrowHelperRef.current, meshRef.current);
+    if (isPlayer && meshRef.current) {
+      updateCamera(state.camera, clientTransform.position);
     }
 
     if (isDead) {
@@ -171,23 +145,12 @@ export default function Player({ entityId }: { entityId: number }) {
       <mesh
         name={name}
         ref={meshRef}
-        onClick={handleRightClick}
+        onClick={handleClick}
         castShadow
         receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshPhongMaterial color={color} />
-        {isPlayer && (
-          <DreiMapControls
-            ref={controlsRef}
-            enablePan={false}
-            enableRotate={false}
-          />
-        )}
       </mesh>
-      <arrowHelper
-        ref={arrowHelperRef}
-        args={[arrowHelperDirection, arowHelperOrigin, 2, 0xffff00]}
-      />
       {combatTargetId && (
         <LightningBeam
           start={clientTransform.position}
@@ -204,65 +167,46 @@ export default function Player({ entityId }: { entityId: number }) {
     velocity: number,
     epsilon: number,
   ) {
+    // Calculate the direction vector towards the target
     direction.subVectors(targetPosition, clientTransform.position).normalize();
-    const distance = velocity * delta;
-    const moveVector = direction.multiplyScalar(distance);
 
-    if (clientTransform.position.distanceTo(targetPosition) > epsilon) {
-      clientTransform.position.add(moveVector);
+    // Calculate the distance to move this frame
+    const distance = velocity * delta;
+
+    // Calculate the remaining distance to the target
+    const distanceToTarget =
+      clientTransform.position.distanceTo(targetPosition);
+
+    // If the calculated distance exceeds the remaining distance, clamp it
+    const moveDistance = Math.min(distance, distanceToTarget);
+
+    // Calculate the movement vector
+    const moveVector = direction.multiplyScalar(moveDistance);
+
+    // Move the client position
+    clientTransform.position.add(moveVector);
+
+    // Snap to grid if close enough to the target
+    if (distanceToTarget <= epsilon) {
+      clientTransform.position.set(
+        Math.floor(targetPosition.x),
+        Math.floor(targetPosition.y),
+        Math.floor(targetPosition.z),
+      );
     }
   }
 
-  function updateCamera(
-    controls: MapControls,
-    targetPosition: THREE.Vector3,
-    targetRotation: THREE.Euler,
-    delta: number,
-    epsilon: number,
-  ) {
-    const cameraPosition = controls.object.position;
-    const adjustedTargetPosition = targetPosition.clone();
-    adjustedTargetPosition.y += CAMERA_HEIGHT;
-
-    // Calculate the desired camera position behind the player
-    const newBehindOffset = behindOffset.clone();
-    newBehindOffset.applyEuler(targetRotation);
-    const desiredCameraPosition = adjustedTargetPosition
-      .clone()
-      .add(newBehindOffset);
-
-    // Smoothly transition the camera to the desired position
-    const distanceToTarget = cameraPosition.distanceTo(desiredCameraPosition);
-    if (distanceToTarget > epsilon) {
-      followDirection
-        .subVectors(desiredCameraPosition, cameraPosition)
-        .normalize();
-      const followDistance = distanceToTarget * delta;
-      const followVector = followDirection.multiplyScalar(followDistance);
-
-      cameraPosition.add(followVector);
-      controls.update();
-    }
+  function updateCamera(camera: THREE.Camera, targetPosition: THREE.Vector3) {
+    // Set the camera position for an isometric view
+    const cameraOffset = new THREE.Vector3(
+      CAMERA_DISTANCE * Math.cos(cameraAngle) * Math.cos(CAMERA_VERTICAL_ANGLE),
+      CAMERA_DISTANCE * Math.sin(CAMERA_VERTICAL_ANGLE),
+      CAMERA_DISTANCE * Math.sin(cameraAngle) * Math.cos(CAMERA_VERTICAL_ANGLE),
+    );
+    const cameraPosition = targetPosition.clone().add(cameraOffset);
+    camera.position.copy(cameraPosition);
 
     // Ensure the camera is looking at the player
-    controls.object.lookAt(targetPosition);
-  }
-
-  function smoothLookAt(
-    mesh: THREE.Mesh,
-    targetPosition: THREE.Vector3,
-    delta: number,
-  ) {
-    rotationMatrix.lookAt(targetPosition, mesh.position, mesh.up);
-    const step = 10 * delta;
-    targetQuaternion.setFromRotationMatrix(rotationMatrix);
-    mesh.quaternion.rotateTowards(targetQuaternion, step);
-  }
-
-  function updateArrowHelper(arrowHelper: THREE.ArrowHelper, mesh: THREE.Mesh) {
-    const direction = arrowHelperDirection.clone();
-    direction.applyQuaternion(mesh.quaternion);
-    arrowHelper.setDirection(direction);
-    arrowHelper.position.copy(mesh.position);
+    camera.lookAt(targetPosition);
   }
 }

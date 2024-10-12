@@ -5,18 +5,10 @@ import React, {
   useCallback,
   useEffect,
 } from 'react';
-import {
-  ComponentConstructors,
-  createComponentClass,
-  HealthComponent,
-  PrincipalComponent,
-  SessionComponent,
-} from '../components';
-import { Principal } from '@dfinity/principal';
+import { ComponentConstructors, createComponentClass } from '../components';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from './ConnectionProvider';
 import { match, P } from 'ts-pattern';
-import ConnectAction from '../actions/connect-action';
 import { Component, Entity, EntityId } from '../ecs';
 
 interface WorldContextType {
@@ -26,9 +18,7 @@ interface WorldContextType {
   removeComponent: (entityId: EntityId, componentClass: Function) => void;
   getEntities: () => EntityId[];
   getEntitiesByArchetype: (componentClasses: Function[]) => EntityId[];
-  isPlayerDead: boolean;
   playerEntityId: EntityId | undefined;
-  session?: number;
 }
 
 const WorldContext = createContext<WorldContextType | undefined>(undefined);
@@ -43,13 +33,9 @@ export const useWorld = (): WorldContextType => {
 
 export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const { identity } = useInternetIdentity();
-  const { updates, send } = useConnection();
+  const { updates, disconnect } = useConnection();
   const [entities, setEntities] = useState<Map<EntityId, Entity>>(new Map());
-  const [playerEntityId, setPlayerEntityId] = useState<EntityId | undefined>(
-    undefined,
-  );
-  const [isPlayerDead, setIsPlayerDead] = useState<boolean>(false);
-  const [session, setSession] = useState<number | undefined>(undefined);
+  const playerEntityIdRef = React.useRef<EntityId | undefined>(undefined);
 
   const getEntity = useCallback(
     (entityId: EntityId): Entity => {
@@ -66,17 +52,19 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const addComponent = useCallback(
     (entityId: EntityId, component: Component) => {
       setEntities((prev) => {
-        const entity = prev.get(entityId);
+        const newEntities = new Map(prev);
+        const entity = newEntities.get(entityId);
         if (!entity) {
           // If the entity doesn't exist, create a new one
           const newEntity = new Entity(entityId);
           newEntity.addComponent(component);
-          return new Map(prev).set(entityId, newEntity);
+          newEntities.set(entityId, newEntity);
         } else {
           // Clone the entity and add the component
           entity.addComponent(component);
-          return new Map(prev).set(entityId, entity);
+          newEntities.set(entityId, entity);
         }
+        return newEntities; // Return a new Map reference
       });
     },
     [],
@@ -84,11 +72,17 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
 
   const removeComponent = useCallback(
     (entityId: EntityId, componentClass: Function) => {
-      const entity = getEntity(entityId);
-      entity.deleteComponent(componentClass);
-      setEntities((prev) => new Map(prev));
+      setEntities((prev) => {
+        const newEntities = new Map(prev);
+        const entity = newEntities.get(entityId);
+        if (entity) {
+          entity.deleteComponent(componentClass);
+          newEntities.set(entityId, entity);
+        }
+        return newEntities; // Return a new Map reference
+      });
     },
-    [getEntity],
+    [],
   );
 
   const getEntities = useCallback((): EntityId[] => {
@@ -106,63 +100,46 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    const updatePlayerState = () => {
-      const playerEntities = getEntitiesByArchetype([PrincipalComponent]);
-      const playerEntity = playerEntities.find((entityId) => {
-        const entity = getEntity(entityId);
-        const component = entity.getComponent(PrincipalComponent);
-        return (
-          component?.principal.compareTo(
-            identity?.getPrincipal() || Principal.anonymous(),
-          ) === 'eq'
-        );
-      });
+    if (!identity) {
+      return;
+    }
 
-      setPlayerEntityId(playerEntity);
-
-      if (playerEntity !== undefined) {
-        const entity = getEntity(playerEntity);
-        const health = entity.getComponent(HealthComponent);
-        setIsPlayerDead(health?.amount <= 0);
-
-        const session = entity.getComponent(SessionComponent);
-        if (session) {
-          setSession(session.lastAction);
-        } else {
-          setSession(undefined);
-        }
-      } else {
-        setIsPlayerDead(false);
-      }
-    };
-
-    updatePlayerState();
-  }, [entities, getEntitiesByArchetype, getEntity, identity]);
-
-  useEffect(() => {
     console.log(updates);
     updates.forEach((action) => {
       match(action)
         .with({ Insert: P.select() }, (action) => {
           const component = createComponentClass(action.component);
           addComponent(Number(action.entityId), component);
+
+          // If the component is a PrincipalComponent, we need to check if it's the player
+          // and set the playerEntityId
+          match(action.component).with(
+            { PrincipalComponent: P.select() },
+            ({ principal }) => {
+              if (principal.compareTo(identity.getPrincipal()) === 'eq') {
+                console.log('Setting player entity id: ' + action.entityId);
+                playerEntityIdRef.current = Number(action.entityId);
+              }
+            },
+          );
         })
         .with({ Delete: P.select() }, (action) => {
           const constructor = ComponentConstructors[action.componentType];
           removeComponent(Number(action.entityId), constructor);
+
+          // If the component is a SessionComponent, we need to check if it's the player
+          // entity and disconnect the user if it is
+          match(action.componentType).with('SessionComponent', () => {
+            if (Number(action.entityId) === playerEntityIdRef.current) {
+              disconnect();
+            }
+          });
         })
         .otherwise(() => {
           console.log('Message is not Insert or Delete!');
         });
     });
-  }, [updates]);
-
-  useEffect(() => {
-    if (!session && identity) {
-      const connectAction = new ConnectAction(send);
-      connectAction.handle({ principal: identity.getPrincipal() });
-    }
-  }, [session, identity, send]);
+  }, [updates, identity, addComponent, removeComponent, disconnect]);
 
   return (
     <WorldContext.Provider
@@ -173,9 +150,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
         removeComponent,
         getEntities,
         getEntitiesByArchetype,
-        isPlayerDead,
-        playerEntityId,
-        session,
+        playerEntityId: playerEntityIdRef.current,
       }}>
       {children}
     </WorldContext.Provider>
