@@ -32,7 +32,7 @@ export default function Game() {
   const { playerEntityId, getEntity } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
-  const { fetchedChunks, movementGrid } = useChunks();
+  const { fetchedChunks } = useChunks();
 
   const onReconnectClick = () => {
     if (!identity) {
@@ -122,7 +122,7 @@ export default function Game() {
         <color attach="background" args={['#f0f0f0']} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         {chunks}
-        <MovementGrid movementGrid={movementGrid} />
+        <MovementGrid fetchedChunks={fetchedChunks} />
         <Players />
       </Canvas>
       <PlayerStats />

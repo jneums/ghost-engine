@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
 import { ThreeEvent } from '@react-three/fiber';
@@ -71,6 +71,7 @@ export default function Chunk({
   data: Uint8Array | number[];
 }) {
   const { identity } = useInternetIdentity();
+  const geomRef = useRef(new THREE.BufferGeometry());
 
   if (!identity) {
     throw new Error('Identity not found');
@@ -129,20 +130,21 @@ export default function Chunk({
 
   const geometry = useMemo(() => {
     const { positions, normals, indices } = generateVoxelGeometry();
-    const geom = new THREE.BufferGeometry();
 
-    geom.setAttribute(
+    geomRef.current.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(positions, 3),
     );
-    geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-    geom.setIndex(indices);
+    geomRef.current.setAttribute(
+      'normal',
+      new THREE.Float32BufferAttribute(normals, 3),
+    );
+    geomRef.current.setIndex(indices);
 
     // Compute bounding volumes
-    geom.computeBoundingBox();
-    geom.computeBoundingSphere();
+    geomRef.current.computeBoundingBox();
 
-    return geom;
+    return geomRef.current;
   }, [data]); // Add dependencies if needed
 
   if (!data.length) {

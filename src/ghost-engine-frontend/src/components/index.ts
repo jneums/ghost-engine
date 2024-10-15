@@ -16,7 +16,7 @@ export class HealthComponent {
 }
 
 export class MoveTargetComponent {
-  constructor(public position: THREE.Vector3) {}
+  constructor(public waypoints: THREE.Vector3[]) {}
 }
 
 export class VelocityComponent {
@@ -134,9 +134,11 @@ export function createComponentClass(data: Component) {
     .with({ HealthComponent: P.select() }, ({ amount, max }) => {
       return new HealthComponent(Number(amount), Number(max));
     })
-    .with({ MoveTargetComponent: P.select() }, ({ position }) => {
+    .with({ MoveTargetComponent: P.select() }, ({ waypoints }) => {
       return new MoveTargetComponent(
-        new THREE.Vector3(position.x, position.y, position.z),
+        waypoints.map(
+          (waypoint) => new THREE.Vector3(waypoint.x, waypoint.y, waypoint.z),
+        ),
       );
     })
     .with({ VelocityComponent: P.select() }, ({ x, y, z }) => {

@@ -19,7 +19,7 @@ module {
   };
 
   public type MoveTargetComponent = {
-    position : Vector3.Vector3;
+    waypoints : [Vector3.Vector3];
   };
 
   public type RespawnComponent = {

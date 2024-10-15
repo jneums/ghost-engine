@@ -5,21 +5,45 @@ import { useCallback, useMemo } from 'react';
 import MoveAction from '../actions/move-action';
 import { useWorld } from '../context/WorldProvider';
 import { useConnection } from '../context/ConnectionProvider';
-import {
-  ClientTransformComponent,
-  HealthComponent,
-  MoveTargetComponent,
-} from '.';
+import { ClientTransformComponent, HealthComponent } from '.';
+import { FetchedChunk } from '../hooks/useChunks';
+import useMovementGrid from '../hooks/useMovementGrid';
+import { findPath, Node } from '../pathfinding';
+
 const DRAG_THRESHOLD = 5;
 
 export default function MovementGrid({
-  movementGrid,
+  fetchedChunks,
 }: {
-  movementGrid: { grid: number[][][]; gridOrigin: THREE.Vector3 } | null;
+  fetchedChunks: FetchedChunk[];
 }) {
-  const { addComponent, playerEntityId, getEntity } = useWorld();
+  const { playerEntityId, getEntity, addComponent } = useWorld();
   const { send } = useConnection();
   const { setErrorMessage } = useErrorMessage();
+
+  const movementGrid = useMovementGrid(8, fetchedChunks);
+
+  const findNodeByPosition = (
+    nodes: Node[][][],
+    position: THREE.Vector3,
+  ): Node | null => {
+    for (let y = 0; y < nodes.length; y++) {
+      for (let x = 0; x < nodes[y].length; x++) {
+        for (let z = 0; z < nodes[y][x].length; z++) {
+          const node = nodes[y][x][z];
+          if (
+            node &&
+            node.x === position.x &&
+            node.y === position.y &&
+            node.z === position.z
+          ) {
+            return node;
+          }
+        }
+      }
+    }
+    return null;
+  };
 
   const handleClick = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
@@ -32,7 +56,9 @@ export default function MovementGrid({
         return;
       }
 
-      const health = getEntity(playerEntityId).getComponent(HealthComponent);
+      const playerEntity = getEntity(playerEntityId);
+
+      const health = playerEntity.getComponent(HealthComponent);
       if (!health) {
         console.error('Health component not found');
         return;
@@ -43,97 +69,111 @@ export default function MovementGrid({
         return;
       }
 
-      const transform = getEntity(playerEntityId).getComponent(
-        ClientTransformComponent,
-      );
+      const transform = playerEntity.getComponent(ClientTransformComponent);
       if (!transform) {
         console.error('Transform component not found');
         return;
       }
 
-      const target =
-        getEntity(playerEntityId).getComponent(MoveTargetComponent);
-      const targetPosition = target?.position || transform.position;
+      const startPosition = transform.position;
+      const targetPosition = new THREE.Vector3(
+        Math.floor(e.point.x),
+        Math.floor(e.point.y),
+        Math.floor(e.point.z),
+      );
+
+      if (!movementGrid) {
+        console.error('Movement grid not initialized');
+        return;
+      }
+
+      const { grid } = movementGrid;
+
+      // console.log('grid:  ', grid);
+
+      // Find start and end nodes
+      const startNode = findNodeByPosition(grid, startPosition);
+      const endNode = findNodeByPosition(grid, targetPosition);
+
+      if (!startNode || !endNode) {
+        console.error('Start or end node not found');
+        setErrorMessage('Start or end node not found');
+        return;
+      }
+
+      // Generate path using A* algorithm
+      const path = findPath(startNode, endNode);
+
+      if (!path || path.length === 0) {
+        console.error('No valid path found');
+        setErrorMessage('No valid path found');
+        return;
+      }
 
       const move = new MoveAction(addComponent, send);
       move.handle({
         entityId: playerEntityId,
-        position: new THREE.Vector3(e.point.x, targetPosition.y, e.point.z),
+        waypoints: path.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
       });
     },
-    [setErrorMessage],
+    [
+      send,
+      addComponent,
+      playerEntityId,
+      getEntity,
+      setErrorMessage,
+      movementGrid,
+    ],
   );
 
-  // Render the movement grid
   const gridBoxes = useMemo(() => {
     if (!movementGrid) return null;
 
-    const { grid, gridOrigin } = movementGrid;
+    const { grid } = movementGrid;
     if (!grid) return null;
-    const gridSize = grid[0].length; // Assuming all layers have the same size
-
+    const gridSize = grid.length; // Assuming all layers have the same size
     const boxes = [];
 
-    // Indices for the layers in the movementGrid
-    const aboveLayerIndex = 0;
-    const currentLayerIndex = 1;
-    const belowLayerIndex = 2;
+    // Calculate the center of the grid
+    const centerX = gridSize / 2;
+    const centerY = gridSize / 2;
+    const centerZ = gridSize / 2;
 
     for (let x = 0; x < gridSize; x++) {
-      for (let z = 0; z < gridSize; z++) {
-        const isWalkableAbove = grid[aboveLayerIndex]?.[x]?.[z] === 1;
-        const isWalkableCurrent = grid[currentLayerIndex]?.[x]?.[z] === 1;
-        const isWalkableBelow = grid[belowLayerIndex]?.[x]?.[z] === 1;
+      for (let y = 0; y < gridSize; y++) {
+        for (let z = 0; z < gridSize; z++) {
+          const node = grid[x][y][z];
 
-        if (isWalkableAbove) {
-          // Above layer
-          boxes.push(
-            <mesh
-              key={`grid-${x}-${z}-above`}
-              onClick={handleClick}
-              position={[
-                gridOrigin.x + x + 0.5, // Align with grid origin
-                gridOrigin.y, // One voxel above
-                gridOrigin.z + z + 0.5, // Align with grid origin
-              ]}>
-              <boxGeometry args={[1, 0.1, 1]} />
-              <meshBasicMaterial color="gold" transparent opacity={0.25} />
-            </mesh>,
-          );
-        }
+          if (node) {
+            // Calculate the distance from the center
+            const distance = Math.sqrt(
+              Math.pow(x - centerX, 2) +
+                Math.pow(y - centerY, 2) +
+                Math.pow(z - centerZ, 2),
+            );
 
-        if (isWalkableCurrent) {
-          // Current layer
-          boxes.push(
-            <mesh
-              key={`grid-${x}-${z}-current`}
-              onClick={handleClick}
-              position={[
-                gridOrigin.x + x + 0.5, // Align with grid origin
-                gridOrigin.y - 1, // Align with current layer
-                gridOrigin.z + z + 0.5, // Align with grid origin
-              ]}>
-              <boxGeometry args={[1, 0.1, 1]} />
-              <meshBasicMaterial color="gold" transparent opacity={0.15} />
-            </mesh>,
-          );
-        }
+            // Calculate opacity based on distance
+            const maxDistance = Math.sqrt(3 * Math.pow(gridSize / 2, 2));
+            const opacity = 0.7 - distance / maxDistance;
 
-        if (isWalkableBelow) {
-          // Below layer
-          boxes.push(
-            <mesh
-              key={`grid-${x}-${z}-below`}
-              onClick={handleClick}
-              position={[
-                gridOrigin.x + x + 0.5, // Align with grid origin
-                gridOrigin.y - 2, // One voxel below
-                gridOrigin.z + z + 0.5, // Align with grid origin
-              ]}>
-              <boxGeometry args={[1, 0.1, 1]} />
-              <meshBasicMaterial color="gold" transparent opacity={0.05} />
-            </mesh>,
-          );
+            boxes.push(
+              <mesh
+                key={`grid-${x}-${z}-layer-${y}`}
+                onClick={handleClick}
+                position={[
+                  node.x + 0.5, // Align with grid origin
+                  node.y, // Correctly align with the current layer
+                  node.z + 0.5, // Align with grid origin
+                ]}>
+                <boxGeometry args={[1, 0.1, 1]} />
+                <meshBasicMaterial
+                  color="silver"
+                  transparent
+                  opacity={opacity} // Vary opacity by distance
+                />
+              </mesh>,
+            );
+          }
         }
       }
     }
@@ -141,5 +181,5 @@ export default function MovementGrid({
     return boxes;
   }, [movementGrid, handleClick]);
 
-  return gridBoxes;
+  return <>{gridBoxes}</>;
 }

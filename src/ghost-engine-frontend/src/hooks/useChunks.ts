@@ -1,9 +1,8 @@
 import * as THREE from 'three';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
 import {
-  ClientTransformComponent,
   PlayerChunksComponent,
   PlayerViewComponent,
   TransformComponent,
@@ -144,90 +143,5 @@ export default function useChunks() {
     fetchChunksInPhases();
   }, [identity, playerEntityId, getEntity]);
 
-  // Create a movement grid for pathfinding
-  const movementGrid = useMemo(() => {
-    if (!playerEntityId) return null;
-
-    const transform = getEntity(playerEntityId).getComponent(
-      ClientTransformComponent,
-    );
-    if (!transform) return null;
-
-    const playerX = Math.floor(transform.position.x);
-    const playerY = Math.floor(transform.position.y);
-    const playerZ = Math.floor(transform.position.z);
-
-    const gridSize = 8; // 8 blocks in every direction
-    const grid = Array.from({ length: 3 }, () =>
-      // 3 layers: above, current, below
-      Array.from({ length: gridSize * 2 + 1 }, () =>
-        Array(gridSize * 2 + 1).fill(0),
-      ),
-    );
-
-    // Calculate the grid's world origin
-    const gridOrigin = new THREE.Vector3(
-      playerX - gridSize,
-      playerY,
-      playerZ - gridSize,
-    );
-
-    // Iterate over the relevant chunks
-    Object.values(fetchedChunks).forEach(({ x, z, data }) => {
-      const chunkStartX = x * CHUNK_SIZE;
-      const chunkStartZ = z * CHUNK_SIZE;
-
-      for (let localX = 0; localX < CHUNK_SIZE; localX++) {
-        for (let localZ = 0; localZ < CHUNK_SIZE; localZ++) {
-          const worldX = chunkStartX + localX;
-          const worldZ = chunkStartZ + localZ;
-
-          // Check if the block is within the grid range
-          const gridX = worldX - playerX + gridSize;
-          const gridZ = worldZ - playerZ + gridSize;
-
-          if (
-            gridX >= 0 &&
-            gridX < gridSize * 2 + 1 &&
-            gridZ >= 0 &&
-            gridZ < gridSize * 2 + 1
-          ) {
-            // Check the current, below, and lowest Y-levels
-            const currentY = playerY;
-            const belowY = playerY - 1;
-            const lowestY = playerY - 2;
-
-            const currentBlockIndex =
-              currentY * CHUNK_SIZE * CHUNK_SIZE + localZ * CHUNK_SIZE + localX;
-            const belowBlockIndex =
-              belowY * CHUNK_SIZE * CHUNK_SIZE + localZ * CHUNK_SIZE + localX;
-            const lowestBlockIndex =
-              lowestY * CHUNK_SIZE * CHUNK_SIZE + localZ * CHUNK_SIZE + localX;
-
-            const currentBlockValue = data[currentBlockIndex];
-            const belowBlockValue = data[belowBlockIndex];
-            const lowestBlockValue = data[lowestBlockIndex];
-
-            // Walkable if current is air and below is solid
-            grid[0][gridX][gridZ] =
-              currentBlockValue === 0 && belowBlockValue !== 0 ? 1 : 0;
-
-            // Walkable if below is air and lowest is solid
-            grid[1][gridX][gridZ] =
-              belowBlockValue === 0 && lowestBlockValue !== 0 ? 1 : 0;
-
-            // Walkable if lowest is air and two below is solid
-            const twoBelowBlockIndex =
-              lowestBlockIndex - CHUNK_SIZE * CHUNK_SIZE;
-            grid[2][gridX][gridZ] =
-              lowestBlockValue === 0 && data[twoBelowBlockIndex] !== 0 ? 1 : 0;
-          }
-        }
-      }
-    });
-
-    return { grid, gridOrigin };
-  }, [fetchedChunks, playerEntityId]);
-
-  return { loading, fetchedChunks: Object.values(fetchedChunks), movementGrid };
+  return { loading, fetchedChunks: Object.values(fetchedChunks) };
 }

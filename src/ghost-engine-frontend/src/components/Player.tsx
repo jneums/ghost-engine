@@ -16,6 +16,10 @@ import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
 import { useConnection } from '../context/ConnectionProvider';
 import { useCamera } from '../context/CameraProvider';
+import PlayerIndicator from './PlayerIndicator';
+
+const PLAYER_WIDTH = 1;
+const PLAYER_HEIGHT = 1.8;
 
 export default function Player({ entityId }: { entityId: number }) {
   const { cameraAngle } = useCamera();
@@ -28,7 +32,7 @@ export default function Player({ entityId }: { entityId: number }) {
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const { setErrorMessage } = useErrorMessage();
 
-  const CAMERA_DISTANCE = 10; // Distance from the player
+  const CAMERA_DISTANCE = 15; // Distance from the player
   const CAMERA_VERTICAL_ANGLE = Math.atan(1 / Math.sqrt(2)); // 35.264 degrees for isometric view
 
   const direction = new THREE.Vector3();
@@ -99,17 +103,21 @@ export default function Player({ entityId }: { entityId: number }) {
   }, [combat]);
 
   useFrame((state, delta) => {
-    const updatedPosition = moveTarget
-      ? moveTarget.position
-      : serverTransform.position;
+    let updatedPosition = clientTransform.position;
+    if (isPlayer && moveTarget && moveTarget.waypoints.length > 0) {
+      updatedPosition = moveTarget.waypoints[0];
+    }
+    if (!isPlayer && serverTransform) {
+      updatedPosition = serverTransform.position;
+    }
 
     // Start moving towards the target
     updatePosition(clientTransform, updatedPosition, delta, velocity, epsilon);
 
     meshRef.current?.position.copy({
-      x: clientTransform.position.x + 0.5,
-      y: clientTransform.position.y + 0.5,
-      z: clientTransform.position.z + 0.5,
+      x: clientTransform.position.x + 0.5 * PLAYER_WIDTH,
+      y: clientTransform.position.y + 0.5 * PLAYER_HEIGHT,
+      z: clientTransform.position.z + 0.5 * PLAYER_WIDTH,
     });
 
     if (isPlayer && meshRef.current) {
@@ -148,8 +156,9 @@ export default function Player({ entityId }: { entityId: number }) {
         onClick={handleClick}
         castShadow
         receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <boxGeometry args={[1, 2, 1]} />
         <meshPhongMaterial color={color} />
+        <PlayerIndicator />
       </mesh>
       {combatTargetId && (
         <LightningBeam
@@ -167,6 +176,7 @@ export default function Player({ entityId }: { entityId: number }) {
     velocity: number,
     epsilon: number,
   ) {
+    if (!targetPosition) return;
     // Calculate the direction vector towards the target
     direction.subVectors(targetPosition, clientTransform.position).normalize();
 
@@ -193,6 +203,14 @@ export default function Player({ entityId }: { entityId: number }) {
         Math.floor(targetPosition.y),
         Math.floor(targetPosition.z),
       );
+
+      // Remove the waypoint if it has been reached
+      if (moveTarget) {
+        moveTarget.waypoints.shift();
+        if (moveTarget.waypoints.length === 0) {
+          removeComponent(entityId, MoveTargetComponent);
+        }
+      }
     }
   }
 

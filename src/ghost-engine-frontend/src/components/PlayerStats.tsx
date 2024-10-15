@@ -68,14 +68,16 @@ export default function PlayerStats() {
     if (!transform) return;
     const target = entity.getComponent(MoveTargetComponent);
     const moveAction = new MoveAction(addComponent, send);
-    const targetPosition = target?.position || transform.position;
+    const targetPosition =
+      target?.waypoints?.length > 0 ? target.waypoints[0] : transform.position;
+    const position = new THREE.Vector3(
+      targetPosition.x,
+      targetPosition.y + altitudeDelta,
+      targetPosition.z,
+    );
     moveAction.handle({
       entityId: playerEntityId,
-      position: new THREE.Vector3(
-        targetPosition.x,
-        targetPosition.y + altitudeDelta,
-        targetPosition.z,
-      ),
+      waypoints: [position],
     });
   };
 
