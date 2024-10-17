@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
 import {
@@ -26,15 +26,23 @@ export default function useChunks() {
   const [fetchedChunks, setFetchedChunks] = useState<
     Record<string, FetchedChunk>
   >({});
+  const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const entity = playerEntityId ? getEntity(playerEntityId) : null;
+  const chunks = entity?.getComponent(PlayerChunksComponent);
 
   async function fetchChunkData(chunk: { x: number; z: number }) {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
     const maxAttempts = 5; // Maximum number of attempts
     const initialDelay = 500; // Initial delay in milliseconds
     let attempt = 0;
 
     while (attempt < maxAttempts) {
       try {
-        const data = await getChunk({ x: chunk.x, y: 0, z: chunk.z });
+        const data = await getChunk(identity, { x: chunk.x, y: 0, z: chunk.z });
 
         if (data.length > 0) {
           return {
@@ -74,13 +82,7 @@ export default function useChunks() {
       return;
     }
 
-    const entity = getEntity(playerEntityId);
-    if (!entity) {
-      return;
-    }
-
-    const chunks = entity.getComponent(PlayerChunksComponent);
-    if (!chunks) {
+    if (!entity || !chunks) {
       return;
     }
 
@@ -141,7 +143,18 @@ export default function useChunks() {
     };
 
     fetchChunksInPhases();
-  }, [identity, playerEntityId, getEntity]);
+
+    // Set up a retry mechanism to periodically attempt to fetch missing chunks
+    retryIntervalRef.current = setInterval(() => {
+      fetchChunksInPhases();
+    }, 10000); // Retry every 10 seconds
+
+    return () => {
+      if (retryIntervalRef.current) {
+        clearInterval(retryIntervalRef.current);
+      }
+    };
+  }, [identity, playerEntityId, getEntity, chunks]);
 
   return { loading, fetchedChunks: Object.values(fetchedChunks) };
 }

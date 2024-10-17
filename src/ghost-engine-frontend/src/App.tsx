@@ -7,11 +7,10 @@ import { WorldProvider } from './context/WorldProvider';
 import { DialogProvider } from './context/DialogProvider';
 import { ErrorMessageProvider } from './context/ErrorProvider';
 import { ConnectionProvider } from './context/ConnectionProvider';
-import { CameraProvider } from './context/CameraProvider';
 
 export default function App() {
   return (
-    <CssVarsProvider>
+    <CssVarsProvider defaultMode="light">
       <CssBaseline />
       <InternetIdentityProvider
         loginOptions={{
@@ -21,15 +20,13 @@ export default function App() {
           <WorldProvider>
             <DialogProvider>
               <ErrorMessageProvider>
-                <CameraProvider>
-                  <Router>
-                    <Routes>
-                      <Route path="/" element={<Menu />} />
-                      <Route path="/game" element={<Game />} />
-                      <Route path="*" element={<h1>404</h1>} />
-                    </Routes>
-                  </Router>
-                </CameraProvider>
+                <Router>
+                  <Routes>
+                    <Route path="/" element={<Menu />} />
+                    <Route path="/game" element={<Game />} />
+                    <Route path="*" element={<h1>404</h1>} />
+                  </Routes>
+                </Router>
               </ErrorMessageProvider>
             </DialogProvider>
           </WorldProvider>

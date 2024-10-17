@@ -2,13 +2,13 @@ import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { useCallback, useMemo } from 'react';
-import MoveAction from '../actions/move-action';
 import { useWorld } from '../context/WorldProvider';
 import { useConnection } from '../context/ConnectionProvider';
 import { ClientTransformComponent, HealthComponent } from '.';
 import { FetchedChunk } from '../hooks/useChunks';
 import useMovementGrid from '../hooks/useMovementGrid';
 import { findPath, Node } from '../pathfinding';
+import useAction from '../hooks/useAction';
 
 const DRAG_THRESHOLD = 5;
 
@@ -20,6 +20,7 @@ export default function MovementGrid({
   const { playerEntityId, getEntity, addComponent } = useWorld();
   const { send } = useConnection();
   const { setErrorMessage } = useErrorMessage();
+  const { move } = useAction();
 
   const movementGrid = useMovementGrid(8, fetchedChunks);
 
@@ -45,11 +46,53 @@ export default function MovementGrid({
     return null;
   };
 
-  const handleClick = useCallback(
+  const handleMine = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
       if (e.delta > DRAG_THRESHOLD) return;
-      console.log('Floor RIGHT clicked!');
+
+      if (!playerEntityId) {
+        console.error('Player entity not found');
+        return;
+      }
+
+      const playerEntity = getEntity(playerEntityId);
+
+      const targetPosition = new THREE.Vector3(
+        Math.floor(e.point.x),
+        Math.floor(e.point.y),
+        Math.floor(e.point.z),
+      );
+
+      const transform = playerEntity.getComponent(ClientTransformComponent);
+      if (!transform) {
+        console.error('Transform component not found');
+        return;
+      }
+
+      const startPosition = transform.position;
+
+      // Calculate the Euclidean distance between two positions
+      const distance = targetPosition.distanceTo(startPosition);
+      const inRange =
+        distance === 1 ||
+        distance === Math.sqrt(2) ||
+        distance === Math.sqrt(3);
+
+      // Check if the target position is a direct or diagonal neighbor
+      if (!inRange) {
+        setErrorMessage('You are too far away!');
+        return;
+      }
+    },
+    [playerEntityId, getEntity],
+  );
+
+  const handleMove = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      e.stopPropagation();
+      if (e.delta > DRAG_THRESHOLD) return;
+      console.log('Floor LEFT clicked!');
 
       if (!playerEntityId) {
         console.error('Player entity not found');
@@ -110,11 +153,10 @@ export default function MovementGrid({
         return;
       }
 
-      const move = new MoveAction(addComponent, send);
-      move.handle({
-        entityId: playerEntityId,
-        waypoints: path.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-      });
+      move(
+        playerEntityId,
+        path.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+      );
     },
     [
       send,
@@ -159,13 +201,14 @@ export default function MovementGrid({
             boxes.push(
               <mesh
                 key={`grid-${x}-${z}-layer-${y}`}
-                onClick={handleClick}
+                onContextMenu={handleMine}
+                onClick={handleMove}
                 position={[
                   node.x + 0.5, // Align with grid origin
                   node.y, // Correctly align with the current layer
                   node.z + 0.5, // Align with grid origin
                 ]}>
-                <boxGeometry args={[1, 0.1, 1]} />
+                <boxGeometry args={[0.99, 0.1, 0.99]} />
                 <meshBasicMaterial
                   color="silver"
                   transparent
@@ -179,7 +222,7 @@ export default function MovementGrid({
     }
 
     return boxes;
-  }, [movementGrid, handleClick]);
+  }, [movementGrid, handleMove]);
 
   return <>{gridBoxes}</>;
 }

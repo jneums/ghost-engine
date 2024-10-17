@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { useCallback, useMemo, useRef } from 'react';
-import { useInternetIdentity } from 'ic-use-internet-identity';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
 import { ThreeEvent } from '@react-three/fiber';
 
@@ -70,12 +69,7 @@ export default function Chunk({
   z: number;
   data: Uint8Array | number[];
 }) {
-  const { identity } = useInternetIdentity();
   const geomRef = useRef(new THREE.BufferGeometry());
-
-  if (!identity) {
-    throw new Error('Identity not found');
-  }
 
   const generateVoxelGeometry = useCallback(() => {
     const positions = [];
@@ -163,11 +157,7 @@ export default function Chunk({
   };
 
   return (
-    <mesh
-      receiveShadow
-      onClick={handleClick}
-      position={chunkPosition}
-      geometry={geometry}>
+    <mesh onClick={handleClick} position={chunkPosition} geometry={geometry}>
       <meshLambertMaterial color={0xaaaaaa} />
     </mesh>
   );

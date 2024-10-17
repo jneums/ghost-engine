@@ -1,103 +1,83 @@
-import React, {
-  createContext,
-  ReactNode,
-  useState,
-  useCallback,
-  useEffect,
-} from 'react';
+import { create } from 'zustand';
+import React, { ReactNode, useEffect } from 'react';
 import { ComponentConstructors, createComponentClass } from '../components';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from './ConnectionProvider';
 import { match, P } from 'ts-pattern';
 import { Component, Entity, EntityId } from '../ecs';
 
-interface WorldContextType {
+// Define the Zustand store
+interface WorldState {
   entities: Map<EntityId, Entity>;
+  playerEntityId: EntityId | undefined;
   getEntity: (entityId: EntityId) => Entity;
   addComponent: (entityId: EntityId, component: Component) => void;
   removeComponent: (entityId: EntityId, componentClass: Function) => void;
   getEntities: () => EntityId[];
   getEntitiesByArchetype: (componentClasses: Function[]) => EntityId[];
-  playerEntityId: EntityId | undefined;
+  setPlayerEntityId: (entityId: EntityId) => void;
 }
 
-const WorldContext = createContext<WorldContextType | undefined>(undefined);
+const useWorldStore = create<WorldState>((set, get) => ({
+  entities: new Map(),
+  playerEntityId: undefined,
+  getEntity: (entityId: EntityId) => {
+    const { entities } = get();
+    if (!entities.has(entityId)) {
+      const newEntity = new Entity(entityId);
+      set((state) => ({
+        entities: new Map(state.entities).set(entityId, newEntity),
+      }));
+      return newEntity;
+    }
+    return entities.get(entityId)!;
+  },
+  addComponent: (entityId: EntityId, component: Component) => {
+    set((state) => {
+      const newEntities = new Map(state.entities);
+      const entity = newEntities.get(entityId);
+      if (!entity) {
+        const newEntity = new Entity(entityId);
+        newEntity.addComponent(component);
+        newEntities.set(entityId, newEntity);
+      } else {
+        entity.addComponent(component);
+        newEntities.set(entityId, entity);
+      }
+      return { entities: newEntities };
+    });
+  },
+  removeComponent: (entityId: EntityId, componentClass: Function) => {
+    set((state) => {
+      const newEntities = new Map(state.entities);
+      const entity = newEntities.get(entityId);
+      if (entity) {
+        entity.deleteComponent(componentClass);
+        newEntities.set(entityId, entity);
+      }
+      return { entities: newEntities };
+    });
+  },
+  getEntities: () => {
+    return Array.from(get().entities.keys());
+  },
+  getEntitiesByArchetype: (componentClasses: Function[]) => {
+    return Array.from(get().entities.keys()).filter((entityId) => {
+      const entity = get().getEntity(entityId);
+      return entity.hasAllComponents(componentClasses);
+    });
+  },
+  setPlayerEntityId: (entityId: EntityId) => {
+    set({ playerEntityId: entityId });
+  },
+}));
 
-export const useWorld = (): WorldContextType => {
-  const context = React.useContext(WorldContext);
-  if (!context) {
-    throw new Error('useWorld must be used within a WorldProvider');
-  }
-  return context;
-};
+export const useWorld = () => useWorldStore();
 
 export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const { identity } = useInternetIdentity();
   const { updates, disconnect } = useConnection();
-  const [entities, setEntities] = useState<Map<EntityId, Entity>>(new Map());
-  const playerEntityIdRef = React.useRef<EntityId | undefined>(undefined);
-
-  const getEntity = useCallback(
-    (entityId: EntityId): Entity => {
-      if (!entities.has(entityId)) {
-        const newEntity = new Entity(entityId);
-        setEntities((prev) => new Map(prev).set(entityId, newEntity));
-        return newEntity;
-      }
-      return entities.get(entityId)!;
-    },
-    [entities],
-  );
-
-  const addComponent = useCallback(
-    (entityId: EntityId, component: Component) => {
-      setEntities((prev) => {
-        const newEntities = new Map(prev);
-        const entity = newEntities.get(entityId);
-        if (!entity) {
-          // If the entity doesn't exist, create a new one
-          const newEntity = new Entity(entityId);
-          newEntity.addComponent(component);
-          newEntities.set(entityId, newEntity);
-        } else {
-          // Clone the entity and add the component
-          entity.addComponent(component);
-          newEntities.set(entityId, entity);
-        }
-        return newEntities; // Return a new Map reference
-      });
-    },
-    [],
-  );
-
-  const removeComponent = useCallback(
-    (entityId: EntityId, componentClass: Function) => {
-      setEntities((prev) => {
-        const newEntities = new Map(prev);
-        const entity = newEntities.get(entityId);
-        if (entity) {
-          entity.deleteComponent(componentClass);
-          newEntities.set(entityId, entity);
-        }
-        return newEntities; // Return a new Map reference
-      });
-    },
-    [],
-  );
-
-  const getEntities = useCallback((): EntityId[] => {
-    return Array.from(entities.keys());
-  }, [entities]);
-
-  const getEntitiesByArchetype = useCallback(
-    (componentClasses: Function[]): EntityId[] => {
-      return Array.from(entities.keys()).filter((entityId) => {
-        const entity = getEntity(entityId);
-        return entity.hasAllComponents(componentClasses);
-      });
-    },
-    [entities, getEntity],
-  );
+  const { addComponent, removeComponent, setPlayerEntityId } = useWorldStore();
 
   useEffect(() => {
     if (!identity) {
@@ -111,14 +91,12 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
           const component = createComponentClass(action.component);
           addComponent(Number(action.entityId), component);
 
-          // If the component is a PrincipalComponent, we need to check if it's the player
-          // and set the playerEntityId
           match(action.component).with(
             { PrincipalComponent: P.select() },
             ({ principal }) => {
               if (principal.compareTo(identity.getPrincipal()) === 'eq') {
                 console.log('Setting player entity id: ' + action.entityId);
-                playerEntityIdRef.current = Number(action.entityId);
+                setPlayerEntityId(Number(action.entityId));
               }
             },
           );
@@ -127,11 +105,12 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
           const constructor = ComponentConstructors[action.componentType];
           removeComponent(Number(action.entityId), constructor);
 
-          // If the component is a SessionComponent, we need to check if it's the player
-          // entity and disconnect the user if it is
           match(action.componentType).with('SessionComponent', () => {
-            if (Number(action.entityId) === playerEntityIdRef.current) {
-              disconnect();
+            if (
+              Number(action.entityId) ===
+              useWorldStore.getState().playerEntityId
+            ) {
+              disconnect(identity);
             }
           });
         })
@@ -139,20 +118,14 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
           console.log('Message is not Insert or Delete!');
         });
     });
-  }, [updates, identity, addComponent, removeComponent, disconnect]);
+  }, [
+    updates,
+    identity,
+    addComponent,
+    removeComponent,
+    disconnect,
+    setPlayerEntityId,
+  ]);
 
-  return (
-    <WorldContext.Provider
-      value={{
-        entities,
-        getEntity,
-        addComponent,
-        removeComponent,
-        getEntities,
-        getEntitiesByArchetype,
-        playerEntityId: playerEntityIdRef.current,
-      }}>
-      {children}
-    </WorldContext.Provider>
-  );
+  return <>{children}</>;
 };

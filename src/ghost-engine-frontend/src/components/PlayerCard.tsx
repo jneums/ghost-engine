@@ -1,14 +1,14 @@
-import { HealthComponent, NameableComponent, PrincipalComponent } from '.';
+import {
+  ClientTransformComponent,
+  HealthComponent,
+  NameableComponent,
+  PrincipalComponent,
+} from '.';
 import { useWorld } from '../context/WorldProvider';
 import EntityCard from './EntityCard';
-import { useInternetIdentity } from 'ic-use-internet-identity';
 
 export default function PlayerCard() {
   const { playerEntityId, getEntity } = useWorld();
-  const { identity } = useInternetIdentity();
-  if (!identity) {
-    throw new Error('Identity not found');
-  }
 
   if (!playerEntityId) {
     return null;
@@ -29,10 +29,20 @@ export default function PlayerCard() {
     throw new Error('Principal component not found');
   }
 
+  const transform = entity.getComponent(ClientTransformComponent);
+
   const nameabel = entity.getComponent(NameableComponent);
   const name = nameabel?.name || `Player ${entity.id.toString()}`;
 
   const hitpoints = Math.round(Number((health.amount / health.max) * 100));
 
-  return <EntityCard name={name} hitpoints={hitpoints} bottom={0} left={0} />;
+  return (
+    <EntityCard
+      name={name}
+      hitpoints={hitpoints}
+      top={0}
+      left={0}
+      coords={transform?.position}
+    />
+  );
 }

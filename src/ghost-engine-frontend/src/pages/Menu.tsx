@@ -3,7 +3,6 @@ import { Button, IconButton, Stack, Typography } from '@mui/joy';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ColorSchemeToggle from '../components/ColorSchemeToggle';
 
 export default function Menu() {
   const navigate = useNavigate();
@@ -41,9 +40,6 @@ export default function Menu() {
         height="100%"
         width="100%"
         maxWidth="50%"></Stack>
-      <Stack position="absolute" right={0} top={0} padding={2}>
-        <ColorSchemeToggle />
-      </Stack>
       <Stack
         justifyContent="center"
         height="100%"

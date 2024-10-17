@@ -9,34 +9,20 @@ import {
 import * as THREE from 'three';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import LightningBeam from './LightningBeam';
-import SetTargetAction from '../actions/set-target';
-import AttackAction from '../actions/attack-action';
-import { useErrorMessage } from '../context/ErrorProvider';
-import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
-import { useConnection } from '../context/ConnectionProvider';
-import { useCamera } from '../context/CameraProvider';
-import PlayerIndicator from './PlayerIndicator';
+import useAction from '../hooks/useAction';
 
 const PLAYER_WIDTH = 1;
 const PLAYER_HEIGHT = 1.8;
 
 export default function Player({ entityId }: { entityId: number }) {
-  const { cameraAngle } = useCamera();
-  const { playerEntityId, getEntity, addComponent, removeComponent } =
-    useWorld();
-  const { send } = useConnection();
-  const { identity } = useInternetIdentity();
+  const { playerEntityId, getEntity, removeComponent } = useWorld();
+  const { attack, setTarget } = useAction();
   const entity = getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
-  const { setErrorMessage } = useErrorMessage();
-
-  const CAMERA_DISTANCE = 15; // Distance from the player
-  const CAMERA_VERTICAL_ANGLE = Math.atan(1 / Math.sqrt(2)); // 35.264 degrees for isometric view
 
   const direction = new THREE.Vector3();
-
   const velocity = 2; // units per second
   const epsilon = 0.05; // Small value to prevent shaking
 
@@ -58,10 +44,6 @@ export default function Player({ entityId }: { entityId: number }) {
   const combat = entity.getComponent(CombatComponent);
   const health = entity.getComponent(HealthComponent);
 
-  if (!identity) {
-    throw new Error('Identity not found');
-  }
-
   const isPlayer = entityId === playerEntityId;
   const isDead = health.amount <= 0;
   const color = isDead ? 'black' : isPlayer ? 'blue' : 'red';
@@ -74,22 +56,8 @@ export default function Player({ entityId }: { entityId: number }) {
         return;
       }
 
-      const setTarget = new SetTargetAction(addComponent);
-      setTarget.handle({
-        entityId: playerEntityId,
-        targetEntityId: entityId,
-      });
-
-      const attackAction = new AttackAction(
-        getEntity,
-        addComponent,
-        setErrorMessage,
-        send,
-      );
-      attackAction.handle({
-        entityId: playerEntityId,
-        targetEntityId: entityId,
-      });
+      setTarget(playerEntityId, entityId);
+      attack(playerEntityId, entityId);
     },
     [playerEntityId, entityId, isDead, serverTransform.position],
   );
@@ -111,17 +79,23 @@ export default function Player({ entityId }: { entityId: number }) {
       updatedPosition = serverTransform.position;
     }
 
+    // Smoothly rotate the mesh to face the direction of movement
+    if (meshRef.current) {
+      smoothLookAt(meshRef.current, updatedPosition, delta);
+    }
+
     // Start moving towards the target
     updatePosition(clientTransform, updatedPosition, delta, velocity, epsilon);
 
-    meshRef.current?.position.copy({
+    const playerPosition = {
       x: clientTransform.position.x + 0.5 * PLAYER_WIDTH,
       y: clientTransform.position.y + 0.5 * PLAYER_HEIGHT,
       z: clientTransform.position.z + 0.5 * PLAYER_WIDTH,
-    });
+    };
+    meshRef.current?.position.copy(playerPosition);
 
     if (isPlayer && meshRef.current) {
-      updateCamera(state.camera, clientTransform.position);
+      updateCamera(state.camera, meshRef.current.position, delta);
     }
 
     if (isDead) {
@@ -158,7 +132,6 @@ export default function Player({ entityId }: { entityId: number }) {
         receiveShadow>
         <boxGeometry args={[1, 2, 1]} />
         <meshPhongMaterial color={color} />
-        <PlayerIndicator />
       </mesh>
       {combatTargetId && (
         <LightningBeam
@@ -214,17 +187,62 @@ export default function Player({ entityId }: { entityId: number }) {
     }
   }
 
-  function updateCamera(camera: THREE.Camera, targetPosition: THREE.Vector3) {
-    // Set the camera position for an isometric view
-    const cameraOffset = new THREE.Vector3(
-      CAMERA_DISTANCE * Math.cos(cameraAngle) * Math.cos(CAMERA_VERTICAL_ANGLE),
-      CAMERA_DISTANCE * Math.sin(CAMERA_VERTICAL_ANGLE),
-      CAMERA_DISTANCE * Math.sin(cameraAngle) * Math.cos(CAMERA_VERTICAL_ANGLE),
+  function updateCamera(
+    camera: THREE.Camera,
+    targetPosition: THREE.Vector3,
+    delta: number,
+  ) {
+    const CAMERA_FOLLOW_DISTANCE = 5;
+    const CAMERA_HEIGHT = 7;
+
+    // Calculate the desired camera position based on the player's position and rotation
+    const offset = new THREE.Vector3(0, CAMERA_HEIGHT, -CAMERA_FOLLOW_DISTANCE);
+    offset.applyQuaternion(
+      meshRef.current?.quaternion || new THREE.Quaternion(),
     );
-    const cameraPosition = targetPosition.clone().add(cameraOffset);
-    camera.position.copy(cameraPosition);
+
+    const desiredPosition = targetPosition.clone().add(offset);
+
+    // Smoothly interpolate the camera's position
+    camera.position.lerp(desiredPosition, delta * 0.5); // Adjust the factor for smoothness
 
     // Ensure the camera is looking at the player
-    camera.lookAt(targetPosition);
+    const lookAtTarget = targetPosition.clone();
+    lookAtTarget.y += 2; // Adjust to look slightly above the player
+
+    camera.lookAt(lookAtTarget);
+  }
+
+  function smoothLookAt(
+    mesh: THREE.Mesh,
+    targetPosition: THREE.Vector3,
+    delta: number,
+  ) {
+    if (!targetPosition) return;
+
+    const targetWithOffset = targetPosition.clone();
+    targetWithOffset.x += 0.5;
+    targetWithOffset.z += 0.5;
+
+    // Calculate the direction to look at, ignoring the Y-axis
+    const lookDirection = new THREE.Vector3().subVectors(
+      targetWithOffset,
+      mesh.position,
+    );
+    lookDirection.y = 0; // Ignore vertical differences
+
+    // Only rotate if there is movement
+    if (lookDirection.lengthSq() > 0.0001) {
+      lookDirection.normalize();
+
+      // Create a quaternion for the target rotation
+      const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1), // Forward direction
+        lookDirection,
+      );
+
+      // Smoothly interpolate the current rotation towards the target rotation
+      mesh.quaternion.slerp(targetQuaternion, delta * 10); // Adjust the factor for smoothness
+    }
   }
 }

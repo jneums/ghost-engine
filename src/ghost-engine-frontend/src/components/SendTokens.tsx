@@ -7,21 +7,17 @@ import {
   Typography,
 } from '@mui/joy';
 import { useDialog } from '../context/DialogProvider';
-import RedeemTokensAction from '../actions/redeem-tokens';
 import React from 'react';
-import { Principal } from '@dfinity/principal';
-import { useErrorMessage } from '../context/ErrorProvider';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
-import { useConnection } from '../context/ConnectionProvider';
+import useAction from '../hooks/useAction';
 
 export default function SendTokens() {
-  const { playerEntityId, getEntity } = useWorld();
-  const { send } = useConnection();
+  const { playerEntityId } = useWorld();
+  const { redeem } = useAction();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
   const [principalId, setPrincipalId] = React.useState('');
-  const { setErrorMessage } = useErrorMessage();
 
   if (!identity) {
     throw new Error('Identity not found');
@@ -34,17 +30,7 @@ export default function SendTokens() {
       return;
     }
 
-    const principal = Principal.fromText(principalId);
-
-    const redeemTokensAction = new RedeemTokensAction(
-      getEntity,
-      send,
-      setErrorMessage,
-    );
-    redeemTokensAction.handle({
-      entityId: playerEntityId,
-      principal,
-    });
+    redeem(playerEntityId);
     closeDialog();
   };
 

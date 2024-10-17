@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Stack, Typography } from '@mui/joy';
+import NoTextSelect from '../components/NoTextSelect';
 
 type Props = {
   children: React.ReactNode;
@@ -17,15 +18,24 @@ export const ErrorMessageContext =
   createContext<ErrorMessageContextInterface>(initialContext);
 
 export function ErrorMessageProvider({ children }: Props) {
-  const [errorMessage, setErrorMessage] = useState<string | null>('TESTING');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [messageKey, setMessageKey] = useState<number>(0);
+
+  useEffect(() => {
+    if (errorMessage) {
+      setVisible(true);
+      const timer = setTimeout(() => {
+        setVisible(false);
+      }, 2000); // Adjust the duration as needed
+
+      return () => clearTimeout(timer);
+    }
+  }, [messageKey]);
 
   const setErrorMessageContent = (message: string) => {
     setErrorMessage(message);
-    setVisible(true);
-    setTimeout(() => {
-      setVisible(false);
-    }, 3000); // Adjust the duration as needed
+    setMessageKey((prevKey) => prevKey + 1); // Increment key to force update
   };
 
   return (
@@ -36,7 +46,7 @@ export function ErrorMessageProvider({ children }: Props) {
       {children}
       <Stack
         position="absolute"
-        top="70%"
+        top="30%"
         left="50%"
         sx={{
           transform: 'translate(-50%, -50%)',
@@ -44,15 +54,18 @@ export function ErrorMessageProvider({ children }: Props) {
         }}
         alignItems="center"
         justifyContent="center">
-        <Typography
-          level="h4"
-          color="danger"
-          sx={{
-            opacity: visible ? 1 : 0,
-            transition: 'opacity 1s ease-out',
-          }}>
-          {errorMessage}
-        </Typography>
+        <NoTextSelect>
+          <Typography
+            textAlign="center"
+            level="h4"
+            color="danger"
+            sx={{
+              opacity: visible ? 1 : 0,
+              transition: 'opacity 1s ease-out',
+            }}>
+            {errorMessage}
+          </Typography>
+        </NoTextSelect>
       </Stack>
     </ErrorMessageContext.Provider>
   );

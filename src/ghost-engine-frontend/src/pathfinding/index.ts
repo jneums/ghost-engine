@@ -27,6 +27,11 @@ export function initializeNeighbors(grid: (Node | null)[][][]): void {
     [0, 1, -1],
     [0, -1, 1],
     [0, -1, -1], // diagonals in y-z plane
+
+    [1, 0, 1],
+    [-1, 0, 1],
+    [1, 0, -1],
+    [-1, 0, -1], // diagonals in x-z plane
   ];
 
   for (let x = 0; x < grid.length; x++) {
@@ -48,6 +53,15 @@ export function initializeNeighbors(grid: (Node | null)[][][]): void {
               nz < grid[nx][ny].length &&
               grid[nx][ny][nz] !== null
             ) {
+              if (dx !== 0 && dz !== 0) {
+                // Check for corner clipping
+                if (
+                  grid[x + dx][y][z] === null ||
+                  grid[x][y][z + dz] === null
+                ) {
+                  continue; // Skip diagonal if adjacent blocks are not walkable
+                }
+              }
               node.neighbors.push(grid[nx][ny][nz] as Node);
             }
           }

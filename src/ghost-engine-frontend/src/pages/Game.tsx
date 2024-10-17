@@ -1,11 +1,5 @@
-import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import {
-  AccumulativeShadows,
-  RandomizedLight,
-  Sky,
-  Stats,
-} from '@react-three/drei';
+import { Stats } from '@react-three/drei';
 import Players from '../components/Players';
 import { useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -15,7 +9,6 @@ import { useWorld } from '../context/WorldProvider';
 import { useDialog } from '../context/DialogProvider';
 import Respawn from '../components/Respawn';
 import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
-import PlayerStats from '../components/PlayerStats';
 import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from '../context/ConnectionProvider';
@@ -39,7 +32,7 @@ export default function Game() {
       throw new Error('Identity not found');
     }
 
-    connect();
+    connect(identity);
   };
 
   if (!identity) {
@@ -107,8 +100,7 @@ export default function Game() {
     <>
       <Canvas
         onPointerMissed={(e) => console.log('missed: ', e)}
-        shadows
-        gl={{ alpha: false }}
+        onContextMenu={(e) => e.preventDefault()}
         camera={{
           position: [
             transform.position.x + 5,
@@ -116,20 +108,17 @@ export default function Game() {
             transform.position.z + 5,
           ],
         }}>
-        <Sky sunPosition={[10, 200, 10]} />
         <ambientLight intensity={0.1} />
         <pointLight intensity={50000} position={[100, 500, 100]} />
-        <color attach="background" args={['#f0f0f0']} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         {chunks}
         <MovementGrid fetchedChunks={fetchedChunks} />
         <Players />
       </Canvas>
-      <PlayerStats />
       <PlayerCard />
       <TargetCard />
       <LogoutButton />
-      <Stats />
+      {/* <Stats /> */}
     </>
   );
 }
