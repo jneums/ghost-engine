@@ -11,6 +11,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import LightningBeam from './LightningBeam';
 import { useWorld } from '../context/WorldProvider';
 import useAction from '../hooks/useAction';
+import { CAMERA_FOLLOW_DISTANCE, CAMERA_HEIGHT } from '../utils/const';
 
 const PLAYER_WIDTH = 1;
 const PLAYER_HEIGHT = 1.8;
@@ -192,9 +193,6 @@ export default function Player({ entityId }: { entityId: number }) {
     targetPosition: THREE.Vector3,
     delta: number,
   ) {
-    const CAMERA_FOLLOW_DISTANCE = 5;
-    const CAMERA_HEIGHT = 7;
-
     // Calculate the desired camera position based on the player's position and rotation
     const offset = new THREE.Vector3(0, CAMERA_HEIGHT, -CAMERA_FOLLOW_DISTANCE);
     offset.applyQuaternion(

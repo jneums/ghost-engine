@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export interface Node {
   x: number;
   y: number;
@@ -10,6 +12,28 @@ export interface Node {
   parent: Node | null;
   neighbors: Node[];
 }
+
+export const findNodeByPosition = (
+  nodes: Node[][][],
+  position: THREE.Vector3,
+): Node | null => {
+  for (let y = 0; y < nodes.length; y++) {
+    for (let x = 0; x < nodes[y].length; x++) {
+      for (let z = 0; z < nodes[y][x].length; z++) {
+        const node = nodes[y][x][z];
+        if (
+          node &&
+          node.x === position.x &&
+          node.y === position.y &&
+          node.z === position.z
+        ) {
+          return node;
+        }
+      }
+    }
+  }
+  return null;
+};
 
 export function initializeNeighbors(grid: (Node | null)[][][]): void {
   const directions = [

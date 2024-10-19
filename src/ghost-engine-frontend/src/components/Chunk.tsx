@@ -3,10 +3,16 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
 import { ThreeEvent } from '@react-three/fiber';
 import { useWorld } from '../context/WorldProvider';
-import { ClientTransformComponent } from '.';
+import {
+  ClientTransformComponent,
+  HealthComponent,
+  MiningComponent,
+  MoveTargetComponent,
+} from '.';
 import useAction from '../hooks/useAction';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { BlockType, VERTEX_COLORS, DRAG_THRESHOLD } from '../utils/const';
+import { findNodeByPosition, findPath, Node } from '../pathfinding';
 
 const FACES = [
   {
@@ -64,20 +70,24 @@ const FACES = [
     ],
   },
 ];
-
 export default function Chunk({
   x,
   z,
   data,
+  createGrid,
 }: {
   x: number;
   z: number;
   data: Uint8Array | number[];
+  createGrid: (
+    start: THREE.Vector3,
+    target: THREE.Vector3,
+  ) => Node[][][] | null;
 }) {
   const geomRef = useRef(new THREE.BufferGeometry());
   const { playerEntityId, getEntity } = useWorld();
   const { setErrorMessage } = useErrorMessage();
-  const { mine } = useAction();
+  const { mine, move } = useAction();
   const [minedVoxelIndex, setMinedVoxelIndex] = useState<number | null>(null);
 
   const handleMine = useCallback(
@@ -156,6 +166,15 @@ export default function Chunk({
     const indices = [];
     const colors = [];
 
+    const WATER_HEIGHT = 0.6; // Define the height for water blocks
+
+    const mining = playerEntityId
+      ? getEntity(playerEntityId)?.getComponent(MiningComponent)
+      : null;
+    if (!mining) {
+      setMinedVoxelIndex(null);
+    }
+
     for (let y = 0; y < CHUNK_HEIGHT; ++y) {
       for (let z = 0; z < CHUNK_SIZE; ++z) {
         for (let x = 0; x < CHUNK_SIZE; ++x) {
@@ -184,16 +203,13 @@ export default function Chunk({
                 neighbor = data[neighborIndex] || 0;
               }
 
-              // Only add the top face for water blocks
-              if (voxel === BlockType.Water) {
-                // Skip all faces except the top face
-                if (dir[1] !== 1) continue;
-              }
-
-              if (!neighbor) {
+              if (neighbor === BlockType.Air || neighbor === BlockType.Water) {
                 const ndx = positions.length / 3;
                 for (const pos of corners) {
-                  positions.push(pos[0] + x, pos[1] + y, pos[2] + z);
+                  // Adjust the height for water blocks
+                  const adjustedY =
+                    voxel === BlockType.Water ? pos[1] * WATER_HEIGHT : pos[1];
+                  positions.push(pos[0] + x, adjustedY + y, pos[2] + z);
                   normals.push(...dir);
 
                   // Change color if this voxel is being mined
@@ -215,6 +231,86 @@ export default function Chunk({
 
     return { positions, normals, indices, colors };
   }, [data, minedVoxelIndex]);
+
+  const handleMove = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      e.stopPropagation();
+      if (e.delta > DRAG_THRESHOLD) return;
+      console.log('Floor LEFT clicked!');
+
+      if (!playerEntityId) {
+        console.error('Player entity not found');
+        return;
+      }
+
+      const playerEntity = getEntity(playerEntityId);
+
+      const health = playerEntity.getComponent(HealthComponent);
+      if (!health) {
+        console.error('Health component not found');
+        return;
+      }
+      if (health && health.amount <= 0) {
+        console.error('You are dead!');
+        setErrorMessage('You are dead!');
+        return;
+      }
+
+      const transform = playerEntity.getComponent(ClientTransformComponent);
+      if (!transform) {
+        console.error('Transform component not found');
+        return;
+      }
+
+      // Determine the starting position for the new path
+      let startPosition = new THREE.Vector3(
+        Math.round(transform.position.x),
+        Math.round(transform.position.y),
+        Math.round(transform.position.z),
+      );
+
+      const moveTarget = playerEntity.getComponent(MoveTargetComponent);
+      if (moveTarget && moveTarget.waypoints.length > 1) {
+        // Use the next waypoint as the starting position if the player is already moving
+        startPosition = moveTarget.waypoints[1];
+      }
+
+      const targetPosition = new THREE.Vector3(
+        Math.floor(e.point.x),
+        Math.floor(e.point.y),
+        Math.floor(e.point.z),
+      );
+
+      const grid = createGrid(startPosition, targetPosition);
+
+      if (!grid) {
+        console.error('Grid not found');
+        setErrorMessage('Cannot find path');
+        return;
+      }
+
+      const startNode = findNodeByPosition(grid, startPosition);
+      const endNode = findNodeByPosition(grid, targetPosition);
+
+      if (!startNode || !endNode) {
+        console.error('Start or end node not found');
+        setErrorMessage('Start or end node not found');
+        return;
+      }
+
+      const path = findPath(startNode, endNode);
+
+      if (!path || path.length === 0) {
+        console.error('No valid path found');
+        setErrorMessage('No valid path found');
+        return;
+      }
+
+      const waypoints = path.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+      move(playerEntityId, waypoints);
+    },
+    [move, playerEntityId, getEntity, setErrorMessage, createGrid],
+  );
 
   const geometry = useMemo(() => {
     const { positions, normals, indices, colors } = generateVoxelGeometry();
@@ -248,14 +344,9 @@ export default function Chunk({
     number,
   ];
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
-    console.log('Clicked chunk:', chunkPosition);
-  };
-
   return (
     <mesh
-      onClick={handleClick}
+      onClick={handleMove}
       onContextMenu={handleMine}
       position={chunkPosition}
       geometry={geometry}>

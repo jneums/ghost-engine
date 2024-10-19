@@ -8,7 +8,7 @@ import TargetCard from '../components/TargetCard';
 import { useWorld } from '../context/WorldProvider';
 import { useDialog } from '../context/DialogProvider';
 import Respawn from '../components/Respawn';
-import { Button, CircularProgress, Stack, Typography } from '@mui/joy';
+import { CircularProgress, Stack, Typography } from '@mui/joy';
 import LogoutButton from '../components/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from '../context/ConnectionProvider';
@@ -16,16 +16,17 @@ import { HealthComponent, TransformComponent } from '../components';
 import useChunks from '../hooks/useChunks';
 import Chunk from '../components/Chunk';
 import React from 'react';
-import MovementGrid from '../components/MovementGrid';
+import useMovementGrid from '../hooks/useMovementGrid';
 
 const MemoizedChunk = React.memo(Chunk);
 
 export default function Game() {
-  const { connect, disconnect, isConnecting, isConnected } = useConnection();
+  const { connect, disconnect, isConnecting } = useConnection();
   const { playerEntityId, getEntity } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
   const { fetchedChunks } = useChunks();
+  const createGrid = useMovementGrid(fetchedChunks);
 
   if (!identity) {
     return <Navigate to="/" />;
@@ -56,9 +57,15 @@ export default function Game() {
   const chunks = useMemo(
     () =>
       fetchedChunks?.map(({ key, x, z, data }) => (
-        <MemoizedChunk key={key} x={x} z={z} data={data} />
+        <MemoizedChunk
+          key={key}
+          x={x}
+          z={z}
+          data={data}
+          createGrid={createGrid}
+        />
       )),
-    [fetchedChunks],
+    [fetchedChunks, createGrid],
   );
 
   if (isConnecting) {
@@ -108,13 +115,12 @@ export default function Game() {
         <pointLight intensity={50000} position={[100, 500, 100]} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         {chunks}
-        <MovementGrid fetchedChunks={fetchedChunks} />
         <Players />
       </Canvas>
       <PlayerCard />
       <TargetCard />
       <LogoutButton />
-      <Stats />
+      {/* <Stats /> */}
     </>
   );
 }
