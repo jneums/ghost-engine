@@ -1,7 +1,6 @@
 import { GitHub } from '@mui/icons-material';
 import { Button, IconButton, Stack, Typography } from '@mui/joy';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Menu() {
@@ -15,14 +14,13 @@ export default function Menu() {
       ? 'Logging in...'
       : 'Sign in with Internet Identity';
 
-  useEffect(() => {
-    if (identity) {
+  const handleClick = async () => {
+    if (!identity) {
+      await login();
+      navigate('/game');
+    } else {
       navigate('/game');
     }
-  }, [identity, navigate]);
-
-  const handleClick = async () => {
-    await login();
   };
 
   return (

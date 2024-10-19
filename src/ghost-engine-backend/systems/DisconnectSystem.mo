@@ -1,37 +1,14 @@
 import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Components "../components";
-import Const "../utils/Const";
 
 module {
-
-  // Private function to handle TransformComponent logic
-  private func handleTransformComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
-    let defaultTransform = Const.SpawnPoint;
-
-    let transform = switch (ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
-      case (? #TransformComponent(transform)) { transform };
-      case (_) {
-        // Check for a snapshot of the player's transform
-        switch (ECS.World.getComponent(ctx, entityId, "OfflineTransformComponent")) {
-          case (? #OfflineTransformComponent(transform)) { transform };
-          case (_) { defaultTransform };
-        };
-      };
-    };
-    ECS.World.addComponent(ctx, entityId, "OfflineTransformComponent", #OfflineTransformComponent(transform));
-    ECS.World.removeComponent(ctx, entityId, "TransformComponent");
-  };
-
   // Private function to handle disconnection logic
   private func handleDisconnection(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, disconnect : Components.DisconnectComponent) {
     let currentTime = Time.now();
     let elapsedTime = currentTime - disconnect.startAt;
 
     if (elapsedTime >= disconnect.duration) {
-      // Save a snapshot of the player's transform
-      handleTransformComponent(ctx, entityId);
-
       // Remove the player from the simulation
       ECS.World.removeComponent(ctx, entityId, "SessionComponent");
       ECS.World.removeComponent(ctx, entityId, "DisconnectComponent");

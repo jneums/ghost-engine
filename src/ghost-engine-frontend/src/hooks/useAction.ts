@@ -5,6 +5,7 @@ import { sleep } from '../utils';
 import {
   CombatComponent,
   HealthComponent,
+  MiningComponent,
   MoveTargetComponent,
   TargetComponent,
   TransformComponent,
@@ -93,6 +94,28 @@ export default function useAction() {
     });
   }
 
+  function mine(entityId: number, position: THREE.Vector3) {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
+    console.log('Mine action');
+
+    // Notify the backend of the action
+    send(identity, {
+      Mine: {
+        entityId: BigInt(entityId),
+        position: position,
+      },
+    });
+
+    // Add the components to the ecs entity
+    const mining = new MiningComponent(position, 3, 0);
+
+    // Add the components to the ecs entity
+    addComponent(entityId, mining);
+  }
+
   function move(entityId: number, waypoints: THREE.Vector3[]) {
     if (!identity) {
       throw new Error('Identity not found');
@@ -173,5 +196,5 @@ export default function useAction() {
     addComponent(entityId, target);
   }
 
-  return { attack, move, redeem, respawn, setTarget };
+  return { attack, mine, move, redeem, respawn, setTarget };
 }

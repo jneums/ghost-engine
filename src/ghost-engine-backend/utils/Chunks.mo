@@ -1,6 +1,7 @@
 import Const "../utils/Const";
 import Vector3 "../math/Vector3";
 import Float "mo:base/Float";
+
 module {
   // Function to calculate the chunk position from a Vector3 position
   public func getChunkPosition(position : Vector3.Vector3) : Vector3.Vector3 {
@@ -22,17 +23,5 @@ module {
       y = chunkPos.y + Float.fromInt(y);
       z = chunkPos.z + Float.fromInt(z);
     };
-  };
-
-  // Get the block type at a specific position within a chunk
-  public func getBlockType(blocks : [Nat8], x : Nat, y : Nat, z : Nat) : Nat8 {
-    let index = x + y * Const.CHUNK_SIZE + z * Const.CHUNK_SIZE * Const.CHUNK_HEIGHT; // Use CHUNK_HEIGHT for y
-    return blocks[index];
-  };
-
-  // Set the block type at a specific position within a chunk
-  public func setBlockType(blocks : [var Nat8], x : Nat, y : Nat, z : Nat, blockType : Nat8) {
-    let index = x + y * Const.CHUNK_SIZE + z * Const.CHUNK_SIZE * Const.CHUNK_HEIGHT; // Use CHUNK_HEIGHT for y
-    blocks[index] := blockType;
   };
 };

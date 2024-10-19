@@ -12,16 +12,22 @@ import Vector3 "../math/Vector3";
 
 module {
   // Generate a list of chunk IDs around the player
-  func generateChunkPositions(playerChunkPos : Vector3.Vector3, chunkRange : Int) : [Vector3.Vector3] {
-    let chunks = Vector.new<Vector3.Vector3>();
+  func generateChunkPositions(playerChunkPos : Vector3.Vector3, chunkRange : Int) : [{
+    chunkId : Vector3.Vector3;
+    updatedAt : Time.Time;
+  }] {
+    let chunks = Vector.new<{ chunkId : Vector3.Vector3; updatedAt : Time.Time }>();
     var x : Int = -chunkRange;
     while (x <= chunkRange) {
       var z : Int = -chunkRange;
       while (z <= chunkRange) {
         let chunkPos = {
-          x = (playerChunkPos.x + Float.fromInt(x));
-          y = 0.0;
-          z = (playerChunkPos.z + Float.fromInt(z));
+          chunkId = {
+            x = (playerChunkPos.x + Float.fromInt(x));
+            y = 0.0;
+            z = (playerChunkPos.z + Float.fromInt(z));
+          };
+          updatedAt = 0;
         };
         Vector.add(chunks, chunkPos);
         z += 1;
@@ -62,7 +68,7 @@ module {
         Debug.print("Blocks entity ID: " # debug_show (blocksEntityId));
         switch (blocksEntityId) {
           case (?exists) {
-            ECS.World.addComponent(ctx, exists, "UpdateBlocksComponent", #UpdateBlocksComponent({}));
+            ECS.World.addComponent(ctx, exists, "UpdateChunksComponent", #UpdateChunksComponent({}));
           };
           case (_) {};
         };

@@ -10,13 +10,7 @@ module {
 
     let transform = switch (ECS.World.getComponent(ctx, entityId, "TransformComponent")) {
       case (? #TransformComponent(transform)) { transform };
-      case (_) {
-        // Check for a snapshot of the player's transform
-        switch (ECS.World.getComponent(ctx, entityId, "OfflineTransformComponent")) {
-          case (? #OfflineTransformComponent(transform)) { transform };
-          case (_) { defaultTransform };
-        };
-      };
+      case (_) { defaultTransform };
     };
     ECS.World.addComponent(ctx, entityId, "TransformComponent", #TransformComponent(transform));
   };

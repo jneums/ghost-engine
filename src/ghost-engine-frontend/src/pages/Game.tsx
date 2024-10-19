@@ -21,23 +21,27 @@ import MovementGrid from '../components/MovementGrid';
 const MemoizedChunk = React.memo(Chunk);
 
 export default function Game() {
-  const { connect, isConnecting, isConnected } = useConnection();
+  const { connect, disconnect, isConnecting, isConnected } = useConnection();
   const { playerEntityId, getEntity } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
   const { fetchedChunks } = useChunks();
 
-  const onReconnectClick = () => {
-    if (!identity) {
-      throw new Error('Identity not found');
-    }
-
-    connect(identity);
-  };
-
   if (!identity) {
     return <Navigate to="/" />;
   }
+
+  useEffect(() => {
+    if (identity) {
+      connect(identity);
+    }
+
+    return () => {
+      if (identity) {
+        disconnect(identity);
+      }
+    };
+  }, [identity, connect, disconnect]);
 
   const isPlayerDead = playerEntityId
     ? getEntity(playerEntityId).getComponent(HealthComponent).amount <= 0
@@ -75,17 +79,6 @@ export default function Game() {
     );
   }
 
-  if (!isConnected) {
-    return (
-      <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
-        <Typography level="h4">Disconnected</Typography>
-        <Button variant="outlined" onClick={onReconnectClick}>
-          Reconnect
-        </Button>
-      </Stack>
-    );
-  }
-
   const transform = getEntity(playerEntityId).getComponent(TransformComponent);
   if (!transform) {
     return (
@@ -107,6 +100,9 @@ export default function Game() {
             transform.position.y + 3,
             transform.position.z + 5,
           ],
+          fov: 60,
+          near: 0.1,
+          far: 1000,
         }}>
         <ambientLight intensity={0.1} />
         <pointLight intensity={50000} position={[100, 500, 100]} />
@@ -118,7 +114,7 @@ export default function Game() {
       <PlayerCard />
       <TargetCard />
       <LogoutButton />
-      {/* <Stats /> */}
+      <Stats />
     </>
   );
 }

@@ -8,6 +8,7 @@ import Attack "Attack";
 import Respawn "Respawn";
 import Components "../components";
 import Redeem "Redeem";
+import Mine "Mine";
 
 module {
   public let Types = T;
@@ -20,6 +21,7 @@ module {
     #Connect : Connect.Args;
     #Disconnect : Disconnect.Args;
     #Move : Move.Args;
+    #Mine : Mine.Args;
     #Attack : Attack.Args;
     #Respawn : Respawn.Args;
     #Redeem : Redeem.Args;
@@ -36,6 +38,9 @@ module {
       };
       case (#Move(args)) {
         Move.Handler.handle(ctx, args);
+      };
+      case (#Mine(args)) {
+        Mine.Handler.handle(ctx, args);
       };
       case (#Attack(args)) {
         Attack.Handler.handle(ctx, args);

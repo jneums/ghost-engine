@@ -1,16 +1,24 @@
 import * as THREE from 'three';
-import { ThreeEvent } from '@react-three/fiber';
+import { ThreeEvent, useFrame } from '@react-three/fiber';
 import { useErrorMessage } from '../context/ErrorProvider';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useWorld } from '../context/WorldProvider';
 import { useConnection } from '../context/ConnectionProvider';
-import { ClientTransformComponent, HealthComponent } from '.';
+import {
+  ClientTransformComponent,
+  HealthComponent,
+  MoveTargetComponent,
+} from '.';
 import { FetchedChunk } from '../hooks/useChunks';
 import useMovementGrid from '../hooks/useMovementGrid';
 import { findPath, Node } from '../pathfinding';
 import useAction from '../hooks/useAction';
-
-const DRAG_THRESHOLD = 5;
+import {
+  BLOCK_TYPES,
+  BlockType,
+  DRAG_THRESHOLD,
+  HEX_COLORS,
+} from '../utils/const';
 
 export default function MovementGrid({
   fetchedChunks,
@@ -21,8 +29,8 @@ export default function MovementGrid({
   const { send } = useConnection();
   const { setErrorMessage } = useErrorMessage();
   const { move } = useAction();
-
   const movementGrid = useMovementGrid(8, fetchedChunks);
+  const pathNodeRefs = useRef<Map<string, THREE.Mesh>>(new Map());
 
   const findNodeByPosition = (
     nodes: Node[][][],
@@ -45,48 +53,6 @@ export default function MovementGrid({
     }
     return null;
   };
-
-  const handleMine = useCallback(
-    (e: ThreeEvent<MouseEvent>) => {
-      e.stopPropagation();
-      if (e.delta > DRAG_THRESHOLD) return;
-
-      if (!playerEntityId) {
-        console.error('Player entity not found');
-        return;
-      }
-
-      const playerEntity = getEntity(playerEntityId);
-
-      const targetPosition = new THREE.Vector3(
-        Math.floor(e.point.x),
-        Math.floor(e.point.y),
-        Math.floor(e.point.z),
-      );
-
-      const transform = playerEntity.getComponent(ClientTransformComponent);
-      if (!transform) {
-        console.error('Transform component not found');
-        return;
-      }
-
-      const startPosition = transform.position;
-
-      // Calculate the Euclidean distance between two positions
-      const distance = targetPosition.distanceTo(startPosition);
-      const inRange =
-        distance === 1 ||
-        distance === Math.sqrt(2) ||
-        distance === Math.sqrt(3);
-
-      // Check if the target position is a direct or diagonal neighbor
-      if (!inRange) {
-        setErrorMessage('You are too far away!');
-        return;
-      }
-    },
-    [playerEntityId, getEntity],
-  );
 
   const handleMove = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
@@ -132,9 +98,6 @@ export default function MovementGrid({
 
       const { grid } = movementGrid;
 
-      // console.log('grid:  ', grid);
-
-      // Find start and end nodes
       const startNode = findNodeByPosition(grid, startPosition);
       const endNode = findNodeByPosition(grid, targetPosition);
 
@@ -144,7 +107,6 @@ export default function MovementGrid({
         return;
       }
 
-      // Generate path using A* algorithm
       const path = findPath(startNode, endNode);
 
       if (!path || path.length === 0) {
@@ -153,10 +115,10 @@ export default function MovementGrid({
         return;
       }
 
-      move(
-        playerEntityId,
-        path.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-      );
+      const waypoints = path.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+
+      updatePath(waypoints);
+      move(playerEntityId, waypoints);
     },
     [
       send,
@@ -168,18 +130,58 @@ export default function MovementGrid({
     ],
   );
 
+  const updatePath = useCallback((path: THREE.Vector3[]) => {
+    const waypoints = path;
+    const waypointSet = new Set(
+      waypoints.map(({ x, y, z }) => `${x},${y},${z}`),
+    );
+
+    // If we have no path, clear the path nodes
+    if (waypoints.length === 0) {
+      clearPath();
+      return;
+    }
+
+    // Update the color of the path nodes
+    pathNodeRefs.current.forEach((mesh, key) => {
+      if (waypointSet.has(key)) {
+        const color =
+          mesh.userData.color === HEX_COLORS[BlockType.Water]
+            ? 'lightblue'
+            : 'silver';
+        (mesh.material as THREE.MeshBasicMaterial).color.set(color);
+      } else {
+        (mesh.material as THREE.MeshBasicMaterial).color.set(
+          mesh.userData.color,
+        );
+      }
+    });
+  }, []);
+
+  const clearPath = useCallback(() => {
+    pathNodeRefs.current.forEach((mesh) => {
+      (mesh.material as THREE.MeshBasicMaterial).color.set(mesh.userData.color);
+    });
+  }, []);
+
+  useFrame(() => {
+    if (!playerEntityId) return;
+    const playerEntity = getEntity(playerEntityId);
+    const moveTarget = playerEntity.getComponent(MoveTargetComponent);
+
+    if (moveTarget) {
+      const waypoints = moveTarget.waypoints;
+      updatePath(waypoints);
+    }
+  });
+
   const gridBoxes = useMemo(() => {
     if (!movementGrid) return null;
 
     const { grid } = movementGrid;
     if (!grid) return null;
-    const gridSize = grid.length; // Assuming all layers have the same size
+    const gridSize = grid.length;
     const boxes = [];
-
-    // Calculate the center of the grid
-    const centerX = gridSize / 2;
-    const centerY = gridSize / 2;
-    const centerZ = gridSize / 2;
 
     for (let x = 0; x < gridSize; x++) {
       for (let y = 0; y < gridSize; y++) {
@@ -187,33 +189,24 @@ export default function MovementGrid({
           const node = grid[x][y][z];
 
           if (node) {
-            // Calculate the distance from the center
-            const distance = Math.sqrt(
-              Math.pow(x - centerX, 2) +
-                Math.pow(y - centerY, 2) +
-                Math.pow(z - centerZ, 2),
-            );
-
-            // Calculate opacity based on distance
-            const maxDistance = Math.sqrt(3 * Math.pow(gridSize / 2, 2));
-            const opacity = 0.7 - distance / maxDistance;
+            const color = HEX_COLORS[BLOCK_TYPES[node.blockType]];
+            const key = `${node.x},${node.y},${node.z}`;
 
             boxes.push(
               <mesh
                 key={`grid-${x}-${z}-layer-${y}`}
-                onContextMenu={handleMine}
+                ref={(mesh) => {
+                  if (mesh) {
+                    mesh.userData = { color };
+                    pathNodeRefs.current.set(key, mesh);
+                  } else {
+                    pathNodeRefs.current.delete(key);
+                  }
+                }}
                 onClick={handleMove}
-                position={[
-                  node.x + 0.5, // Align with grid origin
-                  node.y, // Correctly align with the current layer
-                  node.z + 0.5, // Align with grid origin
-                ]}>
-                <boxGeometry args={[0.99, 0.1, 0.99]} />
-                <meshBasicMaterial
-                  color="silver"
-                  transparent
-                  opacity={opacity} // Vary opacity by distance
-                />
+                position={[node.x + 0.5, node.y, node.z + 0.5]}>
+                <boxGeometry args={[0.99, 0.01, 0.99]} />
+                <meshLambertMaterial color={color} transparent opacity={0.8} />
               </mesh>,
             );
           }

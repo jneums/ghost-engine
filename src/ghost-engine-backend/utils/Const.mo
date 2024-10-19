@@ -12,7 +12,10 @@ module {
   public let DEFAULT_VIEW_RADIUS = 64.0;
 
   // Environment
-  public let SEA_LEVEL = 128;
+  public let SEA_LEVEL = 78;
+
+  // Mining
+  public let MINING_RADIUS = 3.0;
 
   // Define the Land type as a variant to represent different terrain types
   public let Land = {

@@ -6,9 +6,13 @@ import Float "mo:base/Float";
 import Iter "mo:base/Iter";
 import Int "mo:base/Int";
 import Int64 "mo:base/Int64";
+import TrieMap "mo:base/TrieMap";
+import Nat "mo:base/Nat";
+import Hash "mo:base/Hash";
 import Noise "mo:noise/Noise";
 import NoiseTypes "mo:noise/Types";
 import Random "mo:noise/Random";
+import Map "mo:stable-hash-map/Map/Map";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Const "Const";
@@ -30,12 +34,13 @@ module {
       chunkPositions = [];
       blockData = [];
       chunkStatus = [];
+      changedBlocks = [];
     });
     ECS.World.addComponent(ctx, entityId, "BlocksComponent", newBlocks);
-    ECS.World.addComponent(ctx, entityId, "UpdateBlocksComponent", #UpdateBlocksComponent({}));
+    ECS.World.addComponent(ctx, entityId, "UpdateChunksComponent", #UpdateChunksComponent({}));
   };
 
-  public func addOrUpdateBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat8]) : Components.BlocksComponent {
+  func setChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat8]) : Components.BlocksComponent {
     let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
     switch (index) {
       case (null) {
@@ -45,6 +50,7 @@ module {
           chunkPositions = Array.append(blocksComponent.chunkPositions, [chunkPos]);
           blockData = Array.append(blocksComponent.blockData, [blocks]);
           chunkStatus = Array.append(blocksComponent.chunkStatus, [0 : Nat8]);
+          changedBlocks = Array.append(blocksComponent.changedBlocks, [[]]);
         };
       };
       case (?i) {
@@ -56,12 +62,13 @@ module {
           chunkPositions = blocksComponent.chunkPositions;
           blockData = Array.freeze(newBlockData);
           chunkStatus = blocksComponent.chunkStatus;
+          changedBlocks = blocksComponent.changedBlocks;
         };
       };
     };
   };
 
-  public func removeBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : Components.BlocksComponent {
+  func clearChunk(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : Components.BlocksComponent {
     let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
     switch (index) {
       case (null) {
@@ -77,6 +84,7 @@ module {
           chunkPositions = blocksComponent.chunkPositions;
           blockData = Array.freeze(newBlockData);
           chunkStatus = blocksComponent.chunkStatus;
+          changedBlocks = blocksComponent.changedBlocks;
         };
       };
     };
@@ -105,7 +113,24 @@ module {
         let index = Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
         switch (index) {
           case (null) { [] };
-          case (?i) { blocks.blockData[i] };
+          case (?i) {
+            // Get the original block data
+            let originalBlocks = blocks.blockData[i];
+            let mutableBlocks = Array.thaw<Nat8>(originalBlocks);
+
+            if (Array.size(blocks.changedBlocks) < 1 or Array.size(blocks.changedBlocks[i]) < 1) {
+              return Array.freeze(mutableBlocks);
+            };
+
+            // Apply changes from changedBlocks
+            for ((blockIndex, newBlockType) in blocks.changedBlocks[i].vals()) {
+              if (blockIndex >= 0 and blockIndex < mutableBlocks.size()) {
+                mutableBlocks[blockIndex] := newBlockType;
+              };
+            };
+
+            Array.freeze(mutableBlocks);
+          };
         };
       };
       case (_) {
@@ -133,7 +158,7 @@ module {
           return; // Exit early if blocks already exist
         };
         // Store the blocks in the BlocksComponent
-        let updatedBlocks = removeBlocks(blocks, blockPos);
+        let updatedBlocks = clearChunk(blocks, blockPos);
         let updatedBlocksComponent = #BlocksComponent(updatedBlocks);
         ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
       };
@@ -170,6 +195,7 @@ module {
               chunkPositions = blocks.chunkPositions;
               blockData = blocks.blockData;
               chunkStatus = Array.freeze(newChunkStatus);
+              changedBlocks = blocks.changedBlocks;
             });
             ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
           };
@@ -305,24 +331,21 @@ module {
 
             // Fill blocks from the terrain height downwards
             for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
-              if (y <= height) {
-                let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE +
-                z * Const.CHUNK_SIZE +
-                x;
+              let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE +
+              z * Const.CHUNK_SIZE +
+              x;
 
-                // If the block is below sea level, set it to water
-                if (y < Const.SEA_LEVEL) {
-                  newBlocks[index] := 2; // Example: Set block type to 2
-                } else {
-                  newBlocks[index] := 1; // Example: Set block type to 1
-                };
+              if (y <= height) {
+                newBlocks[index] := 1;
+              } else if (y <= Const.SEA_LEVEL) {
+                newBlocks[index] := 2;
               };
             };
           };
         };
 
         // Store the blocks in the BlocksComponent
-        let updatedBlocks = addOrUpdateBlocks(blocks, chunkPos, Array.freeze(newBlocks));
+        let updatedBlocks = setChunkBlocks(blocks, chunkPos, Array.freeze(newBlocks));
         let updatedBlocksComponent = #BlocksComponent(updatedBlocks);
         ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
       };
@@ -370,6 +393,106 @@ module {
       0.0;
     } else {
       Float.fromInt(highestY);
+    };
+  };
+
+  public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat8 {
+    let chunkPos = Chunks.getChunkPosition(position);
+    Debug.print("Chunk position: " # debug_show (chunkPos));
+
+    let blocks = getBlocks(ctx, chunkPos);
+
+    // Calculate local position within the chunk
+    let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
+    let localY = position.y;
+    let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
+
+    // Calculate the index within the blocks array
+    let index = localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
+    Debug.print("Block index: " # debug_show (index));
+
+    // Ensure the index is within bounds
+    if (index >= 0 and Float.toInt(index) < Array.size(blocks)) {
+      let blockType = blocks[Int.abs(Float.toInt(index))];
+      Debug.print("Block type: " # debug_show (blockType));
+      return blockType;
+    } else {
+      Debug.print("Index out of bounds: " # debug_show (index));
+      return 0; // Return a default value or handle the error as needed
+    };
+  };
+
+  // Set the block type at a specific position within a chunk
+  public func setBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3, blockType : Nat8) {
+    let chunkPos = Chunks.getChunkPosition(position);
+    Debug.print("Chunk position: " # debug_show (chunkPos));
+
+    let blocks = getBlocks(ctx, chunkPos);
+    let mutable = Array.thaw<Nat8>(blocks);
+
+    // Calculate local position within the chunk
+    let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
+    let localY = position.y;
+    let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
+
+    // Calculate the index within the blocks array
+    let index = localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
+    Debug.print("Block index: " # debug_show (index));
+
+    // Ensure the index is within bounds
+    if (index >= 0 and Float.toInt(index) < mutable.size()) {
+      mutable[Int.abs(Float.toInt(index))] := blockType;
+    } else {
+      Debug.print("Index out of bounds: " # debug_show (index));
+      return;
+    };
+
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) < 1) {
+      Debug.print("BlocksComponent not found");
+      return;
+    };
+
+    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
+    switch (blocksComponent) {
+      case (? #BlocksComponent(blocks)) {
+        // Find the blocks for the given chunk position
+        let chunkIdx = Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
+        switch (chunkIdx) {
+          case (null) {};
+          case (?i) {
+            // Convert changedBlocks to a TrieMap
+            let changedChunk = TrieMap.fromEntries<Nat, Nat8>(
+              blocks.changedBlocks[i].vals(),
+              Nat.equal,
+              Map.nhash.0,
+            );
+
+            // Insert or update the blockIndex with the new blockType
+            changedChunk.put(Int.abs(Float.toInt(index)), blockType);
+
+            // Convert the TrieMap back to an array of entries
+            let newChangedChunk = Iter.toArray(changedChunk.entries());
+
+            // Update the changedBlocks for the chunk
+            let newChangedBlocks = Array.thaw<[(Nat, Nat8)]>(blocks.changedBlocks);
+            newChangedBlocks[i] := newChangedChunk;
+
+            let updatedBlocksComponent = {
+              seed = blocks.seed;
+              chunkPositions = blocks.chunkPositions;
+              blockData = blocks.blockData;
+              chunkStatus = blocks.chunkStatus;
+              changedBlocks = Array.freeze(newChangedBlocks);
+            };
+
+            ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", #BlocksComponent(updatedBlocksComponent));
+          };
+        };
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
     };
   };
 };

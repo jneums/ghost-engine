@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useFrame, extend, ReactThreeFiber } from '@react-three/fiber';
 import { shaderMaterial } from '@react-three/drei';
 import glsl from 'babel-plugin-glsl/macro';
@@ -54,7 +54,6 @@ const LightningBeam: React.FC<LightningBeamProps> = ({
   start,
   getEndPosition,
 }) => {
-  const geometryRef = useRef<THREE.BufferGeometry>(new THREE.BufferGeometry());
   const linesRef = useRef<THREE.Line[]>([]);
   const materialRef = useRef<any>(null);
 
@@ -71,7 +70,7 @@ const LightningBeam: React.FC<LightningBeamProps> = ({
           end,
           state.clock.getElapsedTime(),
         );
-        const geometry = geometryRef.current.setFromPoints(points);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
         line.geometry = geometry;
       });
     }

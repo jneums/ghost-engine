@@ -1,16 +1,18 @@
 import ECS "mo:geecs";
 import Components "../components";
 
-import { MovementSystem } "../systems/MovementSystem";
-import { CombatSystem } "../systems/CombatSystem";
-import { DamageSystem } "../systems/DamageSystem";
-import { SpawnSystem } "../systems/SpawnSystem";
-import { RewardSystem } "../systems/RewardSystem";
-import { ConnectSystem } "../systems/ConnectSystem";
-import { DisconnectSystem } "../systems/DisconnectSystem";
-import { SessionSystem } "../systems/SessionSystem";
-import { PlayerViewSystem } "../systems/PlayerViewSystem";
-import { BlocksSystem } "../systems/BlocksSystem";
+import { MovementSystem } "MovementSystem";
+import { CombatSystem } "CombatSystem";
+import { DamageSystem } "DamageSystem";
+import { SpawnSystem } "SpawnSystem";
+import { RewardSystem } "RewardSystem";
+import { ConnectSystem } "ConnectSystem";
+import { DisconnectSystem } "DisconnectSystem";
+import { SessionSystem } "SessionSystem";
+import { PlayerViewSystem } "PlayerViewSystem";
+import { MiningSystem } "MiningSystem";
+import { BlocksSystem } "BlocksSystem";
+import { ChunksSystem } "ChunksSystem";
 
 module {
   // Register systems
@@ -21,9 +23,11 @@ module {
     ECS.World.addSystem(ctx, MovementSystem);
     ECS.World.addSystem(ctx, DamageSystem);
     ECS.World.addSystem(ctx, CombatSystem);
+    ECS.World.addSystem(ctx, MiningSystem);
     ECS.World.addSystem(ctx, RewardSystem);
     ECS.World.addSystem(ctx, SpawnSystem);
     ECS.World.addSystem(ctx, BlocksSystem);
+    ECS.World.addSystem(ctx, ChunksSystem);
     ECS.World.addSystem(ctx, DisconnectSystem);
   };
 };

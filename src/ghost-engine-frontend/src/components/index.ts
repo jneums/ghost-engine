@@ -31,14 +31,6 @@ export class TransformComponent {
   ) {}
 }
 
-export class OfflineTransformComponent {
-  constructor(
-    public position: THREE.Vector3,
-    public rotation: THREE.Quaternion,
-    public scale: THREE.Vector3,
-  ) {}
-}
-
 export class ConnectComponent {
   constructor() {}
 }
@@ -60,6 +52,14 @@ export class CombatComponent {
     public targetEntityId: number,
     public speed: number,
     public range: number,
+    public startAt: number,
+  ) {}
+}
+
+export class MiningComponent {
+  constructor(
+    public position: THREE.Vector3,
+    public speed: number,
     public startAt: number,
   ) {}
 }
@@ -107,8 +107,12 @@ export class UpdatePlayerChunksComponent {
   constructor() {}
 }
 
+export interface PlayersChunk {
+  chunkId: THREE.Vector3;
+  updatedAt: number;
+}
 export class PlayerChunksComponent {
-  constructor(public chunks: THREE.Vector3[]) {}
+  constructor(public chunks: PlayersChunk[]) {}
 }
 
 export class BlocksComponent {
@@ -117,6 +121,10 @@ export class BlocksComponent {
     public blockData: (Uint8Array | number[])[],
     public chunkPositions: THREE.Vector3[],
   ) {}
+}
+
+export class UpdateChunksComponent {
+  constructor() {}
 }
 
 export class UpdateBlocksComponent {
@@ -154,16 +162,6 @@ export function createComponentClass(data: Component) {
         );
       },
     )
-    .with(
-      { OfflineTransformComponent: P.select() },
-      ({ position, rotation, scale }) => {
-        return new OfflineTransformComponent(
-          new THREE.Vector3(position.x, position.y, position.z),
-          new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-          new THREE.Vector3(scale.x, scale.y, scale.z),
-        );
-      },
-    )
     .with({ ConnectComponent: P.select() }, () => {
       return new ConnectComponent();
     })
@@ -184,6 +182,13 @@ export function createComponentClass(data: Component) {
         );
       },
     )
+    .with({ MiningComponent: P.select() }, ({ position, speed, startAt }) => {
+      return new MiningComponent(
+        new THREE.Vector3(position.x, position.y, position.z),
+        Number(speed),
+        Number(startAt),
+      );
+    })
     .with({ FungibleComponent: P.select() }, ({ tokens }) => {
       return new FungibleComponent(tokens);
     })
@@ -210,7 +215,10 @@ export function createComponentClass(data: Component) {
     })
     .with({ PlayerChunksComponent: P.select() }, ({ chunks }) => {
       return new PlayerChunksComponent(
-        chunks.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
+        chunks.map(({ chunkId, updatedAt }) => ({
+          chunkId: new THREE.Vector3(chunkId.x, chunkId.y, chunkId.z),
+          updatedAt: Number(updatedAt / 1_000_000n), // Correct conversion to milliseconds
+        })),
       );
     })
     .with(
@@ -225,6 +233,9 @@ export function createComponentClass(data: Component) {
     )
     .with({ UpdateBlocksComponent: P.select() }, () => {
       return new UpdateBlocksComponent();
+    })
+    .with({ UpdateChunksComponent: P.select() }, () => {
+      return new UpdateChunksComponent();
     })
     .exhaustive();
 }
@@ -242,6 +253,7 @@ export const ComponentConstructors: Record<string, Function> = {
   RespawnComponent: RespawnComponent,
   ResourceComponent: ResourceComponent,
   CombatComponent: CombatComponent,
+  MiningComponent: MiningComponent,
   HealthComponent: HealthComponent,
   RedeemTokensComponent: RedeemTokensComponent,
   PlayerChunksComponent: PlayerChunksComponent,

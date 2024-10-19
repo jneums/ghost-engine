@@ -1,90 +1,109 @@
-import { test; suite; expect } "mo:test/async";
-
 import ECS "mo:geecs";
-import Array "mo:base/Array";
+import Time "mo:base/Time";
 import Debug "mo:base/Debug";
-import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
+import Array "mo:base/Array";
 import Components "../../components";
-import { BlocksSystem } "../../systems/BlocksSystem";
-import Utils "../Utils";
+import Vector3 "../../math/Vector3";
+import Vector "mo:vector";
 
-suite(
-  "Blocks System",
-  func() : async () {
+module {
+  // Define a component for updating blocks
+  // public type UpdateBlocksComponent = {
+  //   blocks : [{ chunkId : Vector3.Vector3; localIdx : Nat; value : Nat8 }];
+  // };
 
-    // Initialize the entity counter:
-    var entityCounter : Nat = 0;
-    let nextEntityId = func() : Nat {
-      entityCounter += 1;
-      entityCounter;
+  // public type PlayerChunksComponent = {
+  //   chunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }]; // List of chunk positions
+  // };
+
+  public type Chunk = {
+    chunkId : Vector3.Vector3;
+    updatedAt : Time.Time;
+  };
+
+  func getUpdatedChunks(blocks : [{ chunkId : Vector3.Vector3; localIdx : Nat; value : Nat8 }]) : [{
+    chunkId : Vector3.Vector3;
+    updatedAt : Time.Time;
+  }] {
+    let updatedChunks = Vector.new<Chunk>();
+
+    for (block in blocks.vals()) {
+      let chunkId = block.chunkId;
+      let updatedAt = Time.now();
+
+      // Check if the chunk is already in the updatedChunks array
+      var chunkExists = false;
+      label findChunk for (updatedChunk in Vector.vals(updatedChunks)) {
+        if (Vector3.equal(updatedChunk.chunkId, chunkId)) {
+          chunkExists := true;
+          break findChunk;
+        };
+      };
+
+      // If the chunk is not in the updatedChunks array, add it
+      if (not chunkExists) {
+        Vector.add(updatedChunks, { chunkId = chunkId; updatedAt = updatedAt });
+      };
     };
 
-    // Initialize the required ECS data structures:
-    let ctx : ECS.Types.Context<Components.Component> = Utils.createContext(nextEntityId);
+    Vector.toArray(updatedChunks);
+  };
 
-    // Create a new entity with a BlocksComponent
-    let entityId = ECS.World.addEntity(ctx);
-    let blocksComponent = #BlocksComponent({
-      seed = 0 : Nat64;
-      chunkPositions = [{ x = 0.0; y = 0.0; z = 0.0 }, { x = 1.0; y = 0.0; z = 0.0 }];
-      blockData = [[] : [Nat8], [] : [Nat8]];
-      chunkStatus = [0 : Nat8, 0 : Nat8];
-    });
-    ECS.World.addComponent(ctx, entityId, "BlocksComponent", blocksComponent);
+  // Update function for the BlocksSystem
+  func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
+    switch (ECS.World.getComponent(ctx, entityId, "BlocksComponent"), ECS.World.getComponent(ctx, entityId, "UpdateBlocksComponent")) {
+      case (? #BlocksComponent(blocks), ? #UpdateBlocksComponent(update)) {
+        Debug.print("\nManaging blocks");
 
-    let playerEntityId = ECS.World.addEntity(ctx);
+        // Iterate over all entities with PlayerChunksComponent
+        let playerEntities = ECS.World.getEntitiesByArchetype(ctx, ["PlayerChunksComponent"]);
+        for (playerEntityId in playerEntities.vals()) {
+          switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
+            case (? #PlayerChunksComponent(playerChunks)) {
+              var updatedChunks = getUpdatedChunks(update.blocks);
 
-    await test(
-      "Generates blocks for chunks that player is in",
-      func() : async () {
-        // Add player chunks component
-        let playerChunks = #PlayerChunksComponent({
-          chunks = [{ x = 0.0; y = 0.0; z = 0.0 }];
-        });
-        ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", playerChunks);
+              // Check each block update against the player's chunks
+              for (blockUpdate in update.blocks.vals()) {
+                for (chunk in playerChunks.chunks.vals()) {
+                  if (Vector3.equal(chunk.chunkId, blockUpdate.chunkId)) {
+                    // Update the updatedAt property for the affected chunk
+                    updatedChunks := Array.map(
+                      updatedChunks,
+                      func(c : { chunkId : Vector3.Vector3; updatedAt : Time.Time }) : {
+                        chunkId : Vector3.Vector3;
+                        updatedAt : Time.Time;
+                      } {
+                        if (Vector3.equal(c.chunkId, blockUpdate.chunkId)) {
+                          { chunkId = c.chunkId; updatedAt = Time.now() };
+                        } else {
+                          c;
+                        };
+                      },
+                    );
+                  };
+                };
+              };
 
-        // Run the BlocksSystem update
-        await BlocksSystem.update(ctx, entityId, 0);
-
-        // Check that blocks were generated for chunk1
-        let blocksComponent = ECS.World.getComponent(ctx, entityId, "BlocksComponent");
-        switch (blocksComponent) {
-          case (? #BlocksComponent(blocks)) {
-            expect.nat(Array.size(blocks.blockData[0])).notEqual(0); // Blocks should be generated
-            expect.nat(Array.size(blocks.blockData[1])).equal(0); // Blocks should be deleted
-          };
-          case (_) {
-            Debug.print("BlocksComponent not found");
-          };
-        };
-      },
-    );
-
-    await test(
-      "Deletes blocks for chunks with status 0",
-      func() : async () {
-        // Add player chunks component
-        let playerChunks = #PlayerChunksComponent({
-          chunks = [{ x = 1.0; y = 0.0; z = 0.0 }];
-        });
-        ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", playerChunks);
-
-        // Run the BlocksSystem update
-        await BlocksSystem.update(ctx, entityId, 0);
-
-        // Check that blocks were deleted for chunk1 and generated for chunk2
-        let blocksComponent = ECS.World.getComponent(ctx, entityId, "BlocksComponent");
-        switch (blocksComponent) {
-          case (? #BlocksComponent(blocks)) {
-            expect.nat(Array.size(blocks.blockData[0])).equal(0); // Blocks should be deleted
-            expect.nat(Array.size(blocks.blockData[1])).notEqual(0); // Blocks should be generated
-          };
-          case (_) {
-            Debug.print("BlocksComponent not found");
+              // Update the PlayerChunksComponent with the new timestamps
+              let updatedPlayerChunks = #PlayerChunksComponent({
+                chunks = updatedChunks;
+              });
+              ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", updatedPlayerChunks);
+            };
+            case (_) {};
           };
         };
-      },
-    );
-  },
-);
+
+        // Remove the UpdateBlocksComponent after processing
+        ECS.World.removeComponent(ctx, entityId, "UpdateBlocksComponent");
+      };
+      case (_) {};
+    };
+  };
+
+  public let BlocksSystem : ECS.Types.System<Components.Component> = {
+    systemType = "BlocksSystem";
+    archetype = ["BlocksComponent", "UpdateBlocksComponent"];
+    update = update;
+  };
+};

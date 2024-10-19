@@ -89,7 +89,7 @@ export default function Player({ entityId }: { entityId: number }) {
 
     const playerPosition = {
       x: clientTransform.position.x + 0.5 * PLAYER_WIDTH,
-      y: clientTransform.position.y + 0.5 * PLAYER_HEIGHT,
+      y: clientTransform.position.y + 0.5 * PLAYER_HEIGHT + 0.01,
       z: clientTransform.position.z + 0.5 * PLAYER_WIDTH,
     };
     meshRef.current?.position.copy(playerPosition);
@@ -130,7 +130,7 @@ export default function Player({ entityId }: { entityId: number }) {
         onClick={handleClick}
         castShadow
         receiveShadow>
-        <boxGeometry args={[1, 2, 1]} />
+        <boxGeometry args={[PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_WIDTH]} />
         <meshPhongMaterial color={color} />
       </mesh>
       {combatTargetId && (

@@ -1,11 +1,8 @@
 import { test; suite; expect } "mo:test";
 
 import ECS "mo:geecs";
-import Principal "mo:base/Principal";
 import Nat "mo:base/Nat";
-import Debug "mo:base/Debug";
 import Components "../../components";
-import Player "../../utils/Player";
 import Utils "../Utils";
 import Blocks "../../utils/Blocks";
 
@@ -32,6 +29,7 @@ suite(
       chunkPositions = [{ x = 0.0; y = 0.0; z = 0.0 }, { x = 1.0; y = 0.0; z = 0.0 }];
       blockData = [[] : [Nat8], [] : [Nat8]];
       chunkStatus = [0 : Nat8, 0 : Nat8];
+      changedBlocks = [];
     });
     ECS.World.addComponent(ctx, entityId, "BlocksComponent", blocksComponent);
 

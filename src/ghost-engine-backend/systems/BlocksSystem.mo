@@ -2,85 +2,68 @@ import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Debug "mo:base/Debug";
 import Components "../components";
-import Blocks "../utils/Blocks";
-import Array "mo:base/Array";
-import Float "mo:base/Float";
-import Map "mo:stable-hash-map/Map/Map";
 import Vector3 "../math/Vector3";
-import Const "../utils/Const";
+import Vector "mo:vector";
 import Chunks "../utils/Chunks";
 
 module {
-  type ChunkStatus = {
-    position : Vector3.Vector3;
-    isActive : Bool;
+  // Define a component for updating blocks
+  public type UpdateBlocksComponent = {
+    blocks : [Components.BlockUpdate];
+  };
+
+  func getPlayerHasChunk(playerChunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }], chunkId : Vector3.Vector3) : Bool {
+    for (playerChunk in playerChunks.vals()) {
+      if (Vector3.equal(playerChunk.chunkId, chunkId)) {
+        return true;
+      };
+    };
+    return false;
+  };
+
+  func updatePlayerChunkTimestamp(ctx : ECS.Types.Context<Components.Component>, playerEntityId : ECS.Types.EntityId, chunkId : Vector3.Vector3) {
+    switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
+      case (? #PlayerChunksComponent(playerChunks)) {
+        let updatedChunks = Vector.new<Components.PlayersChunk>();
+        for (playerChunk in playerChunks.chunks.vals()) {
+          if (Vector3.equal(playerChunk.chunkId, chunkId)) {
+            Vector.add(updatedChunks, { chunkId = playerChunk.chunkId; updatedAt = Time.now() });
+          } else {
+            Vector.add(updatedChunks, playerChunk);
+          };
+        };
+        let updatedChunksArray = Vector.toArray(updatedChunks);
+        ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", #PlayerChunksComponent({ chunks = updatedChunksArray }));
+      };
+      case (_) {};
+    };
   };
 
   // Update function for the BlocksSystem
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
-    switch (ECS.World.getComponent(ctx, entityId, "BlocksComponent")) {
-      case (? #BlocksComponent(blocksComponent)) {
+    switch (ECS.World.getComponent(ctx, entityId, "UpdateBlocksComponent")) {
+      case (? #UpdateBlocksComponent(update)) {
         Debug.print("\nManaging blocks");
-
-        // Track all chunks
-        let chunks = Map.new<Text, ChunkStatus>(Map.thash);
-
-        // Add all chunks as inactive
-        for (chunkId in blocksComponent.chunkPositions.vals()) {
-          Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; isActive = false });
-        };
-
-        // Add the chunks with distance < 4 around the spawn point as active chunks
-        let spawnPoint = Chunks.getChunkPosition({
-          x = Const.SpawnPoint.position.x;
-          y = 0;
-          z = Const.SpawnPoint.position.z;
-        });
-        let chunkRange = Float.toInt(Const.DEFAULT_VIEW_RADIUS) / Const.CHUNK_SIZE;
-
-        var x : Int = -chunkRange;
-        while (x <= chunkRange) {
-          var z : Int = -chunkRange;
-          while (z <= chunkRange) {
-            let chunkPos = {
-              x = (spawnPoint.x + Float.fromInt(x));
-              y = 0.0;
-              z = (spawnPoint.z + Float.fromInt(z));
-            };
-            Map.set(chunks, Map.thash, debug_show (chunkPos), { position = chunkPos; isActive = true });
-            z += 1;
-          };
-          x += 1;
-        };
 
         // Iterate over all entities with PlayerChunksComponent and set as active chunks
         let playerEntities = ECS.World.getEntitiesByArchetype(ctx, ["PlayerChunksComponent"]);
         for (playerEntityId in playerEntities.vals()) {
           switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
             case (? #PlayerChunksComponent(playerChunks)) {
-              for (chunkId in playerChunks.chunks.vals()) {
-                Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; isActive = true });
+              for ((blockPosition, value) in update.blocks.vals()) {
+                // If the block is in the chunk then set the updatedAt prop on the players "PlayerChunksComponent"
+                let chunkId = Chunks.getChunkPosition(blockPosition);
+                let playerHasChunk = getPlayerHasChunk(playerChunks.chunks, chunkId);
+                if (playerHasChunk) {
+                  updatePlayerChunkTimestamp(ctx, playerEntityId, chunkId);
+                };
               };
             };
             case (_) {};
           };
         };
 
-        // Update chunk statuses based on active chunks
-        for (chunkStatus in Map.vals(chunks)) {
-          if (chunkStatus.isActive) {
-            // Generate blocks if they don't exist
-            if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) == 0) {
-              Blocks.generateBlocks(ctx, chunkStatus.position);
-            };
-          } else {
-            // Delete blocks for this chunk
-            if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) > 0) {
-              Blocks.deleteBlocks(ctx, chunkStatus.position);
-            };
-          };
-        };
-
+        // Remove the UpdateBlocksComponent after processing
         ECS.World.removeComponent(ctx, entityId, "UpdateBlocksComponent");
       };
       case (_) {};
@@ -89,7 +72,7 @@ module {
 
   public let BlocksSystem : ECS.Types.System<Components.Component> = {
     systemType = "BlocksSystem";
-    archetype = ["BlocksComponent", "UpdateBlocksComponent"];
+    archetype = ["UpdateBlocksComponent"];
     update = update;
   };
 };

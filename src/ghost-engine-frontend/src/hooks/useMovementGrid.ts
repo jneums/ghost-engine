@@ -12,6 +12,7 @@ export interface Node {
   g: number;
   f: number;
   h: number;
+  blockType: number;
   opened: boolean;
   closed: boolean;
   parent: Node | null;
@@ -92,6 +93,7 @@ export default function useMovementGrid(
                   g: 0,
                   f: 0,
                   h: 0,
+                  blockType: belowBlockValue,
                   opened: false,
                   closed: false,
                   parent: null,

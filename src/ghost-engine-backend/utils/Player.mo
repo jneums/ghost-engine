@@ -3,6 +3,7 @@ import Iter "mo:base/Iter";
 import Time "mo:base/Time";
 import Array "mo:base/Array";
 import Components "../components";
+import Vector3 "../math/Vector3";
 
 module {
   public func getPrincipal(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) : ?Principal {
@@ -86,5 +87,30 @@ module {
       };
       case (null) {};
     };
+  };
+
+  public func getChunks(ctx : ECS.Types.Context<Components.Component>, principal : Principal) : [Components.PlayersChunk] {
+    switch (findPlayersEntityId(ctx, principal)) {
+      case (?exists) {
+        let chunks = ECS.World.getComponent(ctx, exists, "PlayerChunksComponent");
+        switch (chunks) {
+          case (? #PlayerChunksComponent({ chunks })) {
+            return chunks;
+          };
+          case (_) { return [] };
+        };
+      };
+      case (null) { return [] };
+    };
+  };
+
+  public func hasChunk(ctx : ECS.Types.Context<Components.Component>, principal : Principal, chunkId : Vector3.Vector3) : Bool {
+    let chunks = getChunks(ctx, principal);
+    for (chunk in chunks.vals()) {
+      if (Vector3.equal(chunk.chunkId, chunkId)) {
+        return true;
+      };
+    };
+    return false;
   };
 };

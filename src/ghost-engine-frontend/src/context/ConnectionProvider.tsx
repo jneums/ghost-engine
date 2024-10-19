@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import React, { useEffect } from 'react';
 import { HttpAgent, Identity } from '@dfinity/agent';
 import { canisterId, createActor } from '../declarations/ghost-engine-backend';
 import {
@@ -7,7 +6,6 @@ import {
   Action,
   Update,
 } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
-import { useInternetIdentity } from 'ic-use-internet-identity';
 import { match, P } from 'ts-pattern';
 
 // Define the Zustand store
@@ -19,10 +17,10 @@ interface ConnectionState {
   connect: (identity: Identity) => void;
   disconnect: (identity: Identity) => void;
   send: (identity: Identity, message: Action) => Promise<void>;
-  getChunk: (
+  getChunks: (
     identity: Identity,
-    chunkId: { x: number; y: number; z: number },
-  ) => Promise<Uint8Array | number[]>;
+    chunkIds: { x: number; z: number }[],
+  ) => Promise<(Uint8Array | number[])[]>;
 }
 
 const useConnectionStore = create<ConnectionState>((set, get) => {
@@ -135,12 +133,13 @@ const useConnectionStore = create<ConnectionState>((set, get) => {
     await server.putAction(message);
   };
 
-  const getChunk = async (
+  const getChunks = async (
     identity: Identity,
-    chunkId: { x: number; y: number; z: number },
+    chunkIds: { x: number; z: number }[],
   ) => {
     const server = createServer(identity);
-    return await server.getChunk(chunkId);
+    const withY = chunkIds.map(({ x, z }) => ({ x, y: 0, z }));
+    return await server.getChunks(withY);
   };
 
   return {
@@ -151,31 +150,8 @@ const useConnectionStore = create<ConnectionState>((set, get) => {
     connect,
     disconnect,
     send,
-    getChunk,
+    getChunks,
   };
 });
 
 export const useConnection = () => useConnectionStore();
-
-export const ConnectionProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  const { connect, disconnect } = useConnectionStore();
-  const { identity } = useInternetIdentity();
-
-  useEffect(() => {
-    if (identity) {
-      connect(identity);
-    }
-
-    return () => {
-      if (identity) {
-        disconnect(identity);
-      }
-    };
-  }, [identity, connect, disconnect]);
-
-  return <>{children}</>;
-};

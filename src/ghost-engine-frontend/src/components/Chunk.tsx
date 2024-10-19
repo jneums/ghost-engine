@@ -1,7 +1,12 @@
 import * as THREE from 'three';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
 import { ThreeEvent } from '@react-three/fiber';
+import { useWorld } from '../context/WorldProvider';
+import { ClientTransformComponent } from '.';
+import useAction from '../hooks/useAction';
+import { useErrorMessage } from '../context/ErrorProvider';
+import { BlockType, VERTEX_COLORS, DRAG_THRESHOLD } from '../utils/const';
 
 const FACES = [
   {
@@ -70,11 +75,86 @@ export default function Chunk({
   data: Uint8Array | number[];
 }) {
   const geomRef = useRef(new THREE.BufferGeometry());
+  const { playerEntityId, getEntity } = useWorld();
+  const { setErrorMessage } = useErrorMessage();
+  const { mine } = useAction();
+  const [minedVoxelIndex, setMinedVoxelIndex] = useState<number | null>(null);
+
+  const handleMine = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      e.stopPropagation();
+      if (e.delta > DRAG_THRESHOLD) return;
+
+      if (!playerEntityId) {
+        console.error('Player entity not found');
+        return;
+      }
+
+      const playerEntity = getEntity(playerEntityId);
+
+      const faceNormal = e.face?.normal;
+      if (!faceNormal) {
+        console.error('Face normal not found');
+        return;
+      }
+
+      const voxelId = 0;
+
+      const targetPosition = new THREE.Vector3(
+        Math.floor(e.point.x + faceNormal.x * (voxelId > 0 ? 0.5 : -0.5)),
+        Math.floor(e.point.y + faceNormal.y * (voxelId > 0 ? 0.5 : -0.5)),
+        Math.floor(e.point.z + faceNormal.z * (voxelId > 0 ? 0.5 : -0.5)),
+      );
+
+      const localPosition = new THREE.Vector3(
+        ((targetPosition.x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
+        targetPosition.y,
+        ((targetPosition.z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
+      );
+
+      const index =
+        localPosition.x +
+        localPosition.z * CHUNK_SIZE +
+        localPosition.y * CHUNK_SIZE * CHUNK_SIZE;
+
+      if (index < 0 || index >= data.length) {
+        console.error('Index out of bounds:', index);
+        return;
+      }
+
+      if (data[index] === BlockType.Air || data[index] === BlockType.Water) {
+        setErrorMessage("I can't mine that!");
+        return;
+      }
+
+      const transform = playerEntity.getComponent(ClientTransformComponent);
+      if (!transform) {
+        console.error('Transform component not found');
+        return;
+      }
+
+      const startPosition = transform.position;
+
+      const MINING_RADIUS = 2;
+      const distance = targetPosition.distanceTo(startPosition);
+      const inRange = distance < Math.sqrt(3 * MINING_RADIUS);
+
+      if (!inRange) {
+        setErrorMessage('You are too far away!');
+        return;
+      }
+
+      setMinedVoxelIndex(index);
+      mine(playerEntityId, targetPosition);
+    },
+    [playerEntityId, getEntity, mine, setErrorMessage, data],
+  );
 
   const generateVoxelGeometry = useCallback(() => {
     const positions = [];
     const normals = [];
     const indices = [];
+    const colors = [];
 
     for (let y = 0; y < CHUNK_HEIGHT; ++y) {
       for (let z = 0; z < CHUNK_SIZE; ++z) {
@@ -87,7 +167,6 @@ export default function Chunk({
               const neighborY = y + dir[1];
               const neighborZ = z + dir[2];
 
-              // Check if the neighbor is outside the current chunk
               const isOutsideChunk =
                 neighborX < 0 ||
                 neighborX >= CHUNK_SIZE ||
@@ -105,11 +184,26 @@ export default function Chunk({
                 neighbor = data[neighborIndex] || 0;
               }
 
+              // Only add the top face for water blocks
+              if (voxel === BlockType.Water) {
+                // Skip all faces except the top face
+                if (dir[1] !== 1) continue;
+              }
+
               if (!neighbor) {
                 const ndx = positions.length / 3;
                 for (const pos of corners) {
                   positions.push(pos[0] + x, pos[1] + y, pos[2] + z);
                   normals.push(...dir);
+
+                  // Change color if this voxel is being mined
+                  if (index === minedVoxelIndex) {
+                    colors.push(1, 0, 0, 1); // Red color for mined voxel
+                  } else {
+                    const block = voxel as BlockType;
+                    const color = VERTEX_COLORS[block];
+                    colors.push(...color); // Use color with opacity
+                  }
                 }
                 indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
               }
@@ -119,11 +213,11 @@ export default function Chunk({
       }
     }
 
-    return { positions, normals, indices };
-  }, [data]);
+    return { positions, normals, indices, colors };
+  }, [data, minedVoxelIndex]);
 
   const geometry = useMemo(() => {
-    const { positions, normals, indices } = generateVoxelGeometry();
+    const { positions, normals, indices, colors } = generateVoxelGeometry();
 
     geomRef.current.setAttribute(
       'position',
@@ -133,13 +227,16 @@ export default function Chunk({
       'normal',
       new THREE.Float32BufferAttribute(normals, 3),
     );
+    geomRef.current.setAttribute(
+      'color',
+      new THREE.Float32BufferAttribute(colors, 4),
+    );
     geomRef.current.setIndex(indices);
 
-    // Compute bounding volumes
     geomRef.current.computeBoundingBox();
 
     return geomRef.current;
-  }, [data]); // Add dependencies if needed
+  }, [generateVoxelGeometry]);
 
   if (!data.length) {
     return null;
@@ -157,8 +254,12 @@ export default function Chunk({
   };
 
   return (
-    <mesh onClick={handleClick} position={chunkPosition} geometry={geometry}>
-      <meshLambertMaterial color={0xaaaaaa} />
+    <mesh
+      onClick={handleClick}
+      onContextMenu={handleMine}
+      position={chunkPosition}
+      geometry={geometry}>
+      <meshLambertMaterial vertexColors />
     </mesh>
   );
 }

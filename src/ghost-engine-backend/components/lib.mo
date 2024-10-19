@@ -64,6 +64,12 @@ module {
     startAt : Time.Time;
   };
 
+  public type MiningComponent = {
+    position : Vector3.Vector3;
+    speed : Float;
+    startAt : Time.Time;
+  };
+
   public type FungibleComponent = {
     tokens : [{
       symbol : Text;
@@ -87,16 +93,25 @@ module {
     chunkPositions : [Vector3.Vector3]; // Array of chunk positions
     blockData : [[Nat8]]; // Array of block data corresponding to each chunk position
     chunkStatus : [Nat8]; // Array of status corresponding to each chunk position
+    changedBlocks : [[(Nat, Nat8)]] // List of block changes (index, value)
   };
 
-  public type UpdateBlocksComponent = {};
+  public type UpdateChunksComponent = {};
+
+  public type BlockUpdate = (Vector3.Vector3, Nat8); // position, value
+
+  public type UpdateBlocksComponent = {
+    blocks : [BlockUpdate];
+  };
+
+  public type PlayersChunk = {
+    chunkId : Vector3.Vector3;
+    updatedAt : Time.Time;
+  };
 
   public type PlayerChunksComponent = {
-    chunks : [Vector3.Vector3]; // List of chunk positions
+    chunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }]; // List of chunk positions
   };
-
-  // Define a tag component for updating player chunks
-  public type UpdatePlayerChunksComponent = {};
 
   public type PlayerViewComponent = {
     viewRadius : Float; // Radius around the player to load chunks
@@ -108,7 +123,6 @@ module {
     #MoveTargetComponent : MoveTargetComponent;
     #VelocityComponent : VelocityComponent;
     #TransformComponent : TransformComponent;
-    #OfflineTransformComponent : TransformComponent;
     #ConnectComponent : ConnectComponent;
     #DisconnectComponent : DisconnectComponent;
     #SessionComponent : SessionComponent;
@@ -117,15 +131,17 @@ module {
     #NameableComponent : NameableComponent;
     #HealthComponent : HealthComponent;
     #CombatComponent : CombatComponent;
+    #MiningComponent : MiningComponent;
     #DamageComponent : DamageComponent;
     #RespawnComponent : RespawnComponent;
     #RedeemTokensComponent : RedeemTokensComponent;
     #PlayerChunksComponent : PlayerChunksComponent;
     #PlayerViewComponent : PlayerViewComponent;
-    #UpdatePlayerChunksComponent : UpdatePlayerChunksComponent;
+    #UpdatePlayerChunksComponent : UpdateChunksComponent;
 
     // Global block store for backend only
     #BlocksComponent : BlocksComponent;
     #UpdateBlocksComponent : UpdateBlocksComponent;
+    #UpdateChunksComponent : UpdateChunksComponent;
   };
 };
