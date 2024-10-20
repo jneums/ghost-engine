@@ -9,7 +9,7 @@ module {
     let elapsedTime = currentTime - disconnect.startAt;
 
     if (elapsedTime >= disconnect.duration) {
-      // Remove the player from the simulation
+      // Remove the unit from the simulation
       ECS.World.removeComponent(ctx, entityId, "SessionComponent");
       ECS.World.removeComponent(ctx, entityId, "DisconnectComponent");
     };

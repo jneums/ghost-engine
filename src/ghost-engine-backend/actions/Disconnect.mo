@@ -3,7 +3,7 @@ import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Time "mo:base/Time";
 import ECS "mo:geecs";
-import Player "../utils/Player";
+import Units "../utils/Units";
 import Const "../utils/Const";
 import Components "../components";
 
@@ -13,13 +13,13 @@ module {
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nPlayer disconnected: " # debug_show (args.principal));
+    Debug.print("\nUnit disconnected: " # debug_show (args.principal));
 
-    let entityId = Player.findPlayersEntityId(ctx, args.principal);
-    // Remove the player from the simulation
+    let entityId = Units.getEntityId(ctx, args.principal);
+    // Remove the unit from the simulation
     switch (entityId) {
       case (?exists) {
-        // Update the player's connection status
+        // Update the unit's connection status
         ECS.World.addComponent(
           ctx,
           exists,

@@ -2,7 +2,7 @@ import ECS "mo:geecs";
 import T "Types";
 import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
-import Player "../utils/Player";
+import Units "../utils/Units";
 import Components "../components";
 
 module {
@@ -11,10 +11,10 @@ module {
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nPlayer connected: " # debug_show (args.principal));
+    Debug.print("\nUnit connected: " # debug_show (args.principal));
 
-    // Check if the player already has entityId
-    let entityId = switch (Player.findPlayersEntityId(ctx, args.principal)) {
+    // Check if the unit already has entityId
+    let entityId = switch (Units.getEntityId(ctx, args.principal)) {
       case (?exists) {
         exists;
       };

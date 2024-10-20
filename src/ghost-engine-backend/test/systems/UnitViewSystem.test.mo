@@ -8,12 +8,12 @@ import Nat "mo:base/Nat";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Components "../../components";
-import { PlayerViewSystem } "../../systems/PlayerViewSystem";
+import { UnitViewSystem } "../../systems/UnitViewSystem";
 import Utils "../Utils";
 import Vector3 "../../math/Vector3";
 
 suite(
-  "Player View System",
+  "Unit View System",
   func() : async () {
 
     // Initialize the entity counter:
@@ -33,11 +33,11 @@ suite(
     });
     ECS.World.addComponent(ctx, entityId, "PrincipalComponent", principal);
 
-    // Add a PlayerViewComponent and TransformComponent to the entity
-    let playerView = #PlayerViewComponent({
+    // Add a UnitViewComponent and TransformComponent to the entity
+    let unitView = #UnitViewComponent({
       viewRadius = 16.0;
     });
-    ECS.World.addComponent(ctx, entityId, "PlayerViewComponent", playerView);
+    ECS.World.addComponent(ctx, entityId, "UnitViewComponent", unitView);
 
     let transform = #TransformComponent({
       scale = { x = 1.0; y = 1.0; z = 1.0 };
@@ -46,25 +46,25 @@ suite(
     });
     ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-    let chunks = #PlayerChunksComponent({
+    let chunks = #UnitChunksComponent({
       chunks = [];
     });
-    ECS.World.addComponent(ctx, entityId, "PlayerChunksComponent", chunks);
+    ECS.World.addComponent(ctx, entityId, "UnitChunksComponent", chunks);
 
-    let updateChunks = #UpdatePlayerChunksComponent({});
-    ECS.World.addComponent(ctx, entityId, "UpdatePlayerChunksComponent", updateChunks);
+    let updateChunks = #UpdateUnitChunksComponent({});
+    ECS.World.addComponent(ctx, entityId, "UpdateUnitChunksComponent", updateChunks);
 
     await test(
       "Can receive new chunks around origin when starting at 0,0",
       func() : async () {
 
-        // Run the PlayerViewSystem update
-        await PlayerViewSystem.update(ctx, entityId, 0);
+        // Run the UnitViewSystem update
+        await UnitViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
-        switch (allPlayerChunks) {
-          case (? #PlayerChunksComponent(chunks)) {
+        let allUnitChunks = ECS.World.getComponent(ctx, entityId, "UnitChunksComponent");
+        switch (allUnitChunks) {
+          case (? #UnitChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
             let visibleChunks = [
               {
@@ -121,13 +121,13 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the PlayerViewSystem update
-        await PlayerViewSystem.update(ctx, entityId, 0);
+        // Run the UnitViewSystem update
+        await UnitViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
-        switch (allPlayerChunks) {
-          case (? #PlayerChunksComponent(chunks)) {
+        let allUnitChunks = ECS.World.getComponent(ctx, entityId, "UnitChunksComponent");
+        switch (allUnitChunks) {
+          case (? #UnitChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
             let visibleChunks = [
@@ -159,13 +159,13 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the PlayerViewSystem update
-        await PlayerViewSystem.update(ctx, entityId, 0);
+        // Run the UnitViewSystem update
+        await UnitViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
-        switch (allPlayerChunks) {
-          case (? #PlayerChunksComponent(chunks)) {
+        let allUnitChunks = ECS.World.getComponent(ctx, entityId, "UnitChunksComponent");
+        switch (allUnitChunks) {
+          case (? #UnitChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
             let visibleChunks = [
@@ -198,13 +198,13 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the PlayerViewSystem update
-        await PlayerViewSystem.update(ctx, entityId, 0);
+        // Run the UnitViewSystem update
+        await UnitViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
-        switch (allPlayerChunks) {
-          case (? #PlayerChunksComponent(chunks)) {
+        let allUnitChunks = ECS.World.getComponent(ctx, entityId, "UnitChunksComponent");
+        switch (allUnitChunks) {
+          case (? #UnitChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
             let visibleChunks = [
@@ -237,13 +237,13 @@ suite(
         });
         ECS.World.addComponent(ctx, entityId, "TransformComponent", transform);
 
-        // Run the PlayerViewSystem update
-        await PlayerViewSystem.update(ctx, entityId, 0);
+        // Run the UnitViewSystem update
+        await UnitViewSystem.update(ctx, entityId, 0);
 
         // Check that new chunks were loaded
-        let allPlayerChunks = ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent");
-        switch (allPlayerChunks) {
-          case (? #PlayerChunksComponent(chunks)) {
+        let allUnitChunks = ECS.World.getComponent(ctx, entityId, "UnitChunksComponent");
+        switch (allUnitChunks) {
+          case (? #UnitChunksComponent(chunks)) {
             expect.nat(Array.size(chunks.chunks)).equal(9);
 
             let visibleChunks = [

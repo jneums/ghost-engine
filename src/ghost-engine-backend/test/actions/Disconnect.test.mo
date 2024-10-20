@@ -28,7 +28,7 @@ suite(
     ECS.World.addComponent(ctx, entityId, "PrincipalComponent", principal);
 
     test(
-      "Can handle a player disconnect",
+      "Can handle a unit disconnect",
       func() {
 
         // Test the action

@@ -2,6 +2,7 @@ import Vector3 "../math/Vector3";
 import Time "mo:base/Time";
 import Nat8 "mo:base/Nat8";
 import Quaternion "../math/Quaternion";
+import Tokens "../utils/Tokens";
 
 module {
   // Define new component data types here...
@@ -70,12 +71,15 @@ module {
     startAt : Time.Time;
   };
 
+  public type PlaceBlockComponent = {
+    position : Vector3.Vector3;
+    blockType : Nat8;
+    startAt : Time.Time;
+    speed : Float;
+  };
+
   public type FungibleComponent = {
-    tokens : [{
-      symbol : Text;
-      cid : Principal;
-      amount : Nat;
-    }];
+    tokens : [Tokens.Token];
   };
 
   public type ResourceComponent = {
@@ -104,17 +108,17 @@ module {
     blocks : [BlockUpdate];
   };
 
-  public type PlayersChunk = {
+  public type UnitsChunk = {
     chunkId : Vector3.Vector3;
     updatedAt : Time.Time;
   };
 
-  public type PlayerChunksComponent = {
+  public type UnitChunksComponent = {
     chunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }]; // List of chunk positions
   };
 
-  public type PlayerViewComponent = {
-    viewRadius : Float; // Radius around the player to load chunks
+  public type UnitViewComponent = {
+    viewRadius : Float; // Radius around the unit to load chunks
   };
 
   // Register component data types here...
@@ -132,12 +136,13 @@ module {
     #HealthComponent : HealthComponent;
     #CombatComponent : CombatComponent;
     #MiningComponent : MiningComponent;
+    #PlaceBlockComponent : PlaceBlockComponent;
     #DamageComponent : DamageComponent;
     #RespawnComponent : RespawnComponent;
     #RedeemTokensComponent : RedeemTokensComponent;
-    #PlayerChunksComponent : PlayerChunksComponent;
-    #PlayerViewComponent : PlayerViewComponent;
-    #UpdatePlayerChunksComponent : UpdateChunksComponent;
+    #UnitChunksComponent : UnitChunksComponent;
+    #UnitViewComponent : UnitViewComponent;
+    #UpdateUnitChunksComponent : UpdateChunksComponent;
 
     // Global block store for backend only
     #BlocksComponent : BlocksComponent;

@@ -73,13 +73,13 @@ module {
     // Update the transform component
     ECS.World.addComponent(ctx, entityId, "TransformComponent", newTransform);
 
-    // Check if the player has crossed a chunk boundary
+    // Check if the unit has crossed a chunk boundary
     let previousChunkPos = Chunks.getChunkPosition(transform.position);
     let currentChunkPos = Chunks.getChunkPosition(potentialNewPosition);
 
     if (currentChunkPos != previousChunkPos) {
-      // Add the UpdatePlayerChunksComponent tag
-      ECS.World.addComponent(ctx, entityId, "UpdatePlayerChunksComponent", #UpdatePlayerChunksComponent({}));
+      // Add the UpdateUnitChunksComponent tag
+      ECS.World.addComponent(ctx, entityId, "UpdateUnitChunksComponent", #UpdateUnitChunksComponent({}));
     };
   };
 

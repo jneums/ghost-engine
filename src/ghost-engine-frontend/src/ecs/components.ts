@@ -64,9 +64,18 @@ export class MiningComponent {
   ) {}
 }
 
+export class PlaceBlockComponent {
+  constructor(public position: THREE.Vector3, public blockType: number) {}
+}
+
 export class FungibleComponent {
   constructor(
-    public tokens: { cid: Principal; symbol: string; amount: bigint }[],
+    public tokens: {
+      cid: Principal;
+      symbol: string;
+      amount: bigint;
+      blockType: number;
+    }[],
   ) {}
 }
 
@@ -99,20 +108,20 @@ export class TargetComponent {
   constructor(public targetEntityId: number) {}
 }
 
-export class PlayerViewComponent {
+export class UnitViewComponent {
   constructor(public viewRadius: number) {}
 }
 
-export class UpdatePlayerChunksComponent {
+export class UpdateUnitChunksComponent {
   constructor() {}
 }
 
-export interface PlayersChunk {
+export interface UnitsChunk {
   chunkId: THREE.Vector3;
   updatedAt: number;
 }
-export class PlayerChunksComponent {
-  constructor(public chunks: PlayersChunk[]) {}
+export class UnitChunksComponent {
+  constructor(public chunks: UnitsChunk[]) {}
 }
 
 export class BlocksComponent {
@@ -190,7 +199,14 @@ export function createComponentClass(data: Component) {
       );
     })
     .with({ FungibleComponent: P.select() }, ({ tokens }) => {
-      return new FungibleComponent(tokens);
+      return new FungibleComponent(
+        tokens.map((token) => ({
+          cid: Principal.fromText(token.cid),
+          symbol: token.symbol,
+          amount: BigInt(token.amount),
+          blockType: Number(token.blockType),
+        })),
+      );
     })
     .with({ ResourceComponent: P.select() }, ({ resourceType }) => {
       return new ResourceComponent(resourceType);
@@ -207,14 +223,14 @@ export function createComponentClass(data: Component) {
         return new RedeemTokensComponent(Number(startAt), Number(duration), to);
       },
     )
-    .with({ PlayerViewComponent: P.select() }, ({ viewRadius }) => {
-      return new PlayerViewComponent(Number(viewRadius));
+    .with({ UnitViewComponent: P.select() }, ({ viewRadius }) => {
+      return new UnitViewComponent(Number(viewRadius));
     })
-    .with({ UpdatePlayerChunksComponent: P.select() }, () => {
-      return new UpdatePlayerChunksComponent();
+    .with({ UpdateUnitChunksComponent: P.select() }, () => {
+      return new UpdateUnitChunksComponent();
     })
-    .with({ PlayerChunksComponent: P.select() }, ({ chunks }) => {
-      return new PlayerChunksComponent(
+    .with({ UnitChunksComponent: P.select() }, ({ chunks }) => {
+      return new UnitChunksComponent(
         chunks.map(({ chunkId, updatedAt }) => ({
           chunkId: new THREE.Vector3(chunkId.x, chunkId.y, chunkId.z),
           updatedAt: Number(updatedAt / 1_000_000n), // Correct conversion to milliseconds
@@ -237,6 +253,13 @@ export function createComponentClass(data: Component) {
     .with({ UpdateChunksComponent: P.select() }, () => {
       return new UpdateChunksComponent();
     })
+    .with({ PlaceBlockComponent: P.select() }, ({ position, blockType }) => {
+      return new PlaceBlockComponent(
+        new THREE.Vector3(position.x, position.y, position.z),
+        Number(blockType),
+      );
+    })
+
     .exhaustive();
 }
 
@@ -254,9 +277,10 @@ export const ComponentConstructors: Record<string, Function> = {
   ResourceComponent: ResourceComponent,
   CombatComponent: CombatComponent,
   MiningComponent: MiningComponent,
+  PlaceBlockComponent: PlaceBlockComponent,
   HealthComponent: HealthComponent,
   RedeemTokensComponent: RedeemTokensComponent,
-  PlayerChunksComponent: PlayerChunksComponent,
-  UpdatePlayerChunksComponent: UpdatePlayerChunksComponent,
-  PlayerViewComponent: PlayerViewComponent,
+  UnitChunksComponent: UnitChunksComponent,
+  UpdateUnitChunksComponent: UpdateUnitChunksComponent,
+  UnitViewComponent: UnitViewComponent,
 };

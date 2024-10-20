@@ -2,33 +2,20 @@ import * as THREE from 'three';
 import { useCallback } from 'react';
 import { useWorld } from '../context/WorldProvider';
 import { FetchedChunk } from './useChunks';
-import { ClientTransformComponent } from '../components';
-import { CHUNK_SIZE } from '../utils/terrain';
+import { ClientTransformComponent } from '../ecs/components';
+import { CHUNK_SIZE } from '../const/terrain';
 import { initializeNeighbors } from '../pathfinding';
-import { BlockType } from '../utils/const';
-
-export interface Node {
-  x: number;
-  y: number;
-  z: number;
-  g: number;
-  f: number;
-  h: number;
-  blockType: number;
-  opened: boolean;
-  closed: boolean;
-  parent: Node | null;
-  neighbors: Node[];
-}
+import { Node } from '../pathfinding';
+import { BlockType } from '../const/blocks';
 
 export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
-  const { playerEntityId, getEntity } = useWorld();
+  const { unitEntityId, getEntity } = useWorld();
 
   const createMovementGrid = useCallback(
     (startPosition: THREE.Vector3, targetPosition: THREE.Vector3) => {
-      if (!playerEntityId) return null;
+      if (!unitEntityId) return null;
 
-      const transform = getEntity(playerEntityId).getComponent(
+      const transform = getEntity(unitEntityId).getComponent(
         ClientTransformComponent,
       );
       if (!transform) return null;
@@ -76,7 +63,7 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
               gridZ >= 0 &&
               gridZ < gridSizeZ
             ) {
-              // Iterate over each layer, centered around the player's y-position
+              // Iterate over each layer, centered around the unit's y-position
               for (let layerIndex = 0; layerIndex < gridSizeY; layerIndex++) {
                 const currentY = minY + layerIndex;
                 const belowY = currentY - 1;
@@ -129,7 +116,7 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
 
       return grid;
     },
-    [fetchedChunks, playerEntityId],
+    [fetchedChunks, unitEntityId],
   );
 
   return createMovementGrid;

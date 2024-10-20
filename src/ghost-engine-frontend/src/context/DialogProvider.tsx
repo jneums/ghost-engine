@@ -1,6 +1,6 @@
 import { ModalDialogProps } from '@mui/joy';
 import React, { createContext, useContext, useState } from 'react';
-import Dialog from '../components/Dialog';
+import Dialog from '../ui/Dialog';
 
 type Props = {
   children: React.ReactNode;
@@ -31,9 +31,7 @@ export function DialogProvider({ children }: Props) {
   const [dialogContent, setDialogContent] = useState<React.ReactElement | null>(
     null,
   );
-  const [dialogProps, setModalProps] = useState<Partial<ModalDialogProps>>({
-    maxWidth: 'sm',
-  });
+  const [dialogProps, setModalProps] = useState<Partial<ModalDialogProps>>({});
 
   const openDialog = (
     content: React.ReactElement,

@@ -13,7 +13,7 @@ import { useWorld } from '../context/WorldProvider';
 import useAction from '../hooks/useAction';
 
 export default function SendTokens() {
-  const { playerEntityId } = useWorld();
+  const { unitEntityId } = useWorld();
   const { redeem } = useAction();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
@@ -25,12 +25,12 @@ export default function SendTokens() {
 
   const handleRedeemTokens = () => {
     console.log('Redeem tokens');
-    if (!playerEntityId) {
-      console.error('Player id not found');
+    if (!unitEntityId) {
+      console.error('Unit id not found');
       return;
     }
 
-    redeem(playerEntityId);
+    redeem(unitEntityId);
     closeDialog();
   };
 

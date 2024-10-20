@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from '../utils/terrain';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from '../const/terrain';
 import { ThreeEvent } from '@react-three/fiber';
 import { useWorld } from '../context/WorldProvider';
 import {
@@ -8,11 +8,13 @@ import {
   HealthComponent,
   MiningComponent,
   MoveTargetComponent,
-} from '.';
+  PlaceBlockComponent,
+} from '../ecs/components';
 import useAction from '../hooks/useAction';
 import { useErrorMessage } from '../context/ErrorProvider';
-import { BlockType, VERTEX_COLORS, DRAG_THRESHOLD } from '../utils/const';
 import { findNodeByPosition, findPath, Node } from '../pathfinding';
+import { DRAG_THRESHOLD } from '../const/controls';
+import { BlockType, MINING_RADIUS, VERTEX_COLORS } from '../const/blocks';
 
 const FACES = [
   {
@@ -70,6 +72,7 @@ const FACES = [
     ],
   },
 ];
+
 export default function Chunk({
   x,
   z,
@@ -85,22 +88,23 @@ export default function Chunk({
   ) => Node[][][] | null;
 }) {
   const geomRef = useRef(new THREE.BufferGeometry());
-  const { playerEntityId, getEntity } = useWorld();
+  const placeholderRef = useRef<THREE.Mesh>(null);
+  const { unitEntityId, getEntity, activeBlock } = useWorld();
   const { setErrorMessage } = useErrorMessage();
-  const { mine, move } = useAction();
+  const { mine, move, placeBlock } = useAction();
   const [minedVoxelIndex, setMinedVoxelIndex] = useState<number | null>(null);
 
-  const handleMine = useCallback(
+  const handleBlockAction = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
       if (e.delta > DRAG_THRESHOLD) return;
 
-      if (!playerEntityId) {
-        console.error('Player entity not found');
+      if (!unitEntityId) {
+        console.error('Unit entity not found');
         return;
       }
 
-      const playerEntity = getEntity(playerEntityId);
+      const unitEntity = getEntity(unitEntityId);
 
       const faceNormal = e.face?.normal;
       if (!faceNormal) {
@@ -108,12 +112,12 @@ export default function Chunk({
         return;
       }
 
-      const voxelId = 0;
+      const voxelId = activeBlock;
 
       const targetPosition = new THREE.Vector3(
-        Math.floor(e.point.x + faceNormal.x * (voxelId > 0 ? 0.5 : -0.5)),
-        Math.floor(e.point.y + faceNormal.y * (voxelId > 0 ? 0.5 : -0.5)),
-        Math.floor(e.point.z + faceNormal.z * (voxelId > 0 ? 0.5 : -0.5)),
+        Math.floor(e.point.x + faceNormal.x * (voxelId ? 0.5 : -0.5)),
+        Math.floor(e.point.y + faceNormal.y * (voxelId ? 0.5 : -0.5)),
+        Math.floor(e.point.z + faceNormal.z * (voxelId ? 0.5 : -0.5)),
       );
 
       const localPosition = new THREE.Vector3(
@@ -132,20 +136,13 @@ export default function Chunk({
         return;
       }
 
-      if (data[index] === BlockType.Air || data[index] === BlockType.Water) {
-        setErrorMessage("I can't mine that!");
-        return;
-      }
-
-      const transform = playerEntity.getComponent(ClientTransformComponent);
+      const transform = unitEntity.getComponent(ClientTransformComponent);
       if (!transform) {
         console.error('Transform component not found');
         return;
       }
 
       const startPosition = transform.position;
-
-      const MINING_RADIUS = 2;
       const distance = targetPosition.distanceTo(startPosition);
       const inRange = distance < Math.sqrt(3 * MINING_RADIUS);
 
@@ -154,11 +151,51 @@ export default function Chunk({
         return;
       }
 
-      setMinedVoxelIndex(index);
-      mine(playerEntityId, targetPosition);
+      if (!voxelId) {
+        // Mine the block
+        if (data[index] === BlockType.Air || data[index] === BlockType.Water) {
+          setErrorMessage("I can't mine that!");
+          return;
+        }
+        setMinedVoxelIndex(index);
+        mine(unitEntityId, targetPosition);
+      } else {
+        // Place the block
+        if (data[index] !== BlockType.Air) {
+          setErrorMessage('Block already exists here!');
+          return;
+        }
+        if (placeholderRef.current) {
+          placeholderRef.current.position.set(
+            targetPosition.x + 0.5,
+            targetPosition.y + 0.5,
+            targetPosition.z + 0.5,
+          );
+          placeholderRef.current.visible = true;
+        }
+        placeBlock(unitEntityId, targetPosition, voxelId);
+      }
     },
-    [playerEntityId, getEntity, mine, setErrorMessage, data],
+    [
+      unitEntityId,
+      getEntity,
+      mine,
+      placeBlock,
+      setErrorMessage,
+      data,
+      activeBlock,
+    ],
   );
+
+  useEffect(() => {
+    if (minedVoxelIndex === null) return;
+    const mining = unitEntityId
+      ? getEntity(unitEntityId)?.getComponent(MiningComponent)
+      : null;
+    if (!mining) {
+      setMinedVoxelIndex(null);
+    }
+  }, [minedVoxelIndex, unitEntityId, getEntity]);
 
   const generateVoxelGeometry = useCallback(() => {
     const positions = [];
@@ -168,11 +205,18 @@ export default function Chunk({
 
     const WATER_HEIGHT = 0.6; // Define the height for water blocks
 
-    const mining = playerEntityId
-      ? getEntity(playerEntityId)?.getComponent(MiningComponent)
+    const mining = unitEntityId
+      ? getEntity(unitEntityId)?.getComponent(MiningComponent)
       : null;
     if (!mining) {
       setMinedVoxelIndex(null);
+    }
+
+    const placing = unitEntityId
+      ? getEntity(unitEntityId)?.getComponent(PlaceBlockComponent)
+      : null;
+    if (!placing && placeholderRef.current) {
+      placeholderRef.current.visible = false;
     }
 
     for (let y = 0; y < CHUNK_HEIGHT; ++y) {
@@ -214,7 +258,7 @@ export default function Chunk({
 
                   // Change color if this voxel is being mined
                   if (index === minedVoxelIndex) {
-                    colors.push(1, 0, 0, 1); // Red color for mined voxel
+                    colors.push(1, 0, 0); // Red color for mined voxel
                   } else {
                     const block = voxel as BlockType;
                     const color = VERTEX_COLORS[block];
@@ -238,14 +282,14 @@ export default function Chunk({
       if (e.delta > DRAG_THRESHOLD) return;
       console.log('Floor LEFT clicked!');
 
-      if (!playerEntityId) {
-        console.error('Player entity not found');
+      if (!unitEntityId) {
+        console.error('Unit entity not found');
         return;
       }
 
-      const playerEntity = getEntity(playerEntityId);
+      const unitEntity = getEntity(unitEntityId);
 
-      const health = playerEntity.getComponent(HealthComponent);
+      const health = unitEntity.getComponent(HealthComponent);
       if (!health) {
         console.error('Health component not found');
         return;
@@ -256,7 +300,7 @@ export default function Chunk({
         return;
       }
 
-      const transform = playerEntity.getComponent(ClientTransformComponent);
+      const transform = unitEntity.getComponent(ClientTransformComponent);
       if (!transform) {
         console.error('Transform component not found');
         return;
@@ -269,9 +313,9 @@ export default function Chunk({
         Math.round(transform.position.z),
       );
 
-      const moveTarget = playerEntity.getComponent(MoveTargetComponent);
+      const moveTarget = unitEntity.getComponent(MoveTargetComponent);
       if (moveTarget && moveTarget.waypoints.length > 1) {
-        // Use the next waypoint as the starting position if the player is already moving
+        // Use the next waypoint as the starting position if the unit is already moving
         startPosition = moveTarget.waypoints[1];
       }
 
@@ -307,9 +351,9 @@ export default function Chunk({
       }
 
       const waypoints = path.map(([x, y, z]) => new THREE.Vector3(x, y, z));
-      move(playerEntityId, waypoints);
+      move(unitEntityId, waypoints);
     },
-    [move, playerEntityId, getEntity, setErrorMessage, createGrid],
+    [move, unitEntityId, getEntity, setErrorMessage, createGrid],
   );
 
   const geometry = useMemo(() => {
@@ -325,7 +369,7 @@ export default function Chunk({
     );
     geomRef.current.setAttribute(
       'color',
-      new THREE.Float32BufferAttribute(colors, 4),
+      new THREE.Float32BufferAttribute(colors, 3),
     );
     geomRef.current.setIndex(indices);
 
@@ -345,12 +389,18 @@ export default function Chunk({
   ];
 
   return (
-    <mesh
-      onClick={handleMove}
-      onContextMenu={handleMine}
-      position={chunkPosition}
-      geometry={geometry}>
-      <meshLambertMaterial vertexColors />
-    </mesh>
+    <>
+      <mesh
+        onClick={handleMove}
+        onContextMenu={handleBlockAction}
+        position={chunkPosition}
+        geometry={geometry}>
+        <meshLambertMaterial vertexColors />
+      </mesh>
+      <mesh ref={placeholderRef} visible={false}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial color="blue" transparent opacity={0.5} />
+      </mesh>
+    </>
   );
 }

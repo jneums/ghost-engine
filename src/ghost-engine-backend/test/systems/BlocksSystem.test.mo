@@ -12,7 +12,7 @@ module {
   //   blocks : [{ chunkId : Vector3.Vector3; localIdx : Nat; value : Nat8 }];
   // };
 
-  // public type PlayerChunksComponent = {
+  // public type UnitChunksComponent = {
   //   chunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }]; // List of chunk positions
   // };
 
@@ -55,16 +55,16 @@ module {
       case (? #BlocksComponent(blocks), ? #UpdateBlocksComponent(update)) {
         Debug.print("\nManaging blocks");
 
-        // Iterate over all entities with PlayerChunksComponent
-        let playerEntities = ECS.World.getEntitiesByArchetype(ctx, ["PlayerChunksComponent"]);
-        for (playerEntityId in playerEntities.vals()) {
-          switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
-            case (? #PlayerChunksComponent(playerChunks)) {
+        // Iterate over all entities with UnitChunksComponent
+        let unitEntities = ECS.World.getEntitiesByArchetype(ctx, ["UnitChunksComponent"]);
+        for (unitEntityId in unitEntities.vals()) {
+          switch (ECS.World.getComponent(ctx, unitEntityId, "UnitChunksComponent")) {
+            case (? #UnitChunksComponent(unitChunks)) {
               var updatedChunks = getUpdatedChunks(update.blocks);
 
-              // Check each block update against the player's chunks
+              // Check each block update against the unit's chunks
               for (blockUpdate in update.blocks.vals()) {
-                for (chunk in playerChunks.chunks.vals()) {
+                for (chunk in unitChunks.chunks.vals()) {
                   if (Vector3.equal(chunk.chunkId, blockUpdate.chunkId)) {
                     // Update the updatedAt property for the affected chunk
                     updatedChunks := Array.map(
@@ -84,11 +84,11 @@ module {
                 };
               };
 
-              // Update the PlayerChunksComponent with the new timestamps
-              let updatedPlayerChunks = #PlayerChunksComponent({
+              // Update the UnitChunksComponent with the new timestamps
+              let updatedUnitChunks = #UnitChunksComponent({
                 chunks = updatedChunks;
               });
-              ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", updatedPlayerChunks);
+              ECS.World.addComponent(ctx, unitEntityId, "UnitChunksComponent", updatedUnitChunks);
             };
             case (_) {};
           };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Stack, Typography } from '@mui/joy';
-import NoTextSelect from '../components/NoTextSelect';
+import NoTextSelect from '../ui/NoTextSelect';
 
 type Props = {
   children: React.ReactNode;

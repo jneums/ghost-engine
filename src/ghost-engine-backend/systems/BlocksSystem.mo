@@ -12,28 +12,28 @@ module {
     blocks : [Components.BlockUpdate];
   };
 
-  func getPlayerHasChunk(playerChunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }], chunkId : Vector3.Vector3) : Bool {
-    for (playerChunk in playerChunks.vals()) {
-      if (Vector3.equal(playerChunk.chunkId, chunkId)) {
+  func getUnitHasChunk(unitChunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }], chunkId : Vector3.Vector3) : Bool {
+    for (unitChunk in unitChunks.vals()) {
+      if (Vector3.equal(unitChunk.chunkId, chunkId)) {
         return true;
       };
     };
     return false;
   };
 
-  func updatePlayerChunkTimestamp(ctx : ECS.Types.Context<Components.Component>, playerEntityId : ECS.Types.EntityId, chunkId : Vector3.Vector3) {
-    switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
-      case (? #PlayerChunksComponent(playerChunks)) {
-        let updatedChunks = Vector.new<Components.PlayersChunk>();
-        for (playerChunk in playerChunks.chunks.vals()) {
-          if (Vector3.equal(playerChunk.chunkId, chunkId)) {
-            Vector.add(updatedChunks, { chunkId = playerChunk.chunkId; updatedAt = Time.now() });
+  func updateUnitChunkTimestamp(ctx : ECS.Types.Context<Components.Component>, unitEntityId : ECS.Types.EntityId, chunkId : Vector3.Vector3) {
+    switch (ECS.World.getComponent(ctx, unitEntityId, "UnitChunksComponent")) {
+      case (? #UnitChunksComponent(unitChunks)) {
+        let updatedChunks = Vector.new<Components.UnitsChunk>();
+        for (unitChunk in unitChunks.chunks.vals()) {
+          if (Vector3.equal(unitChunk.chunkId, chunkId)) {
+            Vector.add(updatedChunks, { chunkId = unitChunk.chunkId; updatedAt = Time.now() });
           } else {
-            Vector.add(updatedChunks, playerChunk);
+            Vector.add(updatedChunks, unitChunk);
           };
         };
         let updatedChunksArray = Vector.toArray(updatedChunks);
-        ECS.World.addComponent(ctx, playerEntityId, "PlayerChunksComponent", #PlayerChunksComponent({ chunks = updatedChunksArray }));
+        ECS.World.addComponent(ctx, unitEntityId, "UnitChunksComponent", #UnitChunksComponent({ chunks = updatedChunksArray }));
       };
       case (_) {};
     };
@@ -45,17 +45,17 @@ module {
       case (? #UpdateBlocksComponent(update)) {
         Debug.print("\nManaging blocks");
 
-        // Iterate over all entities with PlayerChunksComponent and set as active chunks
-        let playerEntities = ECS.World.getEntitiesByArchetype(ctx, ["PlayerChunksComponent"]);
-        for (playerEntityId in playerEntities.vals()) {
-          switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
-            case (? #PlayerChunksComponent(playerChunks)) {
+        // Iterate over all entities with UnitChunksComponent and set as active chunks
+        let unitEntities = ECS.World.getEntitiesByArchetype(ctx, ["UnitChunksComponent"]);
+        for (unitEntityId in unitEntities.vals()) {
+          switch (ECS.World.getComponent(ctx, unitEntityId, "UnitChunksComponent")) {
+            case (? #UnitChunksComponent(unitChunks)) {
               for ((blockPosition, value) in update.blocks.vals()) {
-                // If the block is in the chunk then set the updatedAt prop on the players "PlayerChunksComponent"
+                // If the block is in the chunk then set the updatedAt prop on the units "UnitChunksComponent"
                 let chunkId = Chunks.getChunkPosition(blockPosition);
-                let playerHasChunk = getPlayerHasChunk(playerChunks.chunks, chunkId);
-                if (playerHasChunk) {
-                  updatePlayerChunkTimestamp(ctx, playerEntityId, chunkId);
+                let unitHasChunk = getUnitHasChunk(unitChunks.chunks, chunkId);
+                if (unitHasChunk) {
+                  updateUnitChunkTimestamp(ctx, unitEntityId, chunkId);
                 };
               };
             };

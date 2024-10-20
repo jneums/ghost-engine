@@ -1,28 +1,30 @@
 import { Canvas } from '@react-three/fiber';
 import { Stats } from '@react-three/drei';
-import Players from '../components/Players';
 import { useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
-import PlayerCard from '../components/PlayerCard';
-import TargetCard from '../components/TargetCard';
+import TargetCard from '../ui/TargetCard';
 import { useWorld } from '../context/WorldProvider';
 import { useDialog } from '../context/DialogProvider';
-import Respawn from '../components/Respawn';
+import Respawn from '../ui/Respawn';
 import { CircularProgress, Stack, Typography } from '@mui/joy';
-import LogoutButton from '../components/LogoutButton';
+import LogoutButton from '../ui/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from '../context/ConnectionProvider';
-import { HealthComponent, TransformComponent } from '../components';
 import useChunks from '../hooks/useChunks';
-import Chunk from '../components/Chunk';
+import Chunk from '../chunks/Chunk';
 import React from 'react';
 import useMovementGrid from '../hooks/useMovementGrid';
+import { HealthComponent, TransformComponent } from '../ecs/components';
+import Units from '../units/Units';
+import UnitCard from '../ui/UnitCard';
+import UnitStats from '../ui/UnitInventory';
+import Unit from '../units/Unit';
 
 const MemoizedChunk = React.memo(Chunk);
 
 export default function Game() {
   const { connect, disconnect, isConnecting } = useConnection();
-  const { playerEntityId, getEntity } = useWorld();
+  const { unitEntityId, getEntity } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
   const { fetchedChunks } = useChunks();
@@ -44,15 +46,15 @@ export default function Game() {
     };
   }, [identity, connect, disconnect]);
 
-  const isPlayerDead = playerEntityId
-    ? getEntity(playerEntityId).getComponent(HealthComponent).amount <= 0
+  const isUnitDead = unitEntityId
+    ? getEntity(unitEntityId).getComponent(HealthComponent)?.amount <= 0
     : false;
 
   useEffect(() => {
-    if (isPlayerDead) {
+    if (isUnitDead) {
       openDialog(<Respawn />);
     }
-  }, [isPlayerDead]);
+  }, [isUnitDead]);
 
   const chunks = useMemo(
     () =>
@@ -77,7 +79,7 @@ export default function Game() {
     );
   }
 
-  if (!playerEntityId) {
+  if (!unitEntityId) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
         <CircularProgress />
@@ -86,7 +88,7 @@ export default function Game() {
     );
   }
 
-  const transform = getEntity(playerEntityId).getComponent(TransformComponent);
+  const transform = getEntity(unitEntityId).getComponent(TransformComponent);
   if (!transform) {
     return (
       <Stack justifyContent="center" alignItems="center" height="100%" gap={2}>
@@ -115,9 +117,11 @@ export default function Game() {
         <pointLight intensity={50000} position={[100, 500, 100]} />
         <fog attach="fog" args={['#f0f0f0', 0, 75]} />
         {chunks}
-        <Players />
+        <Units />
+        <Unit entityId={unitEntityId} isUserControlled />
       </Canvas>
-      <PlayerCard />
+      <UnitCard />
+      <UnitStats />
       <TargetCard />
       <LogoutButton />
       {/* <Stats /> */}

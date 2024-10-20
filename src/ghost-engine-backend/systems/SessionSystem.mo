@@ -6,19 +6,19 @@ import Const "../utils/Const";
 
 module {
 
-  // Private function to check if the player should be disconnected due to inactivity
+  // Private function to check if the unit should be disconnected due to inactivity
   private func shouldDisconnect(session : Components.SessionComponent) : Bool {
     let currentTime = Time.now();
     let elapsedTime = currentTime - session.lastAction;
     elapsedTime >= Const.MAX_AFK_BEFORE_DISCONNECT;
   };
 
-  // Private function to handle player disconnection
+  // Private function to handle unit disconnection
   private func handleDisconnection(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
     switch (ECS.World.getComponent(ctx, entityId, "DisconnectComponent")) {
       case (? #DisconnectComponent(_)) {};
       case (_) {
-        Debug.print("\nPlayer disconnected due to inactivity");
+        Debug.print("\nUnit disconnected due to inactivity");
         let disconnect = #DisconnectComponent({
           startAt = Time.now();
           duration = Const.DISCONNECT_DURATION;

@@ -4,7 +4,7 @@ import Debug "mo:base/Debug";
 import Principal "mo:base/Principal";
 import Option "mo:base/Option";
 import Time "mo:base/Time";
-import Player "../utils/Player";
+import Units "../utils/Units";
 import Components "../components";
 
 module {
@@ -13,10 +13,10 @@ module {
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nPlayer respawned: " # debug_show (args.principal));
+    Debug.print("\nUnit respawned: " # debug_show (args.principal));
 
-    // Check if the player already has entityId
-    let entityId = Player.findPlayersEntityId(ctx, args.principal);
+    // Check if the unit already has entityId
+    let entityId = Units.getEntityId(ctx, args.principal);
     let entity = Option.get(entityId, ECS.World.addEntity(ctx));
 
     // Add the principal and connection components

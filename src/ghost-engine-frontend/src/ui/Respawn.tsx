@@ -2,24 +2,24 @@ import { Button, Typography } from '@mui/joy';
 import { useDialog } from '../context/DialogProvider';
 import React, { useEffect } from 'react';
 import { useWorld } from '../context/WorldProvider';
-import { HealthComponent } from '.';
+import { HealthComponent } from '../ecs/components';
 import useAction from '../hooks/useAction';
 
 export default function Respawn() {
-  const { getEntity, playerEntityId } = useWorld();
+  const { getEntity, unitEntityId } = useWorld();
   const { respawn } = useAction();
   const { closeDialog } = useDialog();
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const isPlayerDead = playerEntityId
-    ? getEntity(playerEntityId).getComponent(HealthComponent).amount <= 0
+  const isUnitDead = unitEntityId
+    ? getEntity(unitEntityId).getComponent(HealthComponent).amount <= 0
     : false;
 
   useEffect(() => {
-    if (!isPlayerDead) {
+    if (!isUnitDead) {
       closeDialog();
     }
-  }, [isPlayerDead]);
+  }, [isUnitDead]);
 
   const handleRespawn = () => {
     setIsLoading(true);

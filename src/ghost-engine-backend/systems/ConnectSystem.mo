@@ -40,34 +40,34 @@ module {
     ECS.World.addComponent(ctx, entityId, "HealthComponent", #HealthComponent(health));
   };
 
-  // Private function to handle PlayerViewComponent logic
-  private func handlePlayerViewComponent(
+  // Private function to handle UnitViewComponent logic
+  private func handleUnitViewComponent(
     ctx : ECS.Types.Context<Components.Component>,
     entityId : ECS.Types.EntityId,
   ) {
     let defaultView = {
       viewRadius = Const.DEFAULT_VIEW_RADIUS;
     };
-    let playerView = switch (ECS.World.getComponent(ctx, entityId, "PlayerViewComponent")) {
-      case (? #PlayerViewComponent(playerView)) { playerView };
+    let unitView = switch (ECS.World.getComponent(ctx, entityId, "UnitViewComponent")) {
+      case (? #UnitViewComponent(unitView)) { unitView };
       case (_) { defaultView };
     };
-    ECS.World.addComponent(ctx, entityId, "PlayerViewComponent", #PlayerViewComponent(playerView));
+    ECS.World.addComponent(ctx, entityId, "UnitViewComponent", #UnitViewComponent(unitView));
   };
 
-  // Private function to handle PlayerChunksComponent logic
-  private func handlePlayerChunksComponent(
+  // Private function to handle UnitChunksComponent logic
+  private func handleUnitChunksComponent(
     ctx : ECS.Types.Context<Components.Component>,
     entityId : ECS.Types.EntityId,
   ) {
     let defaultChunks = {
       chunks = [];
     };
-    let chunks = switch (ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent")) {
-      case (? #PlayerChunksComponent(chunks)) { chunks };
+    let chunks = switch (ECS.World.getComponent(ctx, entityId, "UnitChunksComponent")) {
+      case (? #UnitChunksComponent(chunks)) { chunks };
       case (_) { defaultChunks };
     };
-    ECS.World.addComponent(ctx, entityId, "PlayerChunksComponent", #PlayerChunksComponent(chunks));
+    ECS.World.addComponent(ctx, entityId, "UnitChunksComponent", #UnitChunksComponent(chunks));
   };
 
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _ : Time.Time) : async () {
@@ -82,11 +82,11 @@ module {
         handleTransformComponent(ctx, entityId);
         handleFungibleComponent(ctx, entityId);
         handleHealthComponent(ctx, entityId);
-        handlePlayerViewComponent(ctx, entityId);
-        handlePlayerChunksComponent(ctx, entityId);
+        handleUnitViewComponent(ctx, entityId);
+        handleUnitChunksComponent(ctx, entityId);
 
         // Trigger terrain generation
-        ECS.World.addComponent(ctx, entityId, "UpdatePlayerChunksComponent", #UpdatePlayerChunksComponent({}));
+        ECS.World.addComponent(ctx, entityId, "UpdateUnitChunksComponent", #UpdateUnitChunksComponent({}));
 
         // Start a session
         let session = #SessionComponent({ lastAction = Time.now() });

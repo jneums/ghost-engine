@@ -28,7 +28,7 @@ suite(
     ECS.World.addComponent(ctx, entityId, "PrincipalComponent", principal);
 
     test(
-      "Can handle a player connection",
+      "Can handle a unit connection",
       func() {
 
         // Test the action

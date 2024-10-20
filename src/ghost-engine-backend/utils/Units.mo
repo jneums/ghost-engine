@@ -20,19 +20,19 @@ module {
     };
   };
 
-  public func findPlayersEntityId(ctx : ECS.Types.Context<Components.Component>, principal : Principal) : ?ECS.Types.EntityId {
-    // Get all players in the simulation
-    let playerIds = ECS.World.getEntitiesByArchetype(
+  public func getEntityId(ctx : ECS.Types.Context<Components.Component>, principal : Principal) : ?ECS.Types.EntityId {
+    // Get all units in the simulation
+    let unitIds = ECS.World.getEntitiesByArchetype(
       ctx,
       ["PrincipalComponent"],
     );
-    // Find the player with the matching principal and remove them from the simulation
+    // Find the unit with the matching principal and remove them from the simulation
     var res : ?ECS.Types.EntityId = null;
-    label findPrincipal for (playerId in Iter.fromArray(playerIds)) {
-      switch (getPrincipal(ctx, playerId)) {
+    label findPrincipal for (unitId in Iter.fromArray(unitIds)) {
+      switch (getPrincipal(ctx, unitId)) {
         case (?exists) {
           if (exists == principal) {
-            res := ?playerId;
+            res := ?unitId;
             break findPrincipal;
           };
         };
@@ -48,7 +48,7 @@ module {
     disconnecting : [ECS.Types.EntityId];
     total : Int;
   } {
-    // Get all players in the simulation
+    // Get all units in the simulation
     let active = ECS.World.getEntitiesByArchetype(
       ctx,
       ["PrincipalComponent", "SessionComponent"],
@@ -73,7 +73,7 @@ module {
   };
 
   public func updateSession(ctx : ECS.Types.Context<Components.Component>, principal : Principal) {
-    let entityId = findPlayersEntityId(ctx, principal);
+    let entityId = getEntityId(ctx, principal);
     switch (entityId) {
       case (?exists) {
         ECS.World.addComponent(
@@ -89,12 +89,12 @@ module {
     };
   };
 
-  public func getChunks(ctx : ECS.Types.Context<Components.Component>, principal : Principal) : [Components.PlayersChunk] {
-    switch (findPlayersEntityId(ctx, principal)) {
+  public func getChunks(ctx : ECS.Types.Context<Components.Component>, principal : Principal) : [Components.UnitsChunk] {
+    switch (getEntityId(ctx, principal)) {
       case (?exists) {
-        let chunks = ECS.World.getComponent(ctx, exists, "PlayerChunksComponent");
+        let chunks = ECS.World.getComponent(ctx, exists, "UnitChunksComponent");
         switch (chunks) {
-          case (? #PlayerChunksComponent({ chunks })) {
+          case (? #UnitChunksComponent({ chunks })) {
             return chunks;
           };
           case (_) { return [] };

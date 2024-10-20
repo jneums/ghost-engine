@@ -11,8 +11,8 @@ import Blocks "../utils/Blocks";
 import Vector3 "../math/Vector3";
 
 module {
-  // Generate a list of chunk IDs around the player
-  func generateChunkPositions(playerChunkPos : Vector3.Vector3, chunkRange : Int) : [{
+  // Generate a list of chunk IDs around the unit
+  func generateChunkPositions(unitChunkPos : Vector3.Vector3, chunkRange : Int) : [{
     chunkId : Vector3.Vector3;
     updatedAt : Time.Time;
   }] {
@@ -23,9 +23,9 @@ module {
       while (z <= chunkRange) {
         let chunkPos = {
           chunkId = {
-            x = (playerChunkPos.x + Float.fromInt(x));
+            x = (unitChunkPos.x + Float.fromInt(x));
             y = 0.0;
-            z = (playerChunkPos.z + Float.fromInt(z));
+            z = (unitChunkPos.z + Float.fromInt(z));
           };
           updatedAt = 0;
         };
@@ -37,31 +37,31 @@ module {
     Vector.toArray(chunks);
   };
 
-  // Update function for the PlayerViewSystem
+  // Update function for the UnitViewSystem
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
     switch (
-      ECS.World.getComponent(ctx, entityId, "PlayerViewComponent"),
+      ECS.World.getComponent(ctx, entityId, "UnitViewComponent"),
       ECS.World.getComponent(ctx, entityId, "TransformComponent"),
-      ECS.World.getComponent(ctx, entityId, "PlayerChunksComponent"),
+      ECS.World.getComponent(ctx, entityId, "UnitChunksComponent"),
     ) {
       case (
-        ? #PlayerViewComponent(playerView),
+        ? #UnitViewComponent(unitView),
         ? #TransformComponent(transform),
-        ? #PlayerChunksComponent(_),
+        ? #UnitChunksComponent(_),
       ) {
-        Debug.print("\nUpdate chunks around player");
+        Debug.print("\nUpdate chunks around unit");
 
         let floatChunkSize = Float.fromInt(Const.CHUNK_SIZE);
-        let playerChunkPos = Chunks.getChunkPosition(transform.position);
-        let chunkRange = Float.toInt(playerView.viewRadius / floatChunkSize);
+        let unitChunkPos = Chunks.getChunkPosition(transform.position);
+        let chunkRange = Float.toInt(unitView.viewRadius / floatChunkSize);
 
-        let newChunkPositions = generateChunkPositions(playerChunkPos, chunkRange);
-        let updatedChunks = #PlayerChunksComponent({
+        let newChunkPositions = generateChunkPositions(unitChunkPos, chunkRange);
+        let updatedChunks = #UnitChunksComponent({
           chunks = newChunkPositions;
         });
 
-        ECS.World.addComponent(ctx, entityId, "PlayerChunksComponent", updatedChunks);
-        ECS.World.removeComponent(ctx, entityId, "UpdatePlayerChunksComponent");
+        ECS.World.addComponent(ctx, entityId, "UnitChunksComponent", updatedChunks);
+        ECS.World.removeComponent(ctx, entityId, "UpdateUnitChunksComponent");
 
         // Trigger the BlcoksSystem to update the blocks
         let blocksEntityId = Blocks.getEntityId(ctx);
@@ -77,9 +77,9 @@ module {
     };
   };
 
-  public let PlayerViewSystem : ECS.Types.System<Components.Component> = {
-    systemType = "PlayerViewSystem";
-    archetype = ["PlayerViewComponent", "TransformComponent", "PlayerChunksComponent", "UpdatePlayerChunksComponent"];
+  public let UnitViewSystem : ECS.Types.System<Components.Component> = {
+    systemType = "UnitViewSystem";
+    archetype = ["UnitViewComponent", "TransformComponent", "UnitChunksComponent", "UpdateUnitChunksComponent"];
     update = update;
   };
 };

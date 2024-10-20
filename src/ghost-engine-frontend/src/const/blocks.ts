@@ -1,4 +1,5 @@
-export const DRAG_THRESHOLD = 5;
+export const CHUNK_SIZE = 16;
+export const CHUNK_HEIGHT = 384;
 
 // Define an enum for block types
 export enum BlockType {
@@ -14,13 +15,10 @@ export const BLOCK_TYPES: Record<number, BlockType> = {
 };
 
 // Define a mapping from block type names to their color values and opacity
-export const VERTEX_COLORS: Record<
-  BlockType,
-  [number, number, number, number]
-> = {
-  [BlockType.Air]: [0, 0, 0, 0], // Assuming air is fully transparent
-  [BlockType.Stone]: [0.5, 0.5, 0.5, 1], // Opaque
-  [BlockType.Water]: [0.46, 0.71, 0.77, 0.5], // Blue color with 50% opacity
+export const VERTEX_COLORS: Record<BlockType, [number, number, number]> = {
+  [BlockType.Air]: [0, 0, 0],
+  [BlockType.Stone]: [0.5, 0.5, 0.5],
+  [BlockType.Water]: [0.46, 0.71, 0.77],
 };
 
 export const HEX_COLORS: Record<BlockType, number> = {
@@ -29,5 +27,4 @@ export const HEX_COLORS: Record<BlockType, number> = {
   [BlockType.Water]: 0x76b6c4,
 };
 
-export const CAMERA_FOLLOW_DISTANCE = 5;
-export const CAMERA_HEIGHT = 5;
+export const MINING_RADIUS = 5;

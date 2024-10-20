@@ -12,7 +12,7 @@ export default function Menu() {
   const text =
     loginStatus === 'logging-in'
       ? 'Logging in...'
-      : 'Sign in with Internet Identity';
+      : 'Connect using Internet Identity';
 
   const handleClick = async () => {
     if (!identity) {

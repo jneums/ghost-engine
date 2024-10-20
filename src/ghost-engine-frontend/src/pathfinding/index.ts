@@ -7,6 +7,7 @@ export interface Node {
   g: number;
   f: number;
   h: number;
+  blockType: number;
   opened: boolean;
   closed: boolean;
   parent: Node | null;

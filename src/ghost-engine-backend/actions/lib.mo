@@ -1,14 +1,15 @@
-import T "Types";
 import ECS "mo:geecs";
+import Debug "mo:base/Debug";
+import T "Types";
 import Move "Move";
 import Connect "Connect";
 import Disconnect "Disconnect";
-import Debug "mo:base/Debug";
 import Attack "Attack";
 import Respawn "Respawn";
-import Components "../components";
 import Redeem "Redeem";
 import Mine "Mine";
+import PlaceBlock "PlaceBlock";
+import Components "../components";
 
 module {
   public let Types = T;
@@ -22,6 +23,7 @@ module {
     #Disconnect : Disconnect.Args;
     #Move : Move.Args;
     #Mine : Mine.Args;
+    #PlaceBlock : PlaceBlock.Args;
     #Attack : Attack.Args;
     #Respawn : Respawn.Args;
     #Redeem : Redeem.Args;
@@ -41,6 +43,9 @@ module {
       };
       case (#Mine(args)) {
         Mine.Handler.handle(ctx, args);
+      };
+      case (#PlaceBlock(args)) {
+        PlaceBlock.Handler.handle(ctx, args);
       };
       case (#Attack(args)) {
         Attack.Handler.handle(ctx, args);

@@ -53,12 +53,12 @@ module {
           x += 1;
         };
 
-        // Iterate over all entities with PlayerChunksComponent and set as active chunks
-        let playerEntities = ECS.World.getEntitiesByArchetype(ctx, ["PlayerChunksComponent"]);
-        for (playerEntityId in playerEntities.vals()) {
-          switch (ECS.World.getComponent(ctx, playerEntityId, "PlayerChunksComponent")) {
-            case (? #PlayerChunksComponent(playerChunks)) {
-              for ({ chunkId } in playerChunks.chunks.vals()) {
+        // Iterate over all entities with UnitChunksComponent and set as active chunks
+        let unitEntities = ECS.World.getEntitiesByArchetype(ctx, ["UnitChunksComponent"]);
+        for (unitEntityId in unitEntities.vals()) {
+          switch (ECS.World.getComponent(ctx, unitEntityId, "UnitChunksComponent")) {
+            case (? #UnitChunksComponent(unitChunks)) {
+              for ({ chunkId } in unitChunks.chunks.vals()) {
                 Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; isActive = true });
               };
             };

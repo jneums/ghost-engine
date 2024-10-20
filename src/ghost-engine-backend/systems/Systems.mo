@@ -9,8 +9,9 @@ import { RewardSystem } "RewardSystem";
 import { ConnectSystem } "ConnectSystem";
 import { DisconnectSystem } "DisconnectSystem";
 import { SessionSystem } "SessionSystem";
-import { PlayerViewSystem } "PlayerViewSystem";
+import { UnitViewSystem } "UnitViewSystem";
 import { MiningSystem } "MiningSystem";
+import { PlaceBlockSystem } "PlaceBlockSystem";
 import { BlocksSystem } "BlocksSystem";
 import { ChunksSystem } "ChunksSystem";
 
@@ -19,11 +20,12 @@ module {
   public func register(ctx : ECS.Types.Context<Components.Component>) {
     ECS.World.addSystem(ctx, ConnectSystem);
     ECS.World.addSystem(ctx, SessionSystem);
-    ECS.World.addSystem(ctx, PlayerViewSystem);
+    ECS.World.addSystem(ctx, UnitViewSystem);
     ECS.World.addSystem(ctx, MovementSystem);
     ECS.World.addSystem(ctx, DamageSystem);
     ECS.World.addSystem(ctx, CombatSystem);
     ECS.World.addSystem(ctx, MiningSystem);
+    ECS.World.addSystem(ctx, PlaceBlockSystem);
     ECS.World.addSystem(ctx, RewardSystem);
     ECS.World.addSystem(ctx, SpawnSystem);
     ECS.World.addSystem(ctx, BlocksSystem);

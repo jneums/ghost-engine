@@ -1,15 +1,19 @@
-import { HealthComponent, NameableComponent, TargetComponent } from '.';
+import {
+  HealthComponent,
+  NameableComponent,
+  TargetComponent,
+} from '../ecs/components';
 import { useWorld } from '../context/WorldProvider';
 import EntityCard from './EntityCard';
 
 export default function TargetCard() {
-  const { playerEntityId, getEntity } = useWorld();
+  const { unitEntityId, getEntity } = useWorld();
 
-  if (!playerEntityId) {
+  if (!unitEntityId) {
     return null;
   }
 
-  const entity = getEntity(playerEntityId);
+  const entity = getEntity(unitEntityId);
   if (!entity) {
     throw new Error('Entity not found');
   }
@@ -28,7 +32,7 @@ export default function TargetCard() {
   const health = targetEntity.getComponent(HealthComponent);
 
   const nameable = targetEntity.getComponent(NameableComponent);
-  const name = nameable?.name || `Player ${targetEntity.id.toString()}`;
+  const name = nameable?.name || `Unit ${targetEntity.id.toString()}`;
 
   const hitpoints = health
     ? Math.round(Number((health.amount / health.max) * 100))

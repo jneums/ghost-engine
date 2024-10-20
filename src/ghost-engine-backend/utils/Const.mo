@@ -15,7 +15,8 @@ module {
   public let SEA_LEVEL = 72;
 
   // Mining
-  public let MINING_RADIUS = 3.0;
+  public let MINING_RADIUS = 5.0;
+  public let PLACEMENT_RADIUS = 5.0;
 
   // Define the Land type as a variant to represent different terrain types
   public let Land = {
@@ -50,5 +51,11 @@ module {
       y = 77.0;
       z = 149.0;
     };
+  };
+
+  public let BlockType = {
+    Air = 0 : Nat8;
+    Stone = 1 : Nat8;
+    Water = 2 : Nat8;
   };
 };

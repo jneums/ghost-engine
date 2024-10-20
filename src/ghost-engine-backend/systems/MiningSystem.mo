@@ -2,14 +2,36 @@ import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Float "mo:base/Float";
 import Debug "mo:base/Debug";
+import Option "mo:base/Option";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Blocks "../utils/Blocks";
 import Const "../utils/Const";
+import Tokens "../utils/Tokens";
 
 module {
   // Constant for nanoseconds to seconds conversion
   let NANOS_PER_SECOND = 1_000_000_000.0;
+
+  // Private function to handle cargo transfer upon death
+  private func updateFungibles(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, cargo : Components.FungibleComponent) {
+    // Get the source entity's cargo
+    let sourceFungible = ECS.World.getComponent(ctx, entityId, "FungibleComponent");
+    let newSourceFungible = Option.get(sourceFungible, #FungibleComponent({ tokens = [] }));
+
+    switch (newSourceFungible) {
+      case (#FungibleComponent(fungible)) {
+        // Combine the source and target's cargo
+        let combined = #FungibleComponent({
+          tokens = Tokens.mergeTokens(fungible.tokens, cargo.tokens);
+        });
+
+        // Update the source entity's cargo
+        ECS.World.addComponent(ctx, entityId, "FungibleComponent", combined);
+      };
+      case (_) {};
+    };
+  };
 
   func update(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, _deltaTime : Time.Time) : async () {
     switch (
@@ -50,6 +72,12 @@ module {
             blocks = [(mining.position, empty)];
           });
           ECS.World.addComponent(ctx, entityId, "UpdateBlocksComponent", updateBlocksComponent);
+
+          // Add the mined block to the unit's inventory
+          let blockFungible = {
+            tokens = [Tokens.Stone];
+          };
+          updateFungibles(ctx, entityId, blockFungible);
         };
 
         Debug.print("\nMining progress: " # debug_show (entityId) # " block " # debug_show (mining.position) # " " # debug_show (elapsedInSeconds) # "s / " # debug_show (mining.speed) # "s");

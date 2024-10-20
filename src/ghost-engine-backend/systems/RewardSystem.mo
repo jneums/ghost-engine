@@ -4,7 +4,6 @@ import Int "mo:base/Int";
 import Nat64 "mo:base/Nat64";
 import Debug "mo:base/Debug";
 import Array "mo:base/Array";
-import Principal "mo:base/Principal";
 import Components "../components";
 import ICRC2 "mo:icrc2-types";
 import env "../env";
@@ -20,7 +19,7 @@ module {
   // Private function to transfer tokens
   private func transferTokens(redeem : Components.RedeemTokensComponent, token : Tokens.Token) : async Bool {
     Debug.print("\nRedeeming token: " # debug_show (token));
-    let icrc1 = actor (Principal.toText(token.cid)) : ICRC2.Service;
+    let icrc1 = actor (token.cid) : ICRC2.Service;
     let res = await icrc1.icrc1_transfer({
       from = env.CANISTER_ID_GHOST_ENGINE_BACKEND;
       to = {
@@ -61,7 +60,7 @@ module {
       if (await transferTokens(redeem, token)) {
         // Update the entity's fungible
         let newCargo = #FungibleComponent({
-          tokens = Array.filter(fungible.tokens, func(t : { amount : Nat; cid : Principal; symbol : Text }) : Bool { not Principal.equal(t.cid, token.cid) });
+          tokens = Array.filter(fungible.tokens, func(t : Tokens.Token) : Bool { t.cid != token.cid });
         });
         ECS.World.addComponent(ctx, entityId, "FungibleComponent", newCargo);
       };

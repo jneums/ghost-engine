@@ -3,13 +3,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useWorld } from '../context/WorldProvider';
 import {
-  PlayerChunksComponent,
-  PlayersChunk,
-  PlayerViewComponent,
+  UnitChunksComponent,
+  UnitsChunk,
+  UnitViewComponent,
   TransformComponent,
-} from '../components';
+} from '../ecs/components';
 import { useConnection } from '../context/ConnectionProvider';
-import { CHUNK_SIZE } from '../utils/terrain';
+import { CHUNK_SIZE } from '../const/terrain';
 
 export type FetchedChunk = {
   key: string;
@@ -20,7 +20,7 @@ export type FetchedChunk = {
 };
 
 export default function useChunks() {
-  const { playerEntityId, getEntity } = useWorld();
+  const { unitEntityId, getEntity } = useWorld();
   const { getChunks } = useConnection();
   const { identity } = useInternetIdentity();
   const [loading, setLoading] = useState(false);
@@ -29,11 +29,11 @@ export default function useChunks() {
   >({});
   const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const entity = playerEntityId ? getEntity(playerEntityId) : null;
-  const chunks = entity?.getComponent(PlayerChunksComponent);
+  const entity = unitEntityId ? getEntity(unitEntityId) : null;
+  const chunks = entity?.getComponent(UnitChunksComponent);
 
   const fetchChunkData = useCallback(
-    async (chunks: PlayersChunk[]) => {
+    async (chunks: UnitsChunk[]) => {
       if (!identity) {
         throw new Error('Identity not found');
       }
@@ -94,7 +94,7 @@ export default function useChunks() {
       return;
     }
 
-    if (!identity || !playerEntityId) {
+    if (!identity || !unitEntityId) {
       return;
     }
 
@@ -107,28 +107,28 @@ export default function useChunks() {
       return;
     }
 
-    const currentPlayerChunk = new THREE.Vector3(
+    const currentUnitChunk = new THREE.Vector3(
       Math.floor(transform.position.x / CHUNK_SIZE),
       0,
       Math.floor(transform.position.z / CHUNK_SIZE),
     );
 
-    const playerView = entity.getComponent(PlayerViewComponent);
-    if (!playerView) {
+    const unitView = entity.getComponent(UnitViewComponent);
+    if (!unitView) {
       return;
     }
 
     const fetchChunksInPhases = async () => {
       setLoading(true);
       try {
-        const viewRadius = playerView.viewRadius;
+        const viewRadius = unitView.viewRadius;
         const maxDistance = Math.floor(viewRadius / CHUNK_SIZE);
 
         for (let distance = 0; distance <= maxDistance; distance++) {
           const chunksToFetch = chunks.chunks.filter(
             ({ chunkId, updatedAt }) => {
-              const dx = chunkId.x - currentPlayerChunk.x;
-              const dz = chunkId.z - currentPlayerChunk.z;
+              const dx = chunkId.x - currentUnitChunk.x;
+              const dz = chunkId.z - currentUnitChunk.z;
               const key = JSON.stringify({ x: chunkId.x, z: chunkId.z });
               const existingChunk = fetchedChunks[key];
 
@@ -186,7 +186,7 @@ export default function useChunks() {
     };
   }, [
     identity,
-    playerEntityId,
+    unitEntityId,
     getEntity,
     chunks,
     fetchedChunks,

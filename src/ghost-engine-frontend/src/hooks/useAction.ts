@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 import { useConnection } from '../context/ConnectionProvider';
 import { useInternetIdentity } from 'ic-use-internet-identity';
-import { sleep } from '../utils';
 import {
   CombatComponent,
   HealthComponent,
   MiningComponent,
   MoveTargetComponent,
+  PlaceBlockComponent,
   TargetComponent,
   TransformComponent,
-} from '../components';
+} from '../ecs/components';
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
-import { Principal } from '@dfinity/principal';
+import { sleep } from '../utils/sleep';
 
 export default function useAction() {
   const { identity } = useInternetIdentity();
@@ -62,7 +62,7 @@ export default function useAction() {
 
     const targetTransform = targetEntity.getComponent(TransformComponent);
     if (!targetTransform) {
-      console.error('Player transform not found');
+      console.error('Unit transform not found');
       return;
     }
 
@@ -196,5 +196,29 @@ export default function useAction() {
     addComponent(entityId, target);
   }
 
-  return { attack, mine, move, redeem, respawn, setTarget };
+  function placeBlock(
+    entityId: number,
+    position: THREE.Vector3,
+    blockType: number,
+  ) {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
+    console.log('Place block action');
+
+    // Notify the backend of the action
+    send(identity, {
+      PlaceBlock: {
+        entityId: BigInt(entityId),
+        position: position,
+        blockType: blockType,
+      },
+    });
+
+    const block = new PlaceBlockComponent(position, blockType);
+    addComponent(entityId, block);
+  }
+
+  return { attack, mine, move, redeem, respawn, setTarget, placeBlock };
 }

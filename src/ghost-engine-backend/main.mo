@@ -11,7 +11,7 @@ import ECS "mo:geecs";
 import Actions "actions";
 import Components "components";
 import Updates "utils/Updates";
-import Player "utils/Player";
+import Units "utils/Units";
 import Systems "systems/Systems";
 import Blocks "utils/Blocks";
 import Vector3 "math/Vector3";
@@ -66,8 +66,8 @@ actor {
       Vector.add(ctx.updatedComponents, update);
     };
 
-    // Stop game loop if no active players
-    let { total } = Player.getActiveSessions(ctx);
+    // Stop game loop if no active units
+    let { total } = Units.getActiveSessions(ctx);
     if (total < 1) {
       stopGameLoop();
     };
@@ -108,7 +108,7 @@ actor {
   public shared query ({ caller }) func getState() : async [ECS.Types.Update<Components.Component>] {
     assert (not Principal.isAnonymous(caller));
 
-    switch (Player.findPlayersEntityId(ctx, caller)) {
+    switch (Units.getEntityId(ctx, caller)) {
       case (?exists) {
         let currentState = Vector.new<ECS.Types.Update<Components.Component>>();
         let entities = Entities.filterByRange(ctx, exists);
@@ -134,7 +134,7 @@ actor {
   public shared query ({ caller }) func getUpdates(since : Time.Time) : async [ECS.Types.Update<Components.Component>] {
     assert (not Principal.isAnonymous(caller));
 
-    switch (Player.findPlayersEntityId(ctx, caller)) {
+    switch (Units.getEntityId(ctx, caller)) {
       case (?exists) {
         let entities = Entities.filterByRange(ctx, exists);
         let filtered = Updates.filterByEntities(ctx.updatedComponents, entities);
@@ -153,7 +153,7 @@ actor {
     let results = Array.init<[Nat8]>(chunkIds.size(), []);
     var idx = 0;
     for (chunkId in chunkIds.vals()) {
-      let blocks = if (Player.hasChunk(ctx, caller, chunkId)) {
+      let blocks = if (Units.hasChunk(ctx, caller, chunkId)) {
         Blocks.getBlocks(ctx, chunkId);
       } else {
         [];
@@ -170,7 +170,7 @@ actor {
     assert (not Principal.isAnonymous(caller));
 
     startGameLoop<system>();
-    Player.updateSession(ctx, caller);
+    Units.updateSession(ctx, caller);
     Actions.handleAction(ctx, action);
   };
 };

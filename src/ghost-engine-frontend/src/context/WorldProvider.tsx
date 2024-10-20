@@ -1,26 +1,29 @@
 import { create } from 'zustand';
 import React, { ReactNode, useEffect } from 'react';
-import { ComponentConstructors, createComponentClass } from '../components';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from './ConnectionProvider';
 import { match, P } from 'ts-pattern';
-import { Component, Entity, EntityId } from '../ecs';
+import { Component, Entity, EntityId } from '../ecs/entity';
+import { ComponentConstructors, createComponentClass } from '../ecs/components';
 
 // Define the Zustand store
 interface WorldState {
   entities: Map<EntityId, Entity>;
-  playerEntityId: EntityId | undefined;
+  unitEntityId: EntityId | undefined;
+  activeBlock: number | null;
   getEntity: (entityId: EntityId) => Entity;
   addComponent: (entityId: EntityId, component: Component) => void;
   removeComponent: (entityId: EntityId, componentClass: Function) => void;
   getEntities: () => EntityId[];
   getEntitiesByArchetype: (componentClasses: Function[]) => EntityId[];
-  setPlayerEntityId: (entityId: EntityId) => void;
+  setUnitEntityId: (entityId: EntityId) => void;
+  setActiveBlock: (blockType: number | null) => void;
 }
 
 const useWorldStore = create<WorldState>((set, get) => ({
   entities: new Map(),
-  playerEntityId: undefined,
+  unitEntityId: undefined,
+  activeBlock: null,
   getEntity: (entityId: EntityId) => {
     const { entities } = get();
     if (!entities.has(entityId)) {
@@ -67,8 +70,11 @@ const useWorldStore = create<WorldState>((set, get) => ({
       return entity.hasAllComponents(componentClasses);
     });
   },
-  setPlayerEntityId: (entityId: EntityId) => {
-    set({ playerEntityId: entityId });
+  setUnitEntityId: (entityId: EntityId) => {
+    set({ unitEntityId: entityId });
+  },
+  setActiveBlock: (blockType: number | null) => {
+    set({ activeBlock: blockType });
   },
 }));
 
@@ -77,7 +83,7 @@ export const useWorld = () => useWorldStore();
 export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const { identity } = useInternetIdentity();
   const { updates, disconnect } = useConnection();
-  const { addComponent, removeComponent, setPlayerEntityId } = useWorldStore();
+  const { addComponent, removeComponent, setUnitEntityId } = useWorldStore();
 
   useEffect(() => {
     if (!identity) {
@@ -95,8 +101,8 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
             { PrincipalComponent: P.select() },
             ({ principal }) => {
               if (principal.compareTo(identity.getPrincipal()) === 'eq') {
-                console.log('Setting player entity id: ' + action.entityId);
-                setPlayerEntityId(Number(action.entityId));
+                console.log('Setting unit entity id: ' + action.entityId);
+                setUnitEntityId(Number(action.entityId));
               }
             },
           );
@@ -107,8 +113,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
 
           match(action.componentType).with('SessionComponent', () => {
             if (
-              Number(action.entityId) ===
-              useWorldStore.getState().playerEntityId
+              Number(action.entityId) === useWorldStore.getState().unitEntityId
             ) {
               disconnect(identity);
             }
@@ -124,7 +129,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
     addComponent,
     removeComponent,
     disconnect,
-    setPlayerEntityId,
+    setUnitEntityId,
   ]);
 
   return <>{children}</>;

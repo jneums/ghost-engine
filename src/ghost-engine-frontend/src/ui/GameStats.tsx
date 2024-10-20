@@ -7,11 +7,11 @@ import { Card, Stack, Typography } from '@mui/joy';
 import { createAgent } from '@dfinity/utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import React from 'react';
-import { fromE8s } from '../utils';
-import { RedeemTokensComponent } from '.';
+import { RedeemTokensComponent } from '../ecs/components';
 import { match, P } from 'ts-pattern';
 import CopyId from './CopyId';
 import { useWorld } from '../context/WorldProvider';
+import { fromE8s } from '../utils/tokens';
 
 const icrc1Id = process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER!;
 const gameId = process.env.CANISTER_ID_GHOST_ENGINE_BACKEND!;

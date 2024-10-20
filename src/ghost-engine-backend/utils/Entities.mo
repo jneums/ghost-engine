@@ -8,11 +8,11 @@ import Const "Const";
 
 module {
 
-  public func filterByRange(ctx : ECS.Types.Context<Components.Component>, playerId : ECS.Types.EntityId) : [ECS.Types.EntityId] {
-    switch (ECS.World.getComponent(ctx, playerId, "TransformComponent"), ECS.World.getComponent(ctx, playerId, "PlayerViewComponent")) {
-      case (? #TransformComponent(playerTransform), ? #PlayerViewComponent(view)) {
+  public func filterByRange(ctx : ECS.Types.Context<Components.Component>, unitId : ECS.Types.EntityId) : [ECS.Types.EntityId] {
+    switch (ECS.World.getComponent(ctx, unitId, "TransformComponent"), ECS.World.getComponent(ctx, unitId, "UnitViewComponent")) {
+      case (? #TransformComponent(unitTransform), ? #UnitViewComponent(view)) {
         let floatChunkSize = Float.fromInt(Const.CHUNK_SIZE);
-        let playerChunkPos = Chunks.getChunkPosition(playerTransform.position);
+        let unitChunkPos = Chunks.getChunkPosition(unitTransform.position);
         let chunkRange = Float.toInt(view.viewRadius / floatChunkSize);
 
         let entitiesWithTransform = ECS.World.getEntitiesByArchetype(ctx, ["TransformComponent"]);
@@ -24,8 +24,8 @@ module {
             switch (transform) {
               case (? #TransformComponent(entityTransform)) {
                 let entityChunkPos = Chunks.getChunkPosition(entityTransform.position);
-                let chunkDistanceX = Int.abs(Float.toInt(entityChunkPos.x - playerChunkPos.x));
-                let chunkDistanceZ = Int.abs(Float.toInt(entityChunkPos.z - playerChunkPos.z));
+                let chunkDistanceX = Int.abs(Float.toInt(entityChunkPos.x - unitChunkPos.x));
+                let chunkDistanceZ = Int.abs(Float.toInt(entityChunkPos.z - unitChunkPos.z));
                 chunkDistanceX <= chunkRange and chunkDistanceZ <= chunkRange;
               };
               case (_) { false };

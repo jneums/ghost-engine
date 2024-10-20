@@ -7,7 +7,7 @@ import Nat "mo:base/Nat";
 
 module {
   public func filterUpdatesForClient(components : Vector.Vector<ECS.Types.Update<Components.Component>>) : Vector.Vector<ECS.Types.Update<Components.Component>> {
-    // Iterate through the players and send them the updates
+    // Iterate through the units and send them the updates
     let updates = Vector.new<ECS.Types.Update<Components.Component>>();
 
     // Filter out 'Server Only' components, e.g. MoveTargetComponent

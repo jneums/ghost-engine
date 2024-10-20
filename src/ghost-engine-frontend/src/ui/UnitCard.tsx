@@ -3,18 +3,18 @@ import {
   HealthComponent,
   NameableComponent,
   PrincipalComponent,
-} from '.';
+} from '../ecs/components';
 import { useWorld } from '../context/WorldProvider';
 import EntityCard from './EntityCard';
 
-export default function PlayerCard() {
-  const { playerEntityId, getEntity } = useWorld();
+export default function UnitCard() {
+  const { unitEntityId, getEntity } = useWorld();
 
-  if (!playerEntityId) {
+  if (!unitEntityId) {
     return null;
   }
 
-  const entity = getEntity(playerEntityId);
+  const entity = getEntity(unitEntityId);
   if (!entity) {
     throw new Error('Entity not found');
   }
@@ -32,7 +32,7 @@ export default function PlayerCard() {
   const transform = entity.getComponent(ClientTransformComponent);
 
   const nameabel = entity.getComponent(NameableComponent);
-  const name = nameabel?.name || `Player ${entity.id.toString()}`;
+  const name = nameabel?.name || `Unit ${entity.id.toString()}`;
 
   const hitpoints = Math.round(Number((health.amount / health.max) * 100));
 
