@@ -16,6 +16,12 @@ import { CAMERA_FOLLOW_DISTANCE } from '../const/camera';
 import { updatePosition, smoothLookAt } from './utils';
 import { UNIT_HEIGHT, UNIT_VELOCITY, UNIT_WIDTH } from '../const/units';
 
+// Create a raycaster for collision detection
+const raycaster = new THREE.Raycaster();
+const cameraDirection = new THREE.Vector3();
+
+const DAMPING_FACTOR = 0.5;
+
 export default function Unit({
   entityId,
   isUserControlled,
@@ -28,6 +34,7 @@ export default function Unit({
   const { attack, setTarget } = useAction();
   const entity = getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
+  const spotlightRef = useRef<THREE.SpotLight>(null);
   const lightningBeamSourceRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(2);
@@ -69,6 +76,10 @@ export default function Unit({
 
   const handleTarget = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
+      if (unitEntityId === entityId) {
+        return;
+      }
+
       event.stopPropagation();
       if (!unitEntityId) {
         console.error('Player entity not found');
@@ -82,6 +93,10 @@ export default function Unit({
 
   const handleAttack = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
+      if (unitEntityId === entityId) {
+        return;
+      }
+
       event.stopPropagation();
       if (!unitEntityId) {
         console.error('Player entity not found');
@@ -220,7 +235,13 @@ export default function Unit({
 
     // Smoothly rotate the mesh to face the direction of movement
     if (meshRef.current) {
-      smoothLookAt(meshRef.current, updatedPosition, delta);
+      if (mining && mining.position) {
+        // Smoothly look at the mining target
+        smoothLookAt(meshRef.current, mining.position, delta);
+      } else {
+        // Smoothly look at the movement target
+        smoothLookAt(meshRef.current, updatedPosition, delta);
+      }
     }
 
     // Start moving towards the target
@@ -237,7 +258,7 @@ export default function Unit({
 
     const unitPosition = {
       x: clientTransform.position.x + 0.5 * UNIT_WIDTH,
-      y: clientTransform.position.y + 0.5 * UNIT_HEIGHT + 0.01,
+      y: clientTransform.position.y + 0.5 * UNIT_HEIGHT,
       z: clientTransform.position.z + 0.5 * UNIT_WIDTH,
     };
     meshRef.current?.position.copy(unitPosition);
@@ -251,9 +272,61 @@ export default function Unit({
         radius * Math.cos(rotation.polar),
         radius * Math.sin(rotation.polar) * Math.cos(rotation.azimuthal),
       );
-      state.camera.position.copy(
-        meshRef.current.position.clone().add(cameraOffset),
-      );
+
+      // Calculate the desired camera position
+      const desiredCameraPosition = meshRef.current.position
+        .clone()
+        .add(cameraOffset);
+
+      // Set the raycaster to check for collisions
+      cameraDirection
+        .subVectors(desiredCameraPosition, meshRef.current.position)
+        .normalize();
+      raycaster.set(meshRef.current.position, cameraDirection);
+
+      // Calculate the maximum range for the raycast
+      const bufferDistance = 0.5; // Adjust this buffer as needed
+      const maxRaycastDistance =
+        CAMERA_FOLLOW_DISTANCE * zoomLevel + bufferDistance;
+      raycaster.far = maxRaycastDistance;
+
+      // Find the closest intersection using reduce
+      const closestIntersection = state.scene.children
+        .filter((child) => child.name.startsWith('chunk'))
+        .flatMap((child) => raycaster.intersectObject(child, true))
+        .reduce<THREE.Intersection | null>((closest, intersect) => {
+          if (!closest || intersect.distance < closest.distance) {
+            return intersect;
+          }
+          return closest;
+        }, null);
+
+      // Adjust the camera position to avoid clipping
+      const minDistance = 0.0; // Minimum distance from the player
+      if (closestIntersection) {
+        const intersectionPoint = closestIntersection.point;
+        const distanceToPlayer = intersectionPoint.distanceTo(
+          meshRef.current.position,
+        );
+        if (distanceToPlayer < minDistance) {
+          // If the intersection is too close, adjust to maintain minDistance
+          const direction = new THREE.Vector3()
+            .subVectors(intersectionPoint, meshRef.current.position)
+            .normalize();
+          const adjustedPosition = meshRef.current.position
+            .clone()
+            .add(direction.multiplyScalar(minDistance));
+          state.camera.position.lerp(adjustedPosition, DAMPING_FACTOR); // Damping factor
+        } else {
+          // Use the intersection point directly
+          state.camera.position.lerp(intersectionPoint, DAMPING_FACTOR); // Damping factor
+        }
+      } else {
+        state.camera.position.copy(
+          meshRef.current.position.clone().add(cameraOffset),
+        );
+      }
+
       state.camera.lookAt(meshRef.current.position);
     }
 
@@ -261,6 +334,16 @@ export default function Unit({
       removeComponent(entityId, ClientTransformComponent);
       removeComponent(entityId, TransformComponent);
       removeComponent(entityId, MoveTargetComponent);
+    }
+
+    // Update spotlight direction
+    if (spotlightRef.current && meshRef.current) {
+      const direction = new THREE.Vector3(0, 0, 1);
+      direction.applyQuaternion(meshRef.current.quaternion);
+      spotlightRef.current.target.position.copy(
+        meshRef.current.position.clone().add(direction),
+      );
+      spotlightRef.current.target.updateMatrixWorld();
     }
   });
 
@@ -282,12 +365,10 @@ export default function Unit({
     return null;
   }, [combatTargetId, mining]);
 
-  const name = entityId.toString();
-
   return (
     <>
       <mesh
-        name={name}
+        name={`unit-${entityId}`}
         ref={meshRef}
         onClick={handleTarget}
         onContextMenu={handleAttack}
@@ -295,6 +376,14 @@ export default function Unit({
         receiveShadow>
         <boxGeometry args={[UNIT_WIDTH, UNIT_HEIGHT, UNIT_WIDTH]} />
         <meshPhongMaterial color={color} />
+        <spotLight
+          ref={spotlightRef}
+          position={[0, 0.5 * UNIT_HEIGHT, 0.5 * UNIT_WIDTH]}
+          angle={Math.PI / 2}
+          penumbra={0.2}
+          intensity={0.8}
+          castShadow
+        />
       </mesh>
       {(combatTargetId || mining) && (
         <LightningBeam

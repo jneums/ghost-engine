@@ -98,7 +98,7 @@ export function smoothLookAt(
 
     // Create a quaternion for the target rotation
     const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 0, -1), // Forward direction
+      new THREE.Vector3(0, 0, 1), // Forward direction
       lookDirection,
     );
 

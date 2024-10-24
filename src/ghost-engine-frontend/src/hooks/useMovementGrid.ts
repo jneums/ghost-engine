@@ -66,8 +66,13 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
               // Iterate over each layer, centered around the unit's y-position
               for (let layerIndex = 0; layerIndex < gridSizeY; layerIndex++) {
                 const currentY = minY + layerIndex;
+                const aboveY = currentY + 1;
                 const belowY = currentY - 1;
 
+                const aboveBlockIndex =
+                  aboveY * CHUNK_SIZE * CHUNK_SIZE +
+                  localZ * CHUNK_SIZE +
+                  localX;
                 const currentBlockIndex =
                   currentY * CHUNK_SIZE * CHUNK_SIZE +
                   localZ * CHUNK_SIZE +
@@ -77,16 +82,19 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
                   localZ * CHUNK_SIZE +
                   localX;
 
+                const aboveBlockValue = data[aboveBlockIndex];
                 const currentBlockValue = data[currentBlockIndex];
                 const belowBlockValue = data[belowBlockIndex];
 
                 // Valid blocks to stand on:
-                // Air with Stone or Water underneath
-                // Water with Stone or Water underneath (no walking on top water block)
+                // 2 Airs with Stone or Water underneath
+                // 1 Air above and Water with Stone or Water underneath (no walking on top water block)
                 const airWithSolidUnderneath =
+                  aboveBlockValue === BlockType.Air &&
                   currentBlockValue === BlockType.Air &&
                   belowBlockValue === BlockType.Stone;
                 const waterWithSolidUnderneath =
+                  aboveBlockValue === BlockType.Air &&
                   currentBlockValue === BlockType.Water &&
                   (belowBlockValue === BlockType.Stone ||
                     belowBlockValue === BlockType.Water);

@@ -403,11 +403,14 @@ export default function Chunk({
   return (
     <>
       <mesh
-        onClick={handleMove}
-        onContextMenu={handleBlockAction}
+        name={`chunk-${x}-${z}`}
+        castShadow
+        receiveShadow
+        onClick={handleBlockAction}
+        onContextMenu={handleMove}
         position={chunkPosition}
         geometry={geometry}>
-        <meshLambertMaterial vertexColors />
+        <meshPhongMaterial vertexColors />
       </mesh>
       <mesh ref={placeholderRef} visible={false}>
         <boxGeometry args={[1, 1, 1]} />
