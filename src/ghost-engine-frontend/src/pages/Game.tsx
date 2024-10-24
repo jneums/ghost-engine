@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber';
-import { Sky, Stats } from '@react-three/drei';
-import { useEffect, useMemo } from 'react';
+import { Cloud, Sky, Stats } from '@react-three/drei';
+import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import TargetCard from '../ui/TargetCard';
 import { useWorld } from '../context/WorldProvider';
@@ -10,25 +10,18 @@ import { CircularProgress, Stack, Typography } from '@mui/joy';
 import LogoutButton from '../ui/LogoutButton';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useConnection } from '../context/ConnectionProvider';
-import useChunks from '../hooks/useChunks';
-import Chunk from '../chunks/Chunk';
-import React from 'react';
-import useMovementGrid from '../hooks/useMovementGrid';
 import { HealthComponent, TransformComponent } from '../ecs/components';
 import Units from '../units/Units';
 import UnitCard from '../ui/UnitCard';
 import UnitStats from '../ui/UnitInventory';
 import Unit from '../units/Unit';
-
-const MemoizedChunk = React.memo(Chunk);
+import Chunks from '../chunks';
 
 export default function Game() {
   const { connect, disconnect, isConnecting } = useConnection();
   const { unitEntityId, getEntity } = useWorld();
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
-  const { fetchedChunks } = useChunks();
-  const createGrid = useMovementGrid(fetchedChunks);
 
   if (!identity) {
     return <Navigate to="/" />;
@@ -55,20 +48,6 @@ export default function Game() {
       openDialog(<Respawn />);
     }
   }, [isUnitDead]);
-
-  const chunks = useMemo(
-    () =>
-      fetchedChunks?.map(({ key, x, z, data }) => (
-        <MemoizedChunk
-          key={key}
-          x={x}
-          z={z}
-          data={data}
-          createGrid={createGrid}
-        />
-      )),
-    [fetchedChunks, createGrid],
-  );
 
   if (isConnecting) {
     return (
@@ -110,11 +89,13 @@ export default function Game() {
             transform.position.y + 3,
             transform.position.z + 5,
           ],
+          fov: 80,
         }}>
-        <hemisphereLight args={['white', 'slategrey', 0.1]} />
-        <directionalLight position={[100, 500, 100]} intensity={0.25} />
-        <Sky sunPosition={[100, 500, 100]} />
-        {chunks}
+        <hemisphereLight args={['white', 'slategrey', 0.2]} />
+        <directionalLight position={[100, 300, 100]} intensity={1} />
+        <fog attach="fog" args={['#f0f0f0', 0, 90]} />
+        <Sky sunPosition={[100, 300, 100]} />
+        <Chunks />
         <Units />
         <Unit entityId={unitEntityId} isUserControlled />
       </Canvas>

@@ -37,7 +37,7 @@ export default function Unit({
   const spotlightRef = useRef<THREE.SpotLight>(null);
   const lightningBeamSourceRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(2);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [rotation, setRotation] = useState({
     azimuthal: 0,
@@ -378,10 +378,10 @@ export default function Unit({
         <meshPhongMaterial color={color} />
         <spotLight
           ref={spotlightRef}
-          position={[0, 0.5 * UNIT_HEIGHT, 0.5 * UNIT_WIDTH]}
+          position={[0, 0.5 * UNIT_HEIGHT, 0.6 * UNIT_WIDTH]} // Slightly in front of the unit
           angle={Math.PI / 2}
           penumbra={0.2}
-          intensity={0.8}
+          intensity={1}
           castShadow
         />
       </mesh>

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from '../const/terrain';
-import { ThreeEvent } from '@react-three/fiber';
 import { useWorld } from '../context/WorldProvider';
 import {
   ClientTransformComponent,
@@ -15,71 +15,22 @@ import useAction from '../hooks/useAction';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { findNodeByPosition, findPath, Node } from '../pathfinding';
 import { DRAG_THRESHOLD } from '../const/controls';
-import { BlockType, MINING_RADIUS, VERTEX_COLORS } from '../const/blocks';
+import {
+  BlockType,
+  MINING_RADIUS,
+  TILE_SIZE,
+  TILE_TEXTURE_HEIGHT,
+  TILE_TEXTURE_WITH,
+} from '../const/blocks';
 import { toBaseUnit } from '../utils/tokens';
-
-const FACES = [
-  {
-    dir: [-1, 0, 0],
-    corners: [
-      [0, 1, 0],
-      [0, 0, 0],
-      [0, 1, 1],
-      [0, 0, 1],
-    ],
-  },
-  {
-    dir: [1, 0, 0],
-    corners: [
-      [1, 1, 1],
-      [1, 0, 1],
-      [1, 1, 0],
-      [1, 0, 0],
-    ],
-  },
-  {
-    dir: [0, -1, 0],
-    corners: [
-      [1, 0, 1],
-      [0, 0, 1],
-      [1, 0, 0],
-      [0, 0, 0],
-    ],
-  },
-  {
-    dir: [0, 1, 0],
-    corners: [
-      [0, 1, 1],
-      [1, 1, 1],
-      [0, 1, 0],
-      [1, 1, 0],
-    ],
-  },
-  {
-    dir: [0, 0, -1],
-    corners: [
-      [1, 0, 0],
-      [0, 0, 0],
-      [1, 1, 0],
-      [0, 1, 0],
-    ],
-  },
-  {
-    dir: [0, 0, 1],
-    corners: [
-      [0, 0, 1],
-      [1, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1],
-    ],
-  },
-];
+import { FACES } from './faces';
 
 export default function Chunk({
   x,
   z,
   data,
   createGrid,
+  textureAtlas,
 }: {
   x: number;
   z: number;
@@ -88,6 +39,7 @@ export default function Chunk({
     start: THREE.Vector3,
     target: THREE.Vector3,
   ) => Node[][][] | null;
+  textureAtlas: THREE.Texture;
 }) {
   const geomRef = useRef(new THREE.BufferGeometry());
   const placeholderRef = useRef<THREE.Mesh>(null);
@@ -213,7 +165,7 @@ export default function Chunk({
     const positions = [];
     const normals = [];
     const indices = [];
-    const colors = [];
+    const uvs = [];
 
     const WATER_HEIGHT = 0.6; // Define the height for water blocks
 
@@ -237,7 +189,7 @@ export default function Chunk({
           const index = x + z * CHUNK_SIZE + y * CHUNK_SIZE * CHUNK_SIZE;
           const voxel = data[index];
           if (voxel) {
-            for (const { dir, corners } of FACES) {
+            for (const { dir, corners, uvRow } of FACES) {
               const neighborX = x + dir[0];
               const neighborY = y + dir[1];
               const neighborZ = z + dir[2];
@@ -259,22 +211,33 @@ export default function Chunk({
                 neighbor = data[neighborIndex] || 0;
               }
 
-              if (neighbor === BlockType.Air || neighbor === BlockType.Water) {
+              // Check if the voxel is water and only add the top face
+              if (
+                (voxel === BlockType.Water && dir[1] === 1) || // Top face for water
+                (voxel !== BlockType.Water &&
+                  (neighbor === BlockType.Air || neighbor === BlockType.Water))
+              ) {
                 const ndx = positions.length / 3;
-                for (const pos of corners) {
+                for (const { pos, uv } of corners) {
                   // Adjust the height for water blocks
                   const adjustedY =
                     voxel === BlockType.Water ? pos[1] * WATER_HEIGHT : pos[1];
                   positions.push(pos[0] + x, adjustedY + y, pos[2] + z);
                   normals.push(...dir);
 
-                  // Change color if this voxel is being mined
-                  if (index === minedVoxelIndex) {
-                    colors.push(1, 0, 0); // Red color for mined voxel
+                  if (voxel > 999) {
+                    // push the uv for voxel 0
+                    uvs.push(
+                      ((0 + uv[0]) * TILE_SIZE) / TILE_TEXTURE_WITH,
+                      1 -
+                        ((uvRow + 1 - uv[1]) * TILE_SIZE) / TILE_TEXTURE_HEIGHT,
+                    );
                   } else {
-                    const block = voxel as BlockType;
-                    const color = VERTEX_COLORS[block] || [1, 0, 1];
-                    colors.push(...color); // Use color with opacity
+                    uvs.push(
+                      ((voxel + uv[0]) * TILE_SIZE) / TILE_TEXTURE_WITH,
+                      1 -
+                        ((uvRow + 1 - uv[1]) * TILE_SIZE) / TILE_TEXTURE_HEIGHT,
+                    );
                   }
                 }
                 indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
@@ -285,7 +248,7 @@ export default function Chunk({
       }
     }
 
-    return { positions, normals, indices, colors };
+    return { positions, normals, indices, uvs };
   }, [data, minedVoxelIndex]);
 
   const handleMove = useCallback(
@@ -369,7 +332,7 @@ export default function Chunk({
   );
 
   const geometry = useMemo(() => {
-    const { positions, normals, indices, colors } = generateVoxelGeometry();
+    const { positions, normals, indices, uvs } = generateVoxelGeometry();
 
     geomRef.current.setAttribute(
       'position',
@@ -380,8 +343,8 @@ export default function Chunk({
       new THREE.Float32BufferAttribute(normals, 3),
     );
     geomRef.current.setAttribute(
-      'color',
-      new THREE.Float32BufferAttribute(colors, 3),
+      'uv',
+      new THREE.Float32BufferAttribute(uvs, 2),
     );
     geomRef.current.setIndex(indices);
 
@@ -410,7 +373,7 @@ export default function Chunk({
         onContextMenu={handleMove}
         position={chunkPosition}
         geometry={geometry}>
-        <meshPhongMaterial vertexColors />
+        <meshLambertMaterial map={textureAtlas} transparent />
       </mesh>
       <mesh ref={placeholderRef} visible={false}>
         <boxGeometry args={[1, 1, 1]} />
