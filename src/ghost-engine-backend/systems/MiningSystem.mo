@@ -65,7 +65,7 @@ module {
         // Check if the mining is complete
         let elapsedInSeconds = Float.fromInt(elapsedTime) / NANOS_PER_SECOND;
         if (elapsedInSeconds >= mining.speed) {
-          let empty : Nat8 = 0;
+          let empty : Nat16 = 0;
           Blocks.setBlockType(ctx, mining.position, empty);
           ECS.World.removeComponent(ctx, entityId, "MiningComponent");
           let updateBlocksComponent = #UpdateBlocksComponent({
@@ -74,10 +74,17 @@ module {
           ECS.World.addComponent(ctx, entityId, "UpdateBlocksComponent", updateBlocksComponent);
 
           // Add the mined block to the unit's inventory
-          let blockFungible = {
-            tokens = [Tokens.Stone];
+          switch (Blocks.getTokenByBlockType(ctx, block)) {
+            case (?token) {
+              let blockFungible = {
+                tokens = [token];
+              };
+              updateFungibles(ctx, entityId, blockFungible);
+            };
+            case (_) {
+              Debug.print("\nError getting token for block type: " # debug_show (block));
+            };
           };
-          updateFungibles(ctx, entityId, blockFungible);
         };
 
         Debug.print("\nMining progress: " # debug_show (entityId) # " block " # debug_show (mining.position) # " " # debug_show (elapsedInSeconds) # "s / " # debug_show (mining.speed) # "s");

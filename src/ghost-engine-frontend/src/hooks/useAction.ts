@@ -13,6 +13,7 @@ import {
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { sleep } from '../utils/sleep';
+import { Principal } from '@dfinity/principal';
 
 export default function useAction() {
   const { identity } = useInternetIdentity();
@@ -110,7 +111,7 @@ export default function useAction() {
     });
 
     // Add the components to the ecs entity
-    const mining = new MiningComponent(position, 3, 0);
+    const mining = new MiningComponent(position, 0, 0);
 
     // Add the components to the ecs entity
     addComponent(entityId, mining);
@@ -140,7 +141,7 @@ export default function useAction() {
     });
   }
 
-  function redeem(entityId: number) {
+  function redeem(entityId: number, tokenCid: Principal, amount: bigint) {
     if (!identity) {
       throw new Error('Identity not found');
     }
@@ -165,9 +166,65 @@ export default function useAction() {
 
     // Notify the backend of the action
     send(identity, {
-      Redeem: {
+      UnstakeFungible: {
         entityId: BigInt(entityId),
         to: identity.getPrincipal(),
+        token: tokenCid,
+        amount,
+      },
+    });
+  }
+
+  function stake(entityId: number, tokenCid: Principal, amount: bigint) {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+    console.log('Stake action');
+    const entity = getEntity(entityId);
+    const health = entity.getComponent(HealthComponent);
+
+    const inCombat = entity.getComponent(CombatComponent);
+    if (inCombat) {
+      setErrorMessage('You cannot do that now');
+      console.error('Cannot stake tokens while in combat');
+      return;
+    }
+
+    const isDead = health.amount <= 0;
+
+    if (isDead) {
+      setErrorMessage('You are dead');
+      console.error('Cannot stake tokens while dead');
+      return;
+    }
+
+    // Notify the backend of the action
+    send(identity, {
+      StakeFungible: {
+        entityId: BigInt(entityId),
+        from: identity.getPrincipal(),
+        token: tokenCid,
+        amount: BigInt(amount),
+      },
+    });
+  }
+
+  function importFungible(
+    entityId: number,
+    tokenCid: Principal,
+    to: Principal,
+  ) {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+    console.log('ImportFungible action');
+
+    // Notify the backend of the action
+    send(identity, {
+      ImportFungible: {
+        entityId: BigInt(entityId),
+        token: tokenCid,
+        to,
       },
     });
   }
@@ -199,7 +256,7 @@ export default function useAction() {
   function placeBlock(
     entityId: number,
     position: THREE.Vector3,
-    blockType: number,
+    tokenCid: Principal,
   ) {
     if (!identity) {
       throw new Error('Identity not found');
@@ -211,14 +268,24 @@ export default function useAction() {
     send(identity, {
       PlaceBlock: {
         entityId: BigInt(entityId),
-        position: position,
-        blockType: blockType,
+        position,
+        tokenCid,
       },
     });
 
-    const block = new PlaceBlockComponent(position, blockType);
+    const block = new PlaceBlockComponent(position, tokenCid);
     addComponent(entityId, block);
   }
 
-  return { attack, mine, move, redeem, respawn, setTarget, placeBlock };
+  return {
+    attack,
+    mine,
+    move,
+    importFungible,
+    redeem,
+    stake,
+    respawn,
+    setTarget,
+    placeBlock,
+  };
 }

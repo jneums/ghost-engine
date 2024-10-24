@@ -14,7 +14,10 @@ import useChunks from '../hooks/useChunks';
 import Chunk from '../chunks/Chunk';
 import React from 'react';
 import useMovementGrid from '../hooks/useMovementGrid';
-import { HealthComponent, TransformComponent } from '../ecs/components';
+import {
+  HealthComponent,
+  TransformComponent,
+} from '../ecs/components';
 import Units from '../units/Units';
 import UnitCard from '../ui/UnitCard';
 import UnitStats from '../ui/UnitInventory';

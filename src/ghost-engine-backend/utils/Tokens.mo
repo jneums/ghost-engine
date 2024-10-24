@@ -2,43 +2,35 @@ import Nat "mo:base/Nat";
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
 import Option "mo:base/Option";
+import Float "mo:base/Float";
 import Map "mo:stable-hash-map/Map/Map";
 
 module {
-  public func toE8s(value : Nat) : Nat {
-    value * 100_000_000;
-  };
 
   public type Token = {
     symbol : Text;
+    name : Text;
     cid : Text;
     amount : Nat;
-    blockType : Nat8;
+    decimals : Nat;
+    logo : Text;
+    fee : Nat;
   };
 
-  public let Air = {
-    symbol = "Air";
-    cid = "aaaaa-aa";
-    amount = 0;
-    blockType = 0 : Nat8;
+  public let Offset = {
+    generated = 0 : Nat8; // The first 1000 tokens are reserved for generated tokens
+    userCreated = 1 : Nat8; // The next 1000 tokens are reserved for user-created tokens
   };
 
-  public let Stone = {
-    symbol = "Stone";
-    cid = "5hs4f-vqaaa-aaaai-qpk4a-cai";
-    amount = 100_000_000;
-    blockType = 1 : Nat8;
-  };
-
-  public let Blocks = [
-    Air, // 0
-    Stone, // 1
-  ];
-
-  public func getTokenByBlockType(blockType : Nat8) : Token {
-    switch (blockType) {
-      case (1) { Stone };
-      case (_) { Air };
+  public func getTokenWithAmount(token : Token, amount : Nat) : Token {
+    {
+      symbol = token.symbol;
+      name = token.name;
+      cid = token.cid;
+      amount = amount;
+      decimals = token.decimals;
+      logo = token.logo;
+      fee = token.fee;
     };
   };
 
@@ -62,23 +54,29 @@ module {
     let key = token.symbol # "-" # token.cid;
     switch (Map.get(tokenMap, Map.thash, key)) {
       case (?existingToken) {
-        if (existingToken.amount > token.amount) {
-          // Reduce the amount of the token
-          Map.set(
-            tokenMap,
-            Map.thash,
-            key,
-            {
-              symbol = existingToken.symbol;
-              cid = existingToken.cid;
-              amount = existingToken.amount - token.amount : Nat;
-              blockType = existingToken.blockType;
-            },
-          );
+        // Update the amount of the token
+        let newAmount = if (existingToken.amount > token.amount) {
+          // Subtract the amount from the token
+          existingToken.amount - token.amount : Nat;
         } else {
-          // Remove the token if the amount is zero or less
-          Map.delete(tokenMap, Map.thash, key);
+          // Set the amount to 0
+          0;
         };
+
+        Map.set(
+          tokenMap,
+          Map.thash,
+          key,
+          {
+            symbol = existingToken.symbol;
+            name = existingToken.name;
+            cid = existingToken.cid;
+            decimals = existingToken.decimals;
+            amount = newAmount;
+            logo = existingToken.logo;
+            fee = existingToken.fee;
+          },
+        );
       };
       case (null) {
         // Token not found, do nothing
@@ -99,7 +97,7 @@ module {
       Map.set(tokenMap, Map.thash, key, token);
     };
 
-    // Add tokens from the second array to the map, merging amounts if necessary
+    // Add tokens from the second array to the map, merging decimalss if necessary
     for (token in tokens2.vals()) {
       let key = token.symbol # "-" # token.cid;
       switch (Map.get(tokenMap, Map.thash, key)) {
@@ -110,9 +108,12 @@ module {
             key,
             {
               symbol = token.symbol;
+              name = token.name;
               cid = token.cid;
+              decimals = existingToken.decimals;
               amount = existingToken.amount + token.amount;
-              blockType = token.blockType;
+              logo = token.logo;
+              fee = token.fee;
             },
           );
         };
@@ -124,5 +125,25 @@ module {
 
     // Convert the map back to an array
     Iter.toArray(Map.vals(tokenMap));
+  };
+
+  /**
+   * Convert a value to the base unit used for processing, given the number of decimals.
+   * @param value Nat
+   * @param decimals number of decimal places
+   * @returns value in the smallest unit as a Nat
+   */
+  public func toBaseUnit(value : Nat, decimals : Nat) : Nat {
+    value * Nat.pow(10, decimals);
+  };
+
+  /**
+   * Convert a value from the base unit back to the original unit, given the number of decimals.
+   * @param value Nat
+   * @param decimals number of decimal places
+   * @returns value as a Float
+   */
+  public func fromBaseUnit(value : Nat, decimals : Nat) : Float {
+    Float.fromInt(value) / Float.fromInt(Nat.pow(10, decimals));
   };
 };

@@ -1,4 +1,4 @@
-import { ThreeEvent, useFrame } from '@react-three/fiber';
+import { ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import {
   MoveTargetComponent,
   TransformComponent,
@@ -14,7 +14,7 @@ import { useWorld } from '../context/WorldProvider';
 import useAction from '../hooks/useAction';
 import { CAMERA_FOLLOW_DISTANCE } from '../const/camera';
 import { updatePosition, smoothLookAt } from './utils';
-import { UNIT_HEIGHT, UNIT_WIDTH } from '../const/units';
+import { UNIT_HEIGHT, UNIT_VELOCITY, UNIT_WIDTH } from '../const/units';
 
 export default function Unit({
   entityId,
@@ -23,10 +23,12 @@ export default function Unit({
   entityId: number;
   isUserControlled?: boolean;
 }) {
+  const { gl } = useThree();
   const { unitEntityId, getEntity, removeComponent } = useWorld();
   const { attack, setTarget } = useAction();
   const entity = getEntity(entityId);
   const meshRef = useRef<THREE.Mesh>(null);
+  const lightningBeamSourceRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(2);
   const [isDragging, setIsDragging] = useState(false);
@@ -34,8 +36,14 @@ export default function Unit({
     azimuthal: 0,
     polar: Math.PI / 4,
   });
+  const [lastTouch, setLastTouch] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [initialPinchDistance, setInitialPinchDistance] = useState<
+    number | null
+  >(null);
 
-  const velocity = 1.5; // units per second
+  const velocity = UNIT_VELOCITY; // units per second
   const epsilon = 0.05; // Small value to prevent shaking
 
   if (!entity) return null;
@@ -47,7 +55,7 @@ export default function Unit({
   const mining = entity.getComponent(MiningComponent);
   const health = entity.getComponent(HealthComponent);
 
-  const isDead = health.amount <= 0;
+  const isDead = health?.amount <= 0;
   const color = isDead ? 'black' : isUserControlled ? 'blue' : 'red';
 
   if (!clientTransform && serverTransform) {
@@ -124,18 +132,82 @@ export default function Unit({
       setIsDragging(false);
     };
 
-    window.addEventListener('wheel', handleWheel);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        event.preventDefault(); // Prevent default touch behavior
+        setIsDragging(true);
+        setLastTouch({
+          x: event.touches[0].clientX,
+          y: event.touches[0].clientY,
+        });
+      } else if (event.touches.length === 2) {
+        event.preventDefault(); // Prevent default touch behavior
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        const distance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
+            Math.pow(touch2.clientY - touch1.clientY, 2),
+        );
+        setInitialPinchDistance(distance);
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (isDragging && event.touches.length === 1 && lastTouch) {
+        event.preventDefault(); // Prevent default touch behavior
+        const touch = event.touches[0];
+        const deltaX = touch.clientX - lastTouch.x;
+        const deltaY = touch.clientY - lastTouch.y;
+        setRotation((prevRotation) => ({
+          azimuthal: prevRotation.azimuthal - deltaX * 0.01,
+          polar: Math.max(
+            0.1,
+            Math.min(Math.PI - 0.1, prevRotation.polar - deltaY * 0.01),
+          ), // Invert Y-axis
+        }));
+        setLastTouch({ x: touch.clientX, y: touch.clientY });
+      } else if (event.touches.length === 2 && initialPinchDistance !== null) {
+        event.preventDefault(); // Prevent default touch behavior
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        const distance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
+            Math.pow(touch2.clientY - touch1.clientY, 2),
+        );
+        const zoomChange = (distance - initialPinchDistance) * 0.005;
+        setZoomLevel((prevZoom) =>
+          Math.max(0.5, Math.min(5, prevZoom - zoomChange)),
+        );
+        setInitialPinchDistance(distance);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      setLastTouch(null);
+      setInitialPinchDistance(null);
+    };
+
+    gl.domElement.addEventListener('wheel', handleWheel);
+    gl.domElement.addEventListener('mousedown', handleMouseDown);
+    gl.domElement.addEventListener('mousemove', handleMouseMove);
+    gl.domElement.addEventListener('mouseup', handleMouseUp);
+    gl.domElement.addEventListener('touchstart', handleTouchStart);
+    gl.domElement.addEventListener('touchmove', handleTouchMove, {
+      passive: false,
+    });
+    gl.domElement.addEventListener('touchend', handleTouchEnd);
 
     return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      gl.domElement.removeEventListener('wheel', handleWheel);
+      gl.domElement.removeEventListener('mousedown', handleMouseDown);
+      gl.domElement.removeEventListener('mousemove', handleMouseMove);
+      gl.domElement.removeEventListener('mouseup', handleMouseUp);
+      gl.domElement.removeEventListener('touchstart', handleTouchStart);
+      gl.domElement.removeEventListener('touchmove', handleTouchMove);
+      gl.domElement.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, lastTouch, initialPinchDistance, gl.domElement]);
 
   useFrame((state, delta) => {
     let updatedPosition = clientTransform.position;
@@ -169,6 +241,8 @@ export default function Unit({
       z: clientTransform.position.z + 0.5 * UNIT_WIDTH,
     };
     meshRef.current?.position.copy(unitPosition);
+    lightningBeamSourceRef.current.copy(clientTransform.position);
+    lightningBeamSourceRef.current.y += 0.5 * UNIT_HEIGHT;
 
     if (isUserControlled && meshRef.current) {
       const radius = CAMERA_FOLLOW_DISTANCE * zoomLevel;
@@ -224,7 +298,7 @@ export default function Unit({
       </mesh>
       {(combatTargetId || mining) && (
         <LightningBeam
-          start={clientTransform.position}
+          start={lightningBeamSourceRef.current}
           getEndPosition={getTargetPosition}
         />
       )}

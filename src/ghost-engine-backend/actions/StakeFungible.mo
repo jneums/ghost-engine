@@ -2,23 +2,27 @@ import T "Types";
 import Components "../components";
 import Debug "mo:base/Debug";
 import Time "mo:base/Time";
+import Principal "mo:base/Principal";
 import World "mo:geecs/World";
-import Vector3 "../math/Vector3";
 
 module {
   public type Args = {
     entityId : Nat;
-    position : Vector3.Vector3;
+    from : Principal;
+    token : Principal;
+    amount : Nat;
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nBegin mining: " # debug_show (args.entityId) # " block " # debug_show (args.position));
-    let mining = #MiningComponent({
-      position = args.position;
+    Debug.print("\nBegin staking tokens from: " # Principal.toText(args.from));
+    let stakeFungible = #StakeFungibleComponent({
+      from = args.from;
+      tokenCid = args.token;
+      amount = args.amount;
       startAt = Time.now();
-      speed = 1.0;
+      duration = 0;
     });
-    World.addComponent(ctx, args.entityId, "MiningComponent", mining);
+    World.addComponent(ctx, args.entityId, "StakeFungibleComponent", stakeFungible);
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {

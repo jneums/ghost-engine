@@ -1,4 +1,4 @@
-import { Modal, ModalDialog, ModalDialogProps } from '@mui/joy';
+import { Modal, ModalDialog, ModalDialogProps, ModalOverflow } from '@mui/joy';
 import { useDialog } from '../context/DialogProvider';
 
 export default function Dialog({
@@ -12,9 +12,11 @@ export default function Dialog({
 
   return (
     <Modal open={isOpen}>
-      <ModalDialog variant="plain" {...props}>
-        {dialogContent}
-      </ModalDialog>
+      <ModalOverflow>
+        <ModalDialog variant="plain" {...props}>
+          {dialogContent}
+        </ModalDialog>
+      </ModalOverflow>
     </Modal>
   );
 }

@@ -2,6 +2,8 @@ import { GitHub } from '@mui/icons-material';
 import { Button, IconButton, Stack, Typography } from '@mui/joy';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import { useNavigate } from 'react-router-dom';
+import { sleep } from '../utils/sleep';
+import { useEffect } from 'react';
 
 export default function Menu() {
   const navigate = useNavigate();
@@ -17,11 +19,16 @@ export default function Menu() {
   const handleClick = async () => {
     if (!identity) {
       await login();
-      navigate('/game');
     } else {
       navigate('/game');
     }
   };
+
+  useEffect(() => {
+    if (loginStatus === 'success') {
+      navigate('/game');
+    }
+  }, [loginStatus]);
 
   return (
     <Stack position="relative" height="100%" width="100%">

@@ -39,6 +39,7 @@ export default function UnitCard() {
   return (
     <EntityCard
       name={name}
+      principal={principal.principal}
       hitpoints={hitpoints}
       top={0}
       left={0}

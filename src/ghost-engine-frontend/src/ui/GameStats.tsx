@@ -1,30 +1,24 @@
-import {
-  IcrcLedgerCanister,
-  IcrcTokenMetadataResponse,
-} from '@dfinity/ledger-icrc';
 import { Principal } from '@dfinity/principal';
 import { Card, Stack, Typography } from '@mui/joy';
-import { createAgent } from '@dfinity/utils';
 import { useInternetIdentity } from 'ic-use-internet-identity';
 import React from 'react';
-import { RedeemTokensComponent } from '../ecs/components';
-import { match, P } from 'ts-pattern';
+import { UnstakeFungibleComponent } from '../ecs/components';
 import CopyId from './CopyId';
 import { useWorld } from '../context/WorldProvider';
-import { fromE8s } from '../utils/tokens';
+import { getBalance, getMetadata, TokenMetadata } from '../api/icrc';
+import { fromBaseUnit } from '../utils/tokens';
 
 const icrc1Id = process.env.CANISTER_ID_ICRC1_LEDGER_CANISTER!;
 const gameId = process.env.CANISTER_ID_GHOST_ENGINE_BACKEND!;
-const host = import.meta.env.VITE_IC_URL;
 
 export default function GameStats() {
   const { getEntitiesByArchetype } = useWorld();
   const { identity } = useInternetIdentity();
-  const [balance, setBalance] = React.useState(0n);
-  const [metadata, setMetadata] = React.useState<IcrcTokenMetadataResponse>([]);
+  const [balance, setBalance] = React.useState(0);
+  const [metadata, setMetadata] = React.useState<TokenMetadata | null>(null);
 
   // Get any redeem token components
-  const redeem = getEntitiesByArchetype([RedeemTokensComponent]);
+  const redeem = getEntitiesByArchetype([UnstakeFungibleComponent]);
 
   const fetchBalance = async () => {
     if (!identity) {
@@ -32,23 +26,10 @@ export default function GameStats() {
       return;
     }
 
-    const agent = await createAgent({
-      identity,
-      host,
-      fetchRootKey: process.env.NODE_ENV === 'development',
-    });
+    const data = await getBalance(identity, Principal.fromText(gameId));
 
-    const icrc1 = IcrcLedgerCanister.create({
-      agent,
-      canisterId: Principal.fromText(icrc1Id),
-    });
-
-    const gameServer = Principal.fromText(gameId);
-    const data = await icrc1.balance({
-      owner: gameServer,
-    });
-    setBalance(data);
-    console.log('Game balance:', fromE8s(data));
+    setBalance(fromBaseUnit(data, decimals));
+    console.log('Game balance:', data);
   };
 
   const fetchMetadata = async () => {
@@ -57,18 +38,7 @@ export default function GameStats() {
       return;
     }
 
-    const agent = await createAgent({
-      identity,
-      host,
-      fetchRootKey: process.env.NODE_ENV === 'development',
-    });
-
-    const icrc1 = IcrcLedgerCanister.create({
-      agent,
-      canisterId: Principal.fromText(icrc1Id),
-    });
-
-    const metadata = await icrc1.metadata({});
+    const metadata = await getMetadata(identity, Principal.fromText(icrc1Id));
     setMetadata(metadata);
   };
 
@@ -80,10 +50,12 @@ export default function GameStats() {
     fetchMetadata();
   }, [identity]);
 
-  const res = metadata.find(([k, v]) => k === 'icrc1:symbol') ?? ['', ''];
-  const symbol = match(res[1])
-    .with({ Text: P.select() }, (v) => v)
-    .otherwise(() => '');
+  if (!metadata) {
+    return null;
+  }
+
+  const symbol = metadata['icrc1:symbol'];
+  const decimals = Number(metadata['icrc1:decimals']);
 
   return (
     <Stack position="absolute" top={0} left={0} padding={2}>

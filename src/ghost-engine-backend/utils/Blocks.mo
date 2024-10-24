@@ -1,23 +1,25 @@
 import ECS "mo:geecs";
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";
-import Nat8 "mo:base/Nat8";
+import Nat16 "mo:base/Nat16";
 import Float "mo:base/Float";
 import Iter "mo:base/Iter";
 import Int "mo:base/Int";
-import Int64 "mo:base/Int64";
 import TrieMap "mo:base/TrieMap";
 import Nat "mo:base/Nat";
 import Hash "mo:base/Hash";
-import Noise "mo:noise/Noise";
-import NoiseTypes "mo:noise/Types";
-import Random "mo:noise/Random";
+import Principal "mo:base/Principal";
+import Option "mo:base/Option";
+import Nat32 "mo:base/Nat32";
+import Text "mo:base/Text";
 import Map "mo:stable-hash-map/Map/Map";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Const "Const";
 import Chunks "Chunks";
-import Splines "Splines";
+import Climate "Climate";
+import Tokens "Tokens";
+import TokenRegistry "TokenRegistry";
 
 module {
 
@@ -35,12 +37,13 @@ module {
       blockData = [];
       chunkStatus = [];
       changedBlocks = [];
+      tokenRegistry = TokenRegistry.GeneratedBlocks;
     });
     ECS.World.addComponent(ctx, entityId, "BlocksComponent", newBlocks);
     ECS.World.addComponent(ctx, entityId, "UpdateChunksComponent", #UpdateChunksComponent({}));
   };
 
-  func setChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat8]) : Components.BlocksComponent {
+  func setChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat16]) : Components.BlocksComponent {
     let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
     switch (index) {
       case (null) {
@@ -51,11 +54,12 @@ module {
           blockData = Array.append(blocksComponent.blockData, [blocks]);
           chunkStatus = Array.append(blocksComponent.chunkStatus, [0 : Nat8]);
           changedBlocks = Array.append(blocksComponent.changedBlocks, [[]]);
+          tokenRegistry = blocksComponent.tokenRegistry;
         };
       };
       case (?i) {
         // Update existing entry
-        var newBlockData = Array.thaw<[Nat8]>(blocksComponent.blockData);
+        var newBlockData = Array.thaw<[Nat16]>(blocksComponent.blockData);
         newBlockData[i] := blocks;
         {
           seed = blocksComponent.seed;
@@ -63,6 +67,7 @@ module {
           blockData = Array.freeze(newBlockData);
           chunkStatus = blocksComponent.chunkStatus;
           changedBlocks = blocksComponent.changedBlocks;
+          tokenRegistry = blocksComponent.tokenRegistry;
         };
       };
     };
@@ -77,7 +82,7 @@ module {
       };
       case (?i) {
         // Update existing entry
-        var newBlockData = Array.thaw<[Nat8]>(blocksComponent.blockData);
+        var newBlockData = Array.thaw<[Nat16]>(blocksComponent.blockData);
         newBlockData[i] := [];
         {
           seed = blocksComponent.seed;
@@ -85,6 +90,7 @@ module {
           blockData = Array.freeze(newBlockData);
           chunkStatus = blocksComponent.chunkStatus;
           changedBlocks = blocksComponent.changedBlocks;
+          tokenRegistry = blocksComponent.tokenRegistry;
         };
       };
     };
@@ -98,7 +104,7 @@ module {
     null;
   };
 
-  public func getBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : [Nat8] {
+  public func getBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : [Nat16] {
     // Retrieve the BlocksComponent
     let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
     if (Array.size(entityIds) < 1) {
@@ -116,7 +122,7 @@ module {
           case (?i) {
             // Get the original block data
             let originalBlocks = blocks.blockData[i];
-            let mutableBlocks = Array.thaw<Nat8>(originalBlocks);
+            let mutableBlocks = Array.thaw<Nat16>(originalBlocks);
 
             if (Array.size(blocks.changedBlocks) < 1 or Array.size(blocks.changedBlocks[i]) < 1) {
               return Array.freeze(mutableBlocks);
@@ -196,6 +202,7 @@ module {
               blockData = blocks.blockData;
               chunkStatus = Array.freeze(newChunkStatus);
               changedBlocks = blocks.changedBlocks;
+              tokenRegistry = blocks.tokenRegistry;
             });
             ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
           };
@@ -205,84 +212,6 @@ module {
         Debug.print("BlocksComponent not found");
       };
     };
-  };
-
-  public func initClimateSeed(seed : Nat64) : [NoiseTypes.DoublePerlinNoise] {
-    // Initialize noise layers
-    let xr = Random.xSetSeed(seed);
-
-    let xLow = Random.xNextNat64(xr);
-    let xHigh = Random.xNextNat64(xr);
-
-    let temperatureXr = {
-      var low = xLow ^ 0x5c7e6b29735f0d7f;
-      var high = xHigh ^ 0xf7d86f1bbc734988;
-    };
-    let temperatureAmps = [1.5, 0.0, 1.0, 0.0, 0.0, 0.0];
-    let temperature = Noise.xDoublePerlinInit(temperatureXr, temperatureAmps, -10, temperatureAmps.size(), -1);
-
-    let humidityXr = {
-      var low = xLow ^ 0x81bb4d22e8dc168e;
-      var high = xHigh ^ 0xf1c8b4bea16303cd;
-    };
-    let humidityAmps = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0];
-    let humidity = Noise.xDoublePerlinInit(humidityXr, humidityAmps, -8, humidityAmps.size(), -1);
-
-    let continentalnessXr = {
-      var low = xLow ^ 0x83886c9d0ae3a662;
-      var high = xHigh ^ 0xafa638a61b42e8ad;
-    };
-    let continentalnessAmps = [1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0];
-    let continentalness = Noise.xDoublePerlinInit(continentalnessXr, continentalnessAmps, -9, continentalnessAmps.size(), -1);
-
-    let erosionXr = {
-      var low = xLow ^ 0xd02491e6058f6fd8;
-      var high = xHigh ^ 0x4792512c94c17a80;
-    };
-    let erosionAmps = [1.0, 1.0, 0.0, 1.0, 1.0];
-    let erosion = Noise.xDoublePerlinInit(erosionXr, erosionAmps, -9, erosionAmps.size(), -1);
-
-    let peaksAndValleysXr = {
-      var low = xLow ^ 0x080518cf6af25384;
-      var high = xHigh ^ 0x3f3dfb40a54febd5;
-    };
-    let peaksAndValleysAmps = [1.0, 1.0, 1.0, 0.0];
-    let peaksAndValleys = Noise.xDoublePerlinInit(peaksAndValleysXr, peaksAndValleysAmps, -3, peaksAndValleysAmps.size(), -1);
-
-    let weirdnessXr = {
-      var low = xLow ^ 0xefc8ef4d36102b34;
-      var high = xHigh ^ 0x1beeeb324a0f24ea;
-    };
-    let weirdnessAmps = [1.0, 2.0, 1.0, 0.0, 0.0, 0.0];
-    let weirdness = Noise.xDoublePerlinInit(weirdnessXr, weirdnessAmps, -7, weirdnessAmps.size(), -1);
-
-    [
-      temperature,
-      humidity,
-      continentalness,
-      erosion,
-      peaksAndValleys,
-      weirdness,
-    ];
-  };
-
-  public func sampleClimateNoise(climate : [NoiseTypes.DoublePerlinNoise], climateType : Nat, x : Float, z : Float) : Float {
-    if (climateType == Const.Climate.PeaksAndValleys) {
-      let c = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Continentalness], x, 0.0, z);
-      let e = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Erosion], x, 0.0, z);
-      let w = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Weirdness], x, 0.0, z);
-      let newSamples = [c, e, -3.0 * (Float.abs(Float.abs(w) - 0.6666667) - 0.33333334), w];
-      let s = Splines.evaluateSpline(newSamples, Splines.initSpline());
-      let off = s + 0.015;
-
-      let y = 0 : Int64;
-      let d = 1.0 - Float.fromInt64(Int64.bitshiftLeft(y, 2)) / 128 - 83 / 160 + off;
-
-      return d;
-    };
-
-    let p = Noise.sampleDoublePerlinNoise(climate[climateType], x, 0.0, z);
-    return p;
   };
 
   // Function to generate and store blocks for a given chunk position
@@ -306,9 +235,9 @@ module {
 
         // Generate blocks if they don't exist
         let blockCount = Const.CHUNK_SIZE * Const.CHUNK_HEIGHT * Const.CHUNK_SIZE;
-        var newBlocks = Array.init<Nat8>(blockCount, 0 : Nat8); // Initialize all blocks to type 0
+        var newBlocks = Array.init<Nat16>(blockCount, 0 : Nat16); // Initialize all blocks to type 0
 
-        let climate = initClimateSeed(blocks.seed);
+        let climate = Climate.initClimateSeed(blocks.seed);
 
         // Generate blocks based on noise, optimizing by filling columns
         for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
@@ -318,9 +247,9 @@ module {
             let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
 
             // Sample noise from each map
-            let c = sampleClimateNoise(climate, Const.Climate.Continentalness, globalX, globalZ);
-            let e = sampleClimateNoise(climate, Const.Climate.Erosion, globalX, globalZ);
-            let d = sampleClimateNoise(climate, Const.Climate.PeaksAndValleys, globalX, globalZ);
+            let c = Climate.sampleClimateNoise(climate, Const.Climate.Continentalness, globalX, globalZ);
+            let e = Climate.sampleClimateNoise(climate, Const.Climate.Erosion, globalX, globalZ);
+            let d = Climate.sampleClimateNoise(climate, Const.Climate.PeaksAndValleys, globalX, globalZ);
 
             // Combine spline values to determine the final height
             let combinedHeight = (c + e + d) / 3.0;
@@ -396,7 +325,7 @@ module {
     };
   };
 
-  public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat8 {
+  public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat16 {
     let chunkPos = Chunks.getChunkPosition(position);
     Debug.print("Chunk position: " # debug_show (chunkPos));
 
@@ -423,12 +352,12 @@ module {
   };
 
   // Set the block type at a specific position within a chunk
-  public func setBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3, blockType : Nat8) {
+  public func setBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3, blockType : Nat16) {
     let chunkPos = Chunks.getChunkPosition(position);
     Debug.print("Chunk position: " # debug_show (chunkPos));
 
     let blocks = getBlocks(ctx, chunkPos);
-    let mutable = Array.thaw<Nat8>(blocks);
+    let mutable = Array.thaw<Nat16>(blocks);
 
     // Calculate local position within the chunk
     let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
@@ -462,7 +391,7 @@ module {
           case (null) {};
           case (?i) {
             // Convert changedBlocks to a TrieMap
-            let changedChunk = TrieMap.fromEntries<Nat, Nat8>(
+            let changedChunk = TrieMap.fromEntries<Nat, Nat16>(
               blocks.changedBlocks[i].vals(),
               Nat.equal,
               Map.nhash.0,
@@ -475,7 +404,7 @@ module {
             let newChangedChunk = Iter.toArray(changedChunk.entries());
 
             // Update the changedBlocks for the chunk
-            let newChangedBlocks = Array.thaw<[(Nat, Nat8)]>(blocks.changedBlocks);
+            let newChangedBlocks = Array.thaw<[(Nat, Nat16)]>(blocks.changedBlocks);
             newChangedBlocks[i] := newChangedChunk;
 
             let updatedBlocksComponent = {
@@ -484,6 +413,7 @@ module {
               blockData = blocks.blockData;
               chunkStatus = blocks.chunkStatus;
               changedBlocks = Array.freeze(newChangedBlocks);
+              tokenRegistry = blocks.tokenRegistry;
             };
 
             ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", #BlocksComponent(updatedBlocksComponent));
@@ -492,6 +422,121 @@ module {
       };
       case (_) {
         Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
+  public func getTokenByBlockType(ctx : ECS.Types.Context<Components.Component>, blockType : Nat16) : ?Tokens.Token {
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) < 1) {
+      Debug.print("BlocksComponent not found");
+      return null;
+    };
+
+    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
+    switch (blocksComponent) {
+      case (? #BlocksComponent(blocks)) {
+
+        let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+          blocks.tokenRegistry.vals(),
+          Nat16.equal,
+          func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
+        );
+
+        tokenRegistryMap.get(blockType);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        return null;
+      };
+    };
+  };
+
+  public func registerToken(ctx : ECS.Types.Context<Components.Component>, token : Tokens.Token, offset : Nat8) {
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) < 1) {
+      Debug.print("BlocksComponent not found");
+      return;
+    };
+
+    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
+    switch (blocksComponent) {
+      case (? #BlocksComponent(blocks)) {
+
+        // Check if the token CID is already registered
+        if (Option.isSome(getTypeByTokenCid(ctx, Principal.fromText(token.cid)))) {
+          Debug.print("Token CID already registered");
+          return;
+        };
+
+        let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+          blocks.tokenRegistry.vals(),
+          Nat16.equal,
+          func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
+        );
+
+        // Get the next highest available blockType over 1000
+        var blockType = Nat16.fromNat8(offset) * 1000 : Nat16;
+        label findHighest for (i in Iter.range(1000, 65535)) {
+          if (Option.isNull(tokenRegistryMap.get(Nat16.fromNat(i)))) {
+            blockType := Nat16.fromNat(i);
+            break findHighest;
+          };
+        };
+
+        // Add the token CID to the token registry
+        tokenRegistryMap.put(blockType, token);
+
+        // Convert the TrieMap back to an array of entries
+        let newTokenRegistry = Iter.toArray(tokenRegistryMap.entries());
+
+        let updatedBlocksComponent = {
+          seed = blocks.seed;
+          chunkPositions = blocks.chunkPositions;
+          blockData = blocks.blockData;
+          chunkStatus = blocks.chunkStatus;
+          changedBlocks = blocks.changedBlocks;
+          tokenRegistry = newTokenRegistry;
+        };
+
+        ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", #BlocksComponent(updatedBlocksComponent));
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
+  public func getTypeByTokenCid(ctx : ECS.Types.Context<Components.Component>, tokenCid : Principal) : ?Nat16 {
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) < 1) {
+      Debug.print("BlocksComponent not found");
+      return null;
+    };
+
+    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
+    switch (blocksComponent) {
+      case (? #BlocksComponent(blocks)) {
+        // Convert tokenRegistry to a TrieMap
+        let blockTypeFirst = Array.map<(Nat16, Tokens.Token), (Text, Nat16)>(
+          blocks.tokenRegistry,
+          func(blockType : Nat16, t : Tokens.Token) : (Text, Nat16) {
+            (t.cid, blockType);
+          },
+        );
+
+        let tokenRegistryMap = TrieMap.fromEntries<Text, Nat16>(
+          blockTypeFirst.vals(),
+          Text.equal,
+          Text.hash,
+        );
+
+        // Look up the block type by token CID
+        tokenRegistryMap.get(Principal.toText(tokenCid));
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        return null;
       };
     };
   };

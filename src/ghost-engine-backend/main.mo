@@ -2,7 +2,7 @@ import Debug "mo:base/Debug";
 import Timer "mo:base/Timer";
 import Time "mo:base/Time";
 import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
+import Nat16 "mo:base/Nat16";
 import Array "mo:base/Array";
 import Principal "mo:base/Principal";
 import Vector "mo:vector";
@@ -147,10 +147,10 @@ actor {
   };
 
   // Get block data for chunks
-  public shared query ({ caller }) func getChunks(chunkIds : [Vector3.Vector3]) : async [[Nat8]] {
+  public shared query ({ caller }) func getChunks(chunkIds : [Vector3.Vector3]) : async [[Nat16]] {
     assert (not Principal.isAnonymous(caller));
 
-    let results = Array.init<[Nat8]>(chunkIds.size(), []);
+    let results = Array.init<[Nat16]>(chunkIds.size(), []);
     var idx = 0;
     for (chunkId in chunkIds.vals()) {
       let blocks = if (Units.hasChunk(ctx, caller, chunkId)) {

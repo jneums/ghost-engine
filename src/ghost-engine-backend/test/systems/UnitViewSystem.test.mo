@@ -3,14 +3,11 @@ import { test; suite; expect } "mo:test/async";
 import ECS "mo:geecs";
 import Principal "mo:base/Principal";
 import Array "mo:base/Array";
-import Debug "mo:base/Debug";
 import Nat "mo:base/Nat";
-import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Components "../../components";
 import { UnitViewSystem } "../../systems/UnitViewSystem";
 import Utils "../Utils";
-import Vector3 "../../math/Vector3";
 
 suite(
   "Unit View System",

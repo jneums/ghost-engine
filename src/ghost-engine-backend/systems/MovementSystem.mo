@@ -16,7 +16,7 @@ module {
   };
 
   private func handleMovement(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, moveTarget : Components.MoveTargetComponent, transform : Components.TransformComponent, deltaTime : Time.Time) {
-    let defaultVelocity = 2.0;
+    let defaultVelocity = Const.UNIT_VELOCITY;
     let deltaTimeSeconds = Float.fromInt(deltaTime) / 1_000_000_000.0; // Assuming deltaTime is in nanoseconds
     let velocity = defaultVelocity * deltaTimeSeconds;
     let epsilon = 0.01; // Smaller threshold value for precision

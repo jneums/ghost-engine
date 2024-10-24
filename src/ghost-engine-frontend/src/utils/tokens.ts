@@ -1,13 +1,21 @@
 /**
- * Convert icp tothe  base unit used for processing ICP on the IC - e8s.
- * @param icp number
- * @returns icp in e8s
+ * Convert a value to the base unit used for processing, given the number of decimals.
+ * @param value number
+ * @param decimals number of decimal places
+ * @returns value in the smallest unit as a bigint
  */
-export const toE8s = (value: number) => value * 100_000_000;
+export const toBaseUnit = (value: number, decimals: number): bigint => {
+  const factor = 10 ** decimals;
+  return BigInt(Math.round(value * factor));
+};
 
 /**
- * Convert e8s back to icp
- * @param e8s bigint
- * @returns icp as a number
+ * Convert a value from the base unit back to the original unit, given the number of decimals.
+ * @param value bigint
+ * @param decimals number of decimal places
+ * @returns value as a number
  */
-export const fromE8s = (value: bigint) => Number(value) / 100_000_000;
+export const fromBaseUnit = (value: bigint, decimals: number): number => {
+  const factor = 10 ** decimals;
+  return Number(value) / factor;
+};

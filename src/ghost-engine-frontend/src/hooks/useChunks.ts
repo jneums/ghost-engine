@@ -15,7 +15,7 @@ export type FetchedChunk = {
   key: string;
   x: number;
   z: number;
-  data: Uint8Array | number[];
+  data: Uint16Array | number[];
   updatedAt: number;
 };
 

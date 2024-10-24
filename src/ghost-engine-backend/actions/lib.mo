@@ -6,7 +6,9 @@ import Connect "Connect";
 import Disconnect "Disconnect";
 import Attack "Attack";
 import Respawn "Respawn";
-import Redeem "Redeem";
+import ImportFungible "ImportFungible";
+import StakeFungible "StakeFungible";
+import UnstakeFungible "UnstakeFungible";
 import Mine "Mine";
 import PlaceBlock "PlaceBlock";
 import Components "../components";
@@ -26,7 +28,9 @@ module {
     #PlaceBlock : PlaceBlock.Args;
     #Attack : Attack.Args;
     #Respawn : Respawn.Args;
-    #Redeem : Redeem.Args;
+    #ImportFungible : ImportFungible.Args;
+    #StakeFungible : StakeFungible.Args;
+    #UnstakeFungible : UnstakeFungible.Args;
   };
 
   // Add action handler functions here
@@ -53,8 +57,14 @@ module {
       case (#Respawn(args)) {
         Respawn.Handler.handle(ctx, args);
       };
-      case (#Redeem(args)) {
-        Redeem.Handler.handle(ctx, args);
+      case (#ImportFungible(args)) {
+        ImportFungible.Handler.handle(ctx, args);
+      };
+      case (#StakeFungible(args)) {
+        StakeFungible.Handler.handle(ctx, args);
+      };
+      case (#UnstakeFungible(args)) {
+        UnstakeFungible.Handler.handle(ctx, args);
       };
       case (#Updates(_)) {
         Debug.print("These actions are sent to the clients...");

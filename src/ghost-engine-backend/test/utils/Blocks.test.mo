@@ -1,4 +1,4 @@
-import { test; suite; expect } "mo:test";
+import { test; suite } "mo:test";
 
 import ECS "mo:geecs";
 import Nat "mo:base/Nat";
@@ -16,9 +16,6 @@ suite(
       entityCounter;
     };
 
-    type Component = Components.Component;
-    // Initialize the required ECS data structures:
-
     // Initialize the required ECS data structures:
     let ctx : ECS.Types.Context<Components.Component> = Utils.createContext(nextEntityId);
 
@@ -27,9 +24,10 @@ suite(
     let blocksComponent = #BlocksComponent({
       seed = 0 : Nat64;
       chunkPositions = [{ x = 0.0; y = 0.0; z = 0.0 }, { x = 1.0; y = 0.0; z = 0.0 }];
-      blockData = [[] : [Nat8], [] : [Nat8]];
+      blockData = [[] : [Nat16], [] : [Nat16]];
       chunkStatus = [0 : Nat8, 0 : Nat8];
       changedBlocks = [];
+      tokenRegistry = [];
     });
     ECS.World.addComponent(ctx, entityId, "BlocksComponent", blocksComponent);
 

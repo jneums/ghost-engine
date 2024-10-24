@@ -7,18 +7,22 @@ import World "mo:geecs/World";
 
 module {
   public type Args = {
-    to : Principal;
     entityId : Nat;
+    to : Principal;
+    token : Principal;
+    amount : Nat;
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nBegin redeeming tokens: " # Principal.toText(args.to));
-    let redeem = #RedeemTokensComponent({
+    Debug.print("\nBegin unstaking tokens: " # Principal.toText(args.to));
+    let unstakeFungible = #UnstakeFungibleComponent({
       to = args.to;
+      tokenCid = args.token;
+      amount = args.amount;
       startAt = Time.now();
       duration = 0;
     });
-    World.addComponent(ctx, args.entityId, "RedeemTokensComponent", redeem);
+    World.addComponent(ctx, args.entityId, "UnstakeFungibleComponent", unstakeFungible);
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {

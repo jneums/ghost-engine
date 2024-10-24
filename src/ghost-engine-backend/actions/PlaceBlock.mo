@@ -9,7 +9,7 @@ module {
   public type Args = {
     entityId : Nat;
     position : Vector3.Vector3;
-    blockType : Nat8;
+    tokenCid : Principal;
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
@@ -17,8 +17,8 @@ module {
     let placeBlock = #PlaceBlockComponent({
       position = args.position;
       startAt = Time.now();
-      speed = 1.0;
-      blockType = args.blockType;
+      speed = 0.0;
+      tokenCid = args.tokenCid;
     });
     World.addComponent(ctx, args.entityId, "PlaceBlockComponent", placeBlock);
   };

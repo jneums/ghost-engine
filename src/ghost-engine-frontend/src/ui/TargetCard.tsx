@@ -1,6 +1,7 @@
 import {
   HealthComponent,
   NameableComponent,
+  PrincipalComponent,
   TargetComponent,
 } from '../ecs/components';
 import { useWorld } from '../context/WorldProvider';
@@ -38,5 +39,15 @@ export default function TargetCard() {
     ? Math.round(Number((health.amount / health.max) * 100))
     : 0;
 
-  return <EntityCard name={name} hitpoints={hitpoints} top={0} right={0} />;
+  const principal = targetEntity.getComponent(PrincipalComponent);
+
+  return (
+    <EntityCard
+      name={name}
+      principal={principal.principal}
+      hitpoints={hitpoints}
+      top={0}
+      right={0}
+    />
+  );
 }

@@ -18,6 +18,9 @@ module {
   public let MINING_RADIUS = 5.0;
   public let PLACEMENT_RADIUS = 5.0;
 
+  // Unit
+  public let UNIT_VELOCITY = 3.0;
+
   // Define the Land type as a variant to represent different terrain types
   public let Land = {
     Continentalness = 0;
@@ -54,8 +57,8 @@ module {
   };
 
   public let BlockType = {
-    Air = 0 : Nat8;
-    Stone = 1 : Nat8;
-    Water = 2 : Nat8;
+    Air = 0 : Nat16;
+    Stone = 1 : Nat16;
+    Water = 2 : Nat16;
   };
 };

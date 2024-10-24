@@ -65,18 +65,24 @@ export class MiningComponent {
 }
 
 export class PlaceBlockComponent {
-  constructor(public position: THREE.Vector3, public blockType: number) {}
+  constructor(public position: THREE.Vector3, public tokenCid: Principal) {}
+}
+
+export class ImportFungibleComponent {
+  constructor(public tokenCid: Principal, public to: Principal) {}
+}
+
+export interface FungibleToken {
+  cid: Principal;
+  symbol: string;
+  amount: bigint;
+  logo: string;
+  name: string;
+  decimals: number;
 }
 
 export class FungibleComponent {
-  constructor(
-    public tokens: {
-      cid: Principal;
-      symbol: string;
-      amount: bigint;
-      blockType: number;
-    }[],
-  ) {}
+  constructor(public tokens: FungibleToken[]) {}
 }
 
 export class ResourceComponent {
@@ -87,11 +93,23 @@ export class RespawnComponent {
   constructor(public duration: number, public deathTime: number) {}
 }
 
-export class RedeemTokensComponent {
+export class UnstakeFungibleComponent {
   constructor(
     public startAt: number,
     public duration: number,
-    public to: Principal,
+    public from: Principal,
+    public tokenCid: Principal,
+    public amount: number,
+  ) {}
+}
+
+export class StakeFungibleComponent {
+  constructor(
+    public startAt: number,
+    public duration: number,
+    public from: Principal,
+    public tokenCid: Principal,
+    public amount: number,
   ) {}
 }
 
@@ -127,7 +145,7 @@ export class UnitChunksComponent {
 export class BlocksComponent {
   constructor(
     public seed: number,
-    public blockData: (Uint8Array | number[])[],
+    public blockData: (Uint16Array | number[])[],
     public chunkPositions: THREE.Vector3[],
   ) {}
 }
@@ -142,123 +160,166 @@ export class UpdateBlocksComponent {
 
 export function createComponentClass(data: Component) {
   return match(data)
-    .with({ PrincipalComponent: P.select() }, ({ principal }) => {
-      return new PrincipalComponent(principal);
-    })
-    .with({ NameableComponent: P.select() }, ({ name }) => {
-      return new NameableComponent(name);
-    })
-    .with({ HealthComponent: P.select() }, ({ amount, max }) => {
-      return new HealthComponent(Number(amount), Number(max));
-    })
-    .with({ MoveTargetComponent: P.select() }, ({ waypoints }) => {
-      return new MoveTargetComponent(
-        waypoints.map(
-          (waypoint) => new THREE.Vector3(waypoint.x, waypoint.y, waypoint.z),
+    .with(
+      { PrincipalComponent: P.select() },
+      ({ principal }) => new PrincipalComponent(principal),
+    )
+    .with(
+      { NameableComponent: P.select() },
+      ({ name }) => new NameableComponent(name),
+    )
+    .with(
+      { HealthComponent: P.select() },
+      ({ amount, max }) => new HealthComponent(Number(amount), Number(max)),
+    )
+    .with(
+      { MoveTargetComponent: P.select() },
+      ({ waypoints }) =>
+        new MoveTargetComponent(
+          waypoints.map(
+            (waypoint) => new THREE.Vector3(waypoint.x, waypoint.y, waypoint.z),
+          ),
         ),
-      );
-    })
-    .with({ VelocityComponent: P.select() }, ({ x, y, z }) => {
-      return new VelocityComponent(new THREE.Vector3(x, y, z));
-    })
+    )
+    .with(
+      { VelocityComponent: P.select() },
+      ({ x, y, z }) => new VelocityComponent(new THREE.Vector3(x, y, z)),
+    )
     .with(
       { TransformComponent: P.select() },
-      ({ position, rotation, scale }) => {
-        return new TransformComponent(
+      ({ position, rotation, scale }) =>
+        new TransformComponent(
           new THREE.Vector3(position.x, position.y, position.z),
           new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
           new THREE.Vector3(scale.x, scale.y, scale.z),
-        );
-      },
+        ),
     )
-    .with({ ConnectComponent: P.select() }, () => {
-      return new ConnectComponent();
-    })
-    .with({ DisconnectComponent: P.select() }, ({ startAt, duration }) => {
-      return new DisconnectComponent(Number(startAt), Number(duration));
-    })
-    .with({ SessionComponent: P.select() }, ({ lastAction }) => {
-      return new SessionComponent(Number(lastAction));
-    })
+    .with({ ConnectComponent: P.select() }, () => new ConnectComponent())
+    .with(
+      { DisconnectComponent: P.select() },
+      ({ startAt, duration }) =>
+        new DisconnectComponent(Number(startAt), Number(duration)),
+    )
+    .with(
+      { SessionComponent: P.select() },
+      ({ lastAction }) => new SessionComponent(Number(lastAction)),
+    )
     .with(
       { CombatComponent: P.select() },
-      ({ targetEntityId, speed, range, startAt }) => {
-        return new CombatComponent(
+      ({ targetEntityId, speed, range, startAt }) =>
+        new CombatComponent(
           Number(targetEntityId),
           Number(speed),
           Number(range),
           Number(startAt),
-        );
-      },
+        ),
     )
-    .with({ MiningComponent: P.select() }, ({ position, speed, startAt }) => {
-      return new MiningComponent(
-        new THREE.Vector3(position.x, position.y, position.z),
-        Number(speed),
-        Number(startAt),
-      );
-    })
-    .with({ FungibleComponent: P.select() }, ({ tokens }) => {
-      return new FungibleComponent(
-        tokens.map((token) => ({
-          cid: Principal.fromText(token.cid),
-          symbol: token.symbol,
-          amount: BigInt(token.amount),
-          blockType: Number(token.blockType),
-        })),
-      );
-    })
-    .with({ ResourceComponent: P.select() }, ({ resourceType }) => {
-      return new ResourceComponent(resourceType);
-    })
-    .with({ RespawnComponent: P.select() }, ({ duration, deathTime }) => {
-      return new RespawnComponent(Number(duration), Number(deathTime));
-    })
-    .with({ DamageComponent: P.select() }, ({ sourceEntityId, amount }) => {
-      return new DamageComponent(Number(sourceEntityId), Number(amount));
-    })
     .with(
-      { RedeemTokensComponent: P.select() },
-      ({ startAt, duration, to }) => {
-        return new RedeemTokensComponent(Number(startAt), Number(duration), to);
-      },
+      { MiningComponent: P.select() },
+      ({ position, speed, startAt }) =>
+        new MiningComponent(
+          new THREE.Vector3(position.x, position.y, position.z),
+          Number(speed),
+          Number(startAt),
+        ),
     )
-    .with({ UnitViewComponent: P.select() }, ({ viewRadius }) => {
-      return new UnitViewComponent(Number(viewRadius));
-    })
-    .with({ UpdateUnitChunksComponent: P.select() }, () => {
-      return new UpdateUnitChunksComponent();
-    })
-    .with({ UnitChunksComponent: P.select() }, ({ chunks }) => {
-      return new UnitChunksComponent(
-        chunks.map(({ chunkId, updatedAt }) => ({
-          chunkId: new THREE.Vector3(chunkId.x, chunkId.y, chunkId.z),
-          updatedAt: Number(updatedAt / 1_000_000n), // Correct conversion to milliseconds
-        })),
-      );
-    })
+    .with(
+      { FungibleComponent: P.select() },
+      ({ tokens }) =>
+        new FungibleComponent(
+          tokens.map((token) => ({
+            cid: Principal.fromText(token.cid),
+            symbol: token.symbol,
+            amount: token.amount,
+            logo: token.logo,
+            name: token.name,
+            decimals: Number(token.decimals),
+          })),
+        ),
+    )
+    .with(
+      { ResourceComponent: P.select() },
+      ({ resourceType }) => new ResourceComponent(resourceType),
+    )
+    .with(
+      { RespawnComponent: P.select() },
+      ({ duration, deathTime }) =>
+        new RespawnComponent(Number(duration), Number(deathTime)),
+    )
+    .with(
+      { DamageComponent: P.select() },
+      ({ sourceEntityId, amount }) =>
+        new DamageComponent(Number(sourceEntityId), Number(amount)),
+    )
+    .with(
+      { StakeFungibleComponent: P.select() },
+      ({ startAt, duration, from, tokenCid, amount }) =>
+        new StakeFungibleComponent(
+          Number(startAt),
+          Number(duration),
+          from,
+          tokenCid,
+          Number(amount),
+        ),
+    )
+    .with(
+      { UnstakeFungibleComponent: P.select() },
+      ({ startAt, duration, to, tokenCid, amount }) =>
+        new UnstakeFungibleComponent(
+          Number(startAt),
+          Number(duration),
+          to,
+          tokenCid,
+          Number(amount),
+        ),
+    )
+    .with(
+      { UnitViewComponent: P.select() },
+      ({ viewRadius }) => new UnitViewComponent(Number(viewRadius)),
+    )
+    .with(
+      { UpdateUnitChunksComponent: P.select() },
+      () => new UpdateUnitChunksComponent(),
+    )
+    .with(
+      { UnitChunksComponent: P.select() },
+      ({ chunks }) =>
+        new UnitChunksComponent(
+          chunks.map(({ chunkId, updatedAt }) => ({
+            chunkId: new THREE.Vector3(chunkId.x, chunkId.y, chunkId.z),
+            updatedAt: Number(updatedAt / 1_000_000n), // Correct conversion to milliseconds
+          })),
+        ),
+    )
     .with(
       { BlocksComponent: P.select() },
-      ({ seed, blockData, chunkPositions }) => {
-        return new BlocksComponent(
+      ({ seed, blockData, chunkPositions }) =>
+        new BlocksComponent(
           Number(seed),
           blockData,
           chunkPositions.map((c) => new THREE.Vector3(c.x, c.y, c.z)),
-        );
-      },
+        ),
     )
-    .with({ UpdateBlocksComponent: P.select() }, () => {
-      return new UpdateBlocksComponent();
-    })
-    .with({ UpdateChunksComponent: P.select() }, () => {
-      return new UpdateChunksComponent();
-    })
-    .with({ PlaceBlockComponent: P.select() }, ({ position, blockType }) => {
-      return new PlaceBlockComponent(
-        new THREE.Vector3(position.x, position.y, position.z),
-        Number(blockType),
-      );
-    })
+    .with(
+      { UpdateBlocksComponent: P.select() },
+      () => new UpdateBlocksComponent(),
+    )
+    .with(
+      { UpdateChunksComponent: P.select() },
+      () => new UpdateChunksComponent(),
+    )
+    .with(
+      { PlaceBlockComponent: P.select() },
+      ({ position, tokenCid }) =>
+        new PlaceBlockComponent(
+          new THREE.Vector3(position.x, position.y, position.z),
+          tokenCid,
+        ),
+    )
+    .with(
+      { ImportFungibleComponent: P.select() },
+      ({ tokenCid, to }) => new ImportFungibleComponent(tokenCid, to),
+    )
 
     .exhaustive();
 }
@@ -279,7 +340,9 @@ export const ComponentConstructors: Record<string, Function> = {
   MiningComponent: MiningComponent,
   PlaceBlockComponent: PlaceBlockComponent,
   HealthComponent: HealthComponent,
-  RedeemTokensComponent: RedeemTokensComponent,
+  ImportFungibleComponent: ImportFungibleComponent,
+  StakeFungibleComponent: StakeFungibleComponent,
+  UnstakeFungibleComponent: UnstakeFungibleComponent,
   UnitChunksComponent: UnitChunksComponent,
   UpdateUnitChunksComponent: UpdateUnitChunksComponent,
   UnitViewComponent: UnitViewComponent,

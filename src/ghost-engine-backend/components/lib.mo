@@ -1,10 +1,12 @@
 import Vector3 "../math/Vector3";
 import Time "mo:base/Time";
-import Nat8 "mo:base/Nat8";
+import Nat16 "mo:base/Nat16";
 import Quaternion "../math/Quaternion";
 import Tokens "../utils/Tokens";
 
 module {
+  public type BlockType = Nat16;
+
   // Define new component data types here...
   public type PrincipalComponent = {
     principal : Principal;
@@ -73,7 +75,7 @@ module {
 
   public type PlaceBlockComponent = {
     position : Vector3.Vector3;
-    blockType : Nat8;
+    tokenCid : Principal;
     startAt : Time.Time;
     speed : Float;
   };
@@ -86,23 +88,39 @@ module {
     resourceType : Text;
   };
 
-  public type RedeemTokensComponent = {
+  public type ImportFungibleComponent = {
+    to : Principal;
+    tokenCid : Principal;
+  };
+
+  public type StakeFungibleComponent = {
+    startAt : Time.Time;
+    duration : Time.Time;
+    from : Principal;
+    tokenCid : Principal;
+    amount : Nat;
+  };
+
+  public type UnstakeFungibleComponent = {
     startAt : Time.Time;
     duration : Time.Time;
     to : Principal;
+    tokenCid : Principal;
+    amount : Nat;
   };
 
   public type BlocksComponent = {
     seed : Nat64; // Seed for generating terrain
     chunkPositions : [Vector3.Vector3]; // Array of chunk positions
-    blockData : [[Nat8]]; // Array of block data corresponding to each chunk position
+    blockData : [[BlockType]]; // Array of block data corresponding to each chunk position
     chunkStatus : [Nat8]; // Array of status corresponding to each chunk position
-    changedBlocks : [[(Nat, Nat8)]] // List of block changes (index, value)
+    changedBlocks : [[(Nat, BlockType)]]; // List of block changes (index, value)
+    tokenRegistry : [(Nat16, Tokens.Token)]; // Block types associated tokens
   };
 
   public type UpdateChunksComponent = {};
 
-  public type BlockUpdate = (Vector3.Vector3, Nat8); // position, value
+  public type BlockUpdate = (Vector3.Vector3, Nat16); // position, value
 
   public type UpdateBlocksComponent = {
     blocks : [BlockUpdate];
@@ -114,7 +132,7 @@ module {
   };
 
   public type UnitChunksComponent = {
-    chunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }]; // List of chunk positions
+    chunks : [UnitsChunk]; // List of chunk positions
   };
 
   public type UnitViewComponent = {
@@ -139,7 +157,9 @@ module {
     #PlaceBlockComponent : PlaceBlockComponent;
     #DamageComponent : DamageComponent;
     #RespawnComponent : RespawnComponent;
-    #RedeemTokensComponent : RedeemTokensComponent;
+    #ImportFungibleComponent : ImportFungibleComponent;
+    #UnstakeFungibleComponent : UnstakeFungibleComponent;
+    #StakeFungibleComponent : StakeFungibleComponent;
     #UnitChunksComponent : UnitChunksComponent;
     #UnitViewComponent : UnitViewComponent;
     #UpdateUnitChunksComponent : UpdateChunksComponent;

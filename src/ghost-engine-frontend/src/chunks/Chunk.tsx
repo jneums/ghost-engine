@@ -5,6 +5,7 @@ import { ThreeEvent } from '@react-three/fiber';
 import { useWorld } from '../context/WorldProvider';
 import {
   ClientTransformComponent,
+  FungibleComponent,
   HealthComponent,
   MiningComponent,
   MoveTargetComponent,
@@ -15,6 +16,7 @@ import { useErrorMessage } from '../context/ErrorProvider';
 import { findNodeByPosition, findPath, Node } from '../pathfinding';
 import { DRAG_THRESHOLD } from '../const/controls';
 import { BlockType, MINING_RADIUS, VERTEX_COLORS } from '../const/blocks';
+import { toBaseUnit } from '../utils/tokens';
 
 const FACES = [
   {
@@ -81,7 +83,7 @@ export default function Chunk({
 }: {
   x: number;
   z: number;
-  data: Uint8Array | number[];
+  data: Uint16Array | number[];
   createGrid: (
     start: THREE.Vector3,
     target: THREE.Vector3,
@@ -160,8 +162,18 @@ export default function Chunk({
         setMinedVoxelIndex(index);
         mine(unitEntityId, targetPosition);
       } else {
+        // Make sure the unit has the block to place
+        const fungible = unitEntity.getComponent(FungibleComponent);
+        const token = fungible?.tokens.find(
+          (t) => t.cid.toText() === voxelId.toText(),
+        );
+        if (!token || token.amount < toBaseUnit(1, token.decimals)) {
+          setErrorMessage('You do not have enough blocks to place!');
+          return;
+        }
         // Place the block
         if (data[index] !== BlockType.Air) {
+          console.log('Block: ', data[index]);
           setErrorMessage('Block already exists here!');
           return;
         }
@@ -261,7 +273,7 @@ export default function Chunk({
                     colors.push(1, 0, 0); // Red color for mined voxel
                   } else {
                     const block = voxel as BlockType;
-                    const color = VERTEX_COLORS[block];
+                    const color = VERTEX_COLORS[block] || [1, 0, 1];
                     colors.push(...color); // Use color with opacity
                   }
                 }

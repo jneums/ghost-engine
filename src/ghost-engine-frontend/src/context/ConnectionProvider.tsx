@@ -20,7 +20,7 @@ interface ConnectionState {
   getChunks: (
     identity: Identity,
     chunkIds: { x: number; z: number }[],
-  ) => Promise<(Uint8Array | number[])[]>;
+  ) => Promise<(Uint16Array | number[])[]>;
 }
 
 const useConnectionStore = create<ConnectionState>((set, get) => {
@@ -125,7 +125,7 @@ const useConnectionStore = create<ConnectionState>((set, get) => {
         console.log('Error fetching updates:', error);
         disconnect(identity);
       }
-    }, 1000);
+    }, 500);
   };
 
   const send = async (identity: Identity, message: Action) => {

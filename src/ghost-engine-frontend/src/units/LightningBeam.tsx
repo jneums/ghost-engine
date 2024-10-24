@@ -11,22 +11,22 @@ const LightningBeam: React.FC<LightningBeamProps> = ({
   start,
   getEndPosition,
 }) => {
-  const lineRef = useRef<THREE.Line>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {
     const end = getEndPosition();
-    if (end && lineRef.current) {
+    if (end && meshRef.current) {
       const points = generateLightningPath(start, end);
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      lineRef.current.geometry = geometry;
+      const path = new THREE.CatmullRomCurve3(points);
+      const geometry = new THREE.TubeGeometry(path, 20, 0.02, 8);
+      meshRef.current.geometry = geometry;
     }
   });
 
   return (
-    <line ref={lineRef as any}>
-      <bufferGeometry />
-      <lineBasicMaterial color="red" linewidth={8} />
-    </line>
+    <mesh ref={meshRef}>
+      <meshBasicMaterial color="red" />
+    </mesh>
   );
 };
 

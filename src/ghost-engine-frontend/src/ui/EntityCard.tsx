@@ -1,14 +1,18 @@
 import * as THREE from 'three';
 import { Card, LinearProgress, Stack, StackProps, Typography } from '@mui/joy';
 import NoTextSelect from './NoTextSelect';
+import { Principal } from '@dfinity/principal';
+import CopyId from './CopyId';
 
 export default function EntityCard({
   name,
+  principal,
   hitpoints,
   coords,
   ...stackProps
 }: {
   name: string;
+  principal: Principal;
   hitpoints: number;
   coords?: THREE.Vector3;
 } & StackProps) {
@@ -30,7 +34,7 @@ export default function EntityCard({
             <Stack justifyContent="space-between" gap={1} width="100%">
               <Stack direction="row" justifyContent="space-between">
                 <Typography
-                  level="body-xs"
+                  level="body-sm"
                   sx={{
                     // clamp to 1 line
                     display: '-webkit-box',
@@ -48,6 +52,21 @@ export default function EntityCard({
                       .map((n) => n.toFixed(0))
                       .join(', ')})`}
                 </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between" gap={0.5}>
+                <Typography
+                  level="body-xs"
+                  sx={{
+                    // clamp to 1 line
+                    display: '-webkit-box',
+                    WebkitBoxOrient: 'vertical',
+                    WebkitLineClamp: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                  {principal.toText()}
+                </Typography>
+                <CopyId id={principal.toText()} />
               </Stack>
               <LinearProgress
                 determinate

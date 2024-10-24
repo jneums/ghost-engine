@@ -5,19 +5,21 @@ import { useConnection } from './ConnectionProvider';
 import { match, P } from 'ts-pattern';
 import { Component, Entity, EntityId } from '../ecs/entity';
 import { ComponentConstructors, createComponentClass } from '../ecs/components';
+import { useNavigate } from 'react-router-dom';
+import { Principal } from '@dfinity/principal';
 
 // Define the Zustand store
 interface WorldState {
   entities: Map<EntityId, Entity>;
   unitEntityId: EntityId | undefined;
-  activeBlock: number | null;
+  activeBlock: Principal | null;
   getEntity: (entityId: EntityId) => Entity;
   addComponent: (entityId: EntityId, component: Component) => void;
   removeComponent: (entityId: EntityId, componentClass: Function) => void;
   getEntities: () => EntityId[];
   getEntitiesByArchetype: (componentClasses: Function[]) => EntityId[];
   setUnitEntityId: (entityId: EntityId) => void;
-  setActiveBlock: (blockType: number | null) => void;
+  setActiveBlock: (blockType: Principal | null) => void;
 }
 
 const useWorldStore = create<WorldState>((set, get) => ({
@@ -73,8 +75,8 @@ const useWorldStore = create<WorldState>((set, get) => ({
   setUnitEntityId: (entityId: EntityId) => {
     set({ unitEntityId: entityId });
   },
-  setActiveBlock: (blockType: number | null) => {
-    set({ activeBlock: blockType });
+  setActiveBlock: (tokenCid: Principal | null) => {
+    set({ activeBlock: tokenCid });
   },
 }));
 
@@ -84,6 +86,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
   const { identity } = useInternetIdentity();
   const { updates, disconnect } = useConnection();
   const { addComponent, removeComponent, setUnitEntityId } = useWorldStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!identity) {
@@ -116,6 +119,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
               Number(action.entityId) === useWorldStore.getState().unitEntityId
             ) {
               disconnect(identity);
+              navigate('/');
             }
           });
         })

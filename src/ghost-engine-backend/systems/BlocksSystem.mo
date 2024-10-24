@@ -7,12 +7,7 @@ import Vector "mo:vector";
 import Chunks "../utils/Chunks";
 
 module {
-  // Define a component for updating blocks
-  public type UpdateBlocksComponent = {
-    blocks : [Components.BlockUpdate];
-  };
-
-  func getUnitHasChunk(unitChunks : [{ chunkId : Vector3.Vector3; updatedAt : Time.Time }], chunkId : Vector3.Vector3) : Bool {
+  func getUnitHasChunk(unitChunks : [Components.UnitsChunk], chunkId : Vector3.Vector3) : Bool {
     for (unitChunk in unitChunks.vals()) {
       if (Vector3.equal(unitChunk.chunkId, chunkId)) {
         return true;

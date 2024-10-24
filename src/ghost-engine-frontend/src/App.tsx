@@ -15,19 +15,19 @@ export default function App() {
         loginOptions={{
           maxTimeToLive: 1_000_000_000n * 60n * 60n * 24n * 7n * 30n,
         }}>
-        <WorldProvider>
-          <DialogProvider>
-            <ErrorMessageProvider>
-              <Router>
+        <Router>
+          <WorldProvider>
+            <DialogProvider>
+              <ErrorMessageProvider>
                 <Routes>
                   <Route path="/" element={<Menu />} />
                   <Route path="/game" element={<Game />} />
                   <Route path="*" element={<h1>404</h1>} />
                 </Routes>
-              </Router>
-            </ErrorMessageProvider>
-          </DialogProvider>
-        </WorldProvider>
+              </ErrorMessageProvider>
+            </DialogProvider>
+          </WorldProvider>
+        </Router>
       </InternetIdentityProvider>
     </CssVarsProvider>
   );

@@ -1,22 +1,23 @@
 import T "Types";
 import Components "../components";
 import Debug "mo:base/Debug";
+import Principal "mo:base/Principal";
 import World "mo:geecs/World";
-import Vector3 "../math/Vector3";
 
 module {
   public type Args = {
     entityId : Nat;
-    waypoints : [Vector3.Vector3];
+    to : Principal;
+    token : Principal;
   };
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
-    Debug.print("\nMove entity: " # debug_show (args.entityId) # " to " # debug_show (args.waypoints));
-
-    let moveTarget = #MoveTargetComponent({
-      waypoints = args.waypoints;
+    Debug.print("\nImporting fungible token: " # Principal.toText(args.token));
+    let importFungible = #ImportFungibleComponent({
+      to = args.to;
+      tokenCid = args.token;
     });
-    World.addComponent(ctx, args.entityId, "MoveTargetComponent", moveTarget);
+    World.addComponent(ctx, args.entityId, "ImportFungibleComponent", importFungible);
   };
 
   public let Handler : T.ActionHandler<T.Context<Components.Component>, Args> = {
