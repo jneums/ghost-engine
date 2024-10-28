@@ -52,7 +52,7 @@ export default function useChunks() {
 
           if (data.length > 0) {
             const chunkData = data.map((chunk, idx) => ({
-              key: JSON.stringify(chunkIds[idx]),
+              key: `chunk-${chunkIds[idx].x}-${chunkIds[idx].z}`,
               x: chunkIds[idx].x,
               z: chunkIds[idx].z,
               data: chunk,

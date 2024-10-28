@@ -8,7 +8,7 @@ import ImportToken from './ImportToken';
 import TokenList from './TokenList';
 
 export default function Wallet() {
-  const { unitEntityId, getEntity } = useWorld();
+  const { unitEntityId, getEntity, tokenRegistry } = useWorld();
   const { identity } = useInternetIdentity();
   const { closeDialog } = useDialog();
 

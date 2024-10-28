@@ -43,11 +43,11 @@ module {
     };
 
     // Extract metadata fields
-    let logo = Option.get(getTextValue("icrc1:logo"), "none");
-    let name = Option.get(getTextValue("icrc1:name"), "Token");
-    let symbol = Option.get(getTextValue("icrc1:symbol"), "---");
-    let decimals = Option.get(getNatValue("icrc1:decimals"), 8);
-    let fee = Option.get(getNatValue("icrc1:fee"), 10_000);
+    let logo = Option.get(getTextValue("icrc1:logo"), "");
+    let name = Option.get(getTextValue("icrc1:name"), "");
+    let symbol = Option.get(getTextValue("icrc1:symbol"), "");
+    let decimals = Option.get(getNatValue("icrc1:decimals"), 0);
+    let fee = Option.get(getNatValue("icrc1:fee"), 0);
 
     // Return the parsed metadata
     {

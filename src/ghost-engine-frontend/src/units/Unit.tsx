@@ -149,7 +149,6 @@ export default function Unit({
 
     const handleTouchStart = (event: TouchEvent) => {
       if (event.touches.length === 1) {
-        event.preventDefault(); // Prevent default touch behavior
         setIsDragging(true);
         setLastTouch({
           x: event.touches[0].clientX,
@@ -376,14 +375,16 @@ export default function Unit({
         receiveShadow>
         <boxGeometry args={[UNIT_WIDTH, UNIT_HEIGHT, UNIT_WIDTH]} />
         <meshPhongMaterial color={color} />
-        <spotLight
-          ref={spotlightRef}
-          position={[0, 0.5 * UNIT_HEIGHT, 0.6 * UNIT_WIDTH]} // Slightly in front of the unit
-          angle={Math.PI / 2}
-          penumbra={0.2}
-          intensity={1}
-          castShadow
-        />
+        {isUserControlled && (
+          <spotLight
+            ref={spotlightRef}
+            position={[0, 0.5 * UNIT_HEIGHT, 0.6 * UNIT_WIDTH]} // Slightly in front of the unit
+            angle={Math.PI / 2}
+            penumbra={0.2}
+            intensity={1}
+            castShadow
+          />
+        )}
       </mesh>
       {(combatTargetId || mining) && (
         <LightningBeam

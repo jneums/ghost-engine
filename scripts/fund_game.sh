@@ -6,8 +6,8 @@ CANISTER_ID_GHOST_ENGINE_BACKEND=$(grep CANISTER_ID_GHOST_ENGINE_BACKEND .env.lo
 # Export the CANISTER_ID_GHOST_ENGINE_BACKEND variable
 export CANISTER_ID_GHOST_ENGINE_BACKEND
 
-# Call the icrc1_transfer method on the icrc1_ledger_canister canister
-dfx canister call icrc1_ledger_canister icrc1_transfer "(record {
+# Call the icrc1_transfer method on the stone_ledger_canister canister
+dfx canister call stone_ledger_canister icrc1_transfer "(record {
   to = record {
     owner = principal \"${CANISTER_ID_GHOST_ENGINE_BACKEND}\";
   };  

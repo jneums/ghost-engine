@@ -3,6 +3,7 @@ import Time "mo:base/Time";
 import Nat16 "mo:base/Nat16";
 import Quaternion "../math/Quaternion";
 import Tokens "../utils/Tokens";
+import TokenRegistry "../utils/TokenRegistry";
 
 module {
   public type BlockType = Nat16;
@@ -109,13 +110,15 @@ module {
     amount : Nat;
   };
 
+  public type TokenRegistry = [(Nat16, Tokens.Token)];
+
   public type BlocksComponent = {
     seed : Nat64; // Seed for generating terrain
     chunkPositions : [Vector3.Vector3]; // Array of chunk positions
     blockData : [[BlockType]]; // Array of block data corresponding to each chunk position
     chunkStatus : [Nat8]; // Array of status corresponding to each chunk position
     changedBlocks : [[(Nat, BlockType)]]; // List of block changes (index, value)
-    tokenRegistry : [(Nat16, Tokens.Token)]; // Block types associated tokens
+    tokenRegistry : TokenRegistry; // Block types associated tokens
   };
 
   public type UpdateChunksComponent = {};

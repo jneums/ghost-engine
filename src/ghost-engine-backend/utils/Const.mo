@@ -12,7 +12,7 @@ module {
   public let DEFAULT_VIEW_RADIUS = 64.0;
 
   // Environment
-  public let SEA_LEVEL = 72;
+  public let SEA_LEVEL = 48;
 
   // Mining
   public let MINING_RADIUS = 5.0;
@@ -50,9 +50,9 @@ module {
       w = 0.0;
     };
     position = {
-      x = -20.0;
-      y = 77.0;
-      z = 149.0;
+      x = -178.0;
+      y = 50.0;
+      z = 162.0;
     };
   };
 

@@ -1,9 +1,8 @@
 import { IcrcLedgerCanister } from '@dfinity/ledger-icrc';
 import { createAgent } from '@dfinity/utils';
-import { fromE8s } from '../utils/tokens';
 import { Identity } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { Value } from '../declarations/icrc1_ledger_canister/icrc1_ledger_canister.did';
+import { Value } from '../declarations/stone_ledger_canister/stone_ledger_canister.did';
 import { match, P } from 'ts-pattern';
 
 const host = import.meta.env.VITE_IC_URL;

@@ -92,7 +92,8 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
                 const airWithSolidUnderneath =
                   aboveBlockValue === BlockType.Air &&
                   currentBlockValue === BlockType.Air &&
-                  belowBlockValue === BlockType.Stone;
+                  belowBlockValue !== BlockType.Air &&
+                  belowBlockValue !== BlockType.Water;
                 const waterWithSolidUnderneath =
                   aboveBlockValue === BlockType.Air &&
                   currentBlockValue === BlockType.Water &&

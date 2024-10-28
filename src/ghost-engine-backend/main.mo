@@ -124,7 +124,7 @@ actor {
           };
         };
 
-        let updates = Updates.filterUpdatesForClient(currentState);
+        let updates = Updates.filterUpdatesForClient(currentState, exists);
         Vector.toArray(updates);
       };
       case (null) { return [] };
@@ -139,7 +139,7 @@ actor {
         let entities = Entities.filterByRange(ctx, exists);
         let filtered = Updates.filterByEntities(ctx.updatedComponents, entities);
         let recent = Updates.filterByTimestamp(filtered, since);
-        let updates = Updates.filterUpdatesForClient(recent);
+        let updates = Updates.filterUpdatesForClient(recent, exists);
         Vector.toArray(updates);
       };
       case (null) { return [] };
@@ -163,6 +163,13 @@ actor {
     };
 
     Array.freeze(results);
+  };
+
+  // Get token registry
+  public shared query ({ caller }) func getTokenRegistry() : async Components.TokenRegistry {
+    assert (not Principal.isAnonymous(caller));
+
+    Blocks.getTokenRegistry(ctx);
   };
 
   // Mutations

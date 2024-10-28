@@ -66,22 +66,30 @@ module {
           };
         };
 
+        // Flag to track if a chunk has been processed
+        var chunkProcessed = false;
+
         // Update chunk statuses based on active chunks
-        for (chunkStatus in Map.vals(chunks)) {
+        label processChunk for (chunkStatus in Map.vals(chunks)) {
+
           if (chunkStatus.isActive) {
             // Generate blocks if they don't exist
             if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) == 0) {
-              Blocks.generateBlocks(ctx, chunkStatus.position);
-            };
-          } else {
-            // Delete blocks for this chunk
-            if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) > 0) {
-              Blocks.deleteBlocks(ctx, chunkStatus.position);
+              if (not chunkProcessed) {
+
+                Blocks.generateBlocks(ctx, chunkStatus.position);
+                chunkProcessed := true;
+              };
             };
           };
         };
 
-        ECS.World.removeComponent(ctx, entityId, "UpdateChunksComponent");
+        Debug.print("\nChunks managed");
+
+        // Remove the UpdateChunksComponent only if no more chunks need processing
+        if (not chunkProcessed) {
+          ECS.World.removeComponent(ctx, entityId, "UpdateChunksComponent");
+        };
       };
       case (_) {};
     };

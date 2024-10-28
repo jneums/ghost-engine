@@ -24,26 +24,237 @@ import TokenRegistry "TokenRegistry";
 module {
 
   public func initialize(ctx : ECS.Types.Context<Components.Component>) {
-    let blocks = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(blocks) > 0) {
+    if (hasBlocksComponent(ctx)) {
       Debug.print("Blocks already initialized");
       return;
     };
     let entityId = ECS.World.addEntity(ctx);
+    let newBlocks = createBlocksComponent();
+    ECS.World.addComponent(ctx, entityId, "BlocksComponent", #BlocksComponent(newBlocks));
+    ECS.World.addComponent(ctx, entityId, "UpdateChunksComponent", #UpdateChunksComponent({}));
+  };
 
-    let newBlocks = #BlocksComponent({
+  public func getEntityId(ctx : ECS.Types.Context<Components.Component>) : ?ECS.Types.EntityId {
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) > 0) {
+      return ?entityIds[0];
+    };
+    null;
+  };
+
+  public func getBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : [Nat16] {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        getBlocksForChunk(blocks, chunkPos);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        [];
+      };
+    };
+  };
+
+  public func deleteBlocks(ctx : ECS.Types.Context<Components.Component>, blockPos : Vector3.Vector3) {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        if (Array.size(getBlocks(ctx, blockPos)) == 0) {
+          Debug.print("Blocks already deleted for this chunk position");
+          return;
+        };
+        let updatedBlocks = clearChunk(blocks, blockPos);
+        updateBlocksComponent(ctx, updatedBlocks);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
+  public func setStatus(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3, status : Nat8) : () {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        updateChunkStatus(ctx, blocks, chunkPos, status);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
+  public func generateBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : () {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        if (Array.size(getBlocks(ctx, chunkPos)) > 0) {
+          Debug.print("Blocks already generated for this chunk position");
+          return;
+        };
+        let newBlocks = generateChunkBlocks(blocks, chunkPos);
+        let updatedBlocks = setChunkBlocks(blocks, chunkPos, newBlocks);
+        updateBlocksComponent(ctx, updatedBlocks);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
+  public func getHighestSolidBlockY(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Float {
+    let chunkPos = Chunks.getChunkPosition(position);
+    let blocks = getBlocks(ctx, chunkPos);
+    findHighestSolidBlockY(blocks, position);
+  };
+
+  public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat16 {
+    let chunkPos = Chunks.getChunkPosition(position);
+    let blocks = getBlocks(ctx, chunkPos);
+    getBlockTypeAtPosition(blocks, position);
+  };
+
+  public func setBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3, blockType : Nat16) {
+    let chunkPos = Chunks.getChunkPosition(position);
+    let blocks = getBlocks(ctx, chunkPos);
+    let mutable = Array.thaw<Nat16>(blocks);
+    let index = calculateBlockIndex(position);
+    if (index >= 0 and Float.toInt(index) < mutable.size()) {
+      mutable[Int.abs(Float.toInt(index))] := blockType;
+    } else {
+      Debug.print("Index out of bounds: " # debug_show (index));
+      return;
+    };
+    updateChangedBlocks(ctx, chunkPos, index, blockType);
+  };
+
+  public func getTokenByBlockType(ctx : ECS.Types.Context<Components.Component>, blockType : Nat16) : ?Tokens.Token {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        getTokenFromRegistry(blocks.tokenRegistry, blockType);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        return null;
+      };
+    };
+  };
+
+  public func registerToken(ctx : ECS.Types.Context<Components.Component>, token : Tokens.Token, offset : Nat8) {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        if (Option.isSome(getTypeByTokenCid(ctx, Principal.fromText(token.cid)))) {
+          Debug.print("Token CID already registered");
+          return;
+        };
+        let blockType = findAvailableBlockType(blocks.tokenRegistry, offset);
+        let newTokenRegistry = registerTokenInRegistry(blocks.tokenRegistry, blockType, token);
+        updateBlocksComponent(ctx, { blocks with tokenRegistry = newTokenRegistry });
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
+  public func getTypeByTokenCid(ctx : ECS.Types.Context<Components.Component>, tokenCid : Principal) : ?Nat16 {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        getBlockTypeByTokenCid(blocks.tokenRegistry, tokenCid);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        return null;
+      };
+    };
+  };
+
+  private func hasBlocksComponent(ctx : ECS.Types.Context<Components.Component>) : Bool {
+    let blocks = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    Array.size(blocks) > 0;
+  };
+
+  private func createBlocksComponent() : Components.BlocksComponent {
+    {
       seed = 0 : Nat64;
       chunkPositions = [];
       blockData = [];
       chunkStatus = [];
       changedBlocks = [];
       tokenRegistry = TokenRegistry.GeneratedBlocks;
-    });
-    ECS.World.addComponent(ctx, entityId, "BlocksComponent", newBlocks);
-    ECS.World.addComponent(ctx, entityId, "UpdateChunksComponent", #UpdateChunksComponent({}));
+    };
   };
 
-  func setChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat16]) : Components.BlocksComponent {
+  private func getBlocksComponent(ctx : ECS.Types.Context<Components.Component>) : ?Components.BlocksComponent {
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) < 1) {
+      return null;
+    };
+    switch (ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent")) {
+      case (? #BlocksComponent(blocksComponent)) {
+        ?blocksComponent;
+      };
+      case (_) {
+        null;
+      };
+    };
+  };
+
+  private func getBlocksForChunk(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : [Nat16] {
+    let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
+    switch (index) {
+      case (null) { [] };
+      case (?i) {
+        let originalBlocks = blocksComponent.blockData[i];
+        let mutableBlocks = Array.thaw<Nat16>(originalBlocks);
+        if (Array.size(blocksComponent.changedBlocks) < 1 or Array.size(blocksComponent.changedBlocks[i]) < 1) {
+          return Array.freeze(mutableBlocks);
+        };
+        for ((blockIndex, newBlockType) in blocksComponent.changedBlocks[i].vals()) {
+          if (blockIndex >= 0 and blockIndex < mutableBlocks.size()) {
+            mutableBlocks[blockIndex] := newBlockType;
+          };
+        };
+        Array.freeze(mutableBlocks);
+      };
+    };
+  };
+
+  private func clearChunk(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : Components.BlocksComponent {
+    let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
+    switch (index) {
+      case (null) { blocksComponent };
+      case (?i) {
+        var newBlockData = Array.thaw<[Nat16]>(blocksComponent.blockData);
+        newBlockData[i] := [];
+        { blocksComponent with blockData = Array.freeze(newBlockData) };
+      };
+    };
+  };
+
+  private func updateBlocksComponent(ctx : ECS.Types.Context<Components.Component>, updatedBlocks : Components.BlocksComponent) {
+    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
+    if (Array.size(entityIds) < 1) {
+      Debug.print("BlocksComponent not found");
+      return;
+    };
+    ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", #BlocksComponent(updatedBlocks));
+  };
+
+  private func updateChunkStatus(ctx : ECS.Types.Context<Components.Component>, blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, status : Nat8) {
+    let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
+    switch (index) {
+      case (null) {
+        Debug.print("Chunk position not found");
+      };
+      case (?i) {
+        var newChunkStatus = Array.thaw<Nat8>(blocksComponent.chunkStatus);
+        newChunkStatus[i] := status;
+        let updatedBlocksComponent = {
+          blocksComponent with chunkStatus = Array.freeze(newChunkStatus)
+        };
+        updateBlocksComponent(ctx, updatedBlocksComponent);
+      };
+    };
+  };
+
+  private func setChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat16]) : Components.BlocksComponent {
     let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
     switch (index) {
       case (null) {
@@ -73,251 +284,62 @@ module {
     };
   };
 
-  func clearChunk(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : Components.BlocksComponent {
-    let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
-    switch (index) {
-      case (null) {
-        // Ignore if not exists
-        blocksComponent;
-      };
-      case (?i) {
-        // Update existing entry
-        var newBlockData = Array.thaw<[Nat16]>(blocksComponent.blockData);
-        newBlockData[i] := [];
-        {
-          seed = blocksComponent.seed;
-          chunkPositions = blocksComponent.chunkPositions;
-          blockData = Array.freeze(newBlockData);
-          chunkStatus = blocksComponent.chunkStatus;
-          changedBlocks = blocksComponent.changedBlocks;
-          tokenRegistry = blocksComponent.tokenRegistry;
-        };
-      };
-    };
-  };
+  private func generateChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : [Nat16] {
+    let blockCount = Const.CHUNK_SIZE * Const.CHUNK_HEIGHT * Const.CHUNK_SIZE;
+    var newBlocks = Array.init<Nat16>(blockCount, 0 : Nat16);
+    let climate = Climate.initClimateSeed(blocksComponent.seed);
+    let baseOffset = Float.fromInt(64);
 
-  public func getEntityId(ctx : ECS.Types.Context<Components.Component>) : ?ECS.Types.EntityId {
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) > 0) {
-      return ?entityIds[0];
-    };
-    null;
-  };
+    Debug.print("Generating blocks for chunk at position: " # debug_show (chunkPos));
+    for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
+      let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
+      for (x in Iter.range(0, Const.CHUNK_SIZE - 1)) {
+        let globalX = Float.fromInt(x + Float.toInt(chunkPos.x) * Const.CHUNK_SIZE);
 
-  public func getBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : [Nat16] {
-    // Retrieve the BlocksComponent
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return [];
-    };
+        // Sample 2D noise for continentalness and erosion
+        let continentalness = Climate.sampleClimateNoise(climate, Const.Climate.Continentalness, globalX, 0, globalZ);
+        let erosion = Climate.sampleClimateNoise(climate, Const.Climate.Erosion, globalX, 0, globalZ);
 
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-        // Find the blocks for the given chunk position
-        let index = Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
-        switch (index) {
-          case (null) { [] };
-          case (?i) {
-            // Get the original block data
-            let originalBlocks = blocks.blockData[i];
-            let mutableBlocks = Array.thaw<Nat16>(originalBlocks);
+        for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
+          let globalY = Float.fromInt(y);
 
-            if (Array.size(blocks.changedBlocks) < 1 or Array.size(blocks.changedBlocks[i]) < 1) {
-              return Array.freeze(mutableBlocks);
-            };
+          // Sample 3D noise for peaks and valleys
+          let peaksAndValleys = Climate.sampleClimateNoise(climate, Const.Climate.PeaksAndValleys, globalX, globalY, globalZ);
 
-            // Apply changes from changedBlocks
-            for ((blockIndex, newBlockType) in blocks.changedBlocks[i].vals()) {
-              if (blockIndex >= 0 and blockIndex < mutableBlocks.size()) {
-                mutableBlocks[blockIndex] := newBlockType;
-              };
-            };
+          // Calculate height offset using peaks and valleys
+          let heightOffset = erosion * (Float.fromInt(Const.CHUNK_HEIGHT) - baseOffset) + peaksAndValleys * (Float.fromInt(Const.CHUNK_HEIGHT) - baseOffset);
 
-            Array.freeze(mutableBlocks);
+          // Calculate squish factor inversely related to continentalness
+          let squishFactor = continentalness;
+
+          // Calculate height bias
+          let heightBias = baseOffset + heightOffset * squishFactor;
+          let finalDensity = heightBias - globalY;
+
+          let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE + z * Const.CHUNK_SIZE + x;
+          if (finalDensity > 0) {
+            newBlocks[index] := 1; // Solid block
+          } else if (y <= Const.SEA_LEVEL) {
+            newBlocks[index] := 2; // Water block
           };
         };
       };
-      case (_) {
-        Debug.print("BlocksComponent not found");
-        [];
-      };
     };
+
+    Debug.print("Blocks generated for chunk at position: " # debug_show (chunkPos));
+    Array.freeze(newBlocks);
   };
 
-  public func deleteBlocks(ctx : ECS.Types.Context<Components.Component>, blockPos : Vector3.Vector3) {
-    // Retrieve the BlocksComponent
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return;
-    };
-
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-        // Check if blocks for this chunk position already exist
-        if (Array.size(getBlocks(ctx, blockPos)) == 0) {
-          Debug.print("Blocks already deleted for this chunk position");
-          return; // Exit early if blocks already exist
-        };
-        // Store the blocks in the BlocksComponent
-        let updatedBlocks = clearChunk(blocks, blockPos);
-        let updatedBlocksComponent = #BlocksComponent(updatedBlocks);
-        ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
-      };
-      case (_) {
-        Debug.print("BlocksComponent not found");
-      };
-    };
-  };
-
-  public func setStatus(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3, status : Nat8) : () {
-    // Retrieve the BlocksComponent
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return;
-    };
-
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-        // Find the index of the chunk position
-        let index = Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
-        switch (index) {
-          case (null) {
-            Debug.print("Chunk position not found");
-          };
-          case (?i) {
-            // Update the status for the existing chunk position
-            var newChunkStatus = Array.thaw<Nat8>(blocks.chunkStatus);
-            newChunkStatus[i] := status;
-            let updatedBlocksComponent = #BlocksComponent({
-              seed = blocks.seed;
-              chunkPositions = blocks.chunkPositions;
-              blockData = blocks.blockData;
-              chunkStatus = Array.freeze(newChunkStatus);
-              changedBlocks = blocks.changedBlocks;
-              tokenRegistry = blocks.tokenRegistry;
-            });
-            ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
-          };
-        };
-      };
-      case (_) {
-        Debug.print("BlocksComponent not found");
-      };
-    };
-  };
-
-  // Function to generate and store blocks for a given chunk position
-  public func generateBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : () {
-    // Retrieve the BlocksComponent
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return;
-    };
-
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-        // Check if blocks for this chunk position already exist
-        if (Array.size(getBlocks(ctx, chunkPos)) > 0) {
-          Debug.print("Blocks already generated for this chunk position");
-          return; // Exit early if blocks already exist
-        };
-
-        // Generate blocks if they don't exist
-        let blockCount = Const.CHUNK_SIZE * Const.CHUNK_HEIGHT * Const.CHUNK_SIZE;
-        var newBlocks = Array.init<Nat16>(blockCount, 0 : Nat16); // Initialize all blocks to type 0
-
-        let climate = Climate.initClimateSeed(blocks.seed);
-
-        // Generate blocks based on noise, optimizing by filling columns
-        for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
-          for (x in Iter.range(0, Const.CHUNK_SIZE - 1)) {
-            // Calculate global x and z positions
-            let globalX = Float.fromInt(x + Float.toInt(chunkPos.x) * Const.CHUNK_SIZE);
-            let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
-
-            // Sample noise from each map
-            let c = Climate.sampleClimateNoise(climate, Const.Climate.Continentalness, globalX, globalZ);
-            let e = Climate.sampleClimateNoise(climate, Const.Climate.Erosion, globalX, globalZ);
-            let d = Climate.sampleClimateNoise(climate, Const.Climate.PeaksAndValleys, globalX, globalZ);
-
-            // Combine spline values to determine the final height
-            let combinedHeight = (c + e + d) / 3.0;
-
-            // Map and floor the combined spline value
-            let mappedSplineValue = map(0.0, 128, -1.0, 1.0, combinedHeight);
-            let height = Const.CHUNK_HEIGHT - 128 : Nat + fastFloor(mappedSplineValue);
-
-            // Fill blocks from the terrain height downwards
-            for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
-              let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE +
-              z * Const.CHUNK_SIZE +
-              x;
-
-              if (y <= height) {
-                newBlocks[index] := 1;
-              } else if (y <= Const.SEA_LEVEL) {
-                newBlocks[index] := 2;
-              };
-            };
-          };
-        };
-
-        // Store the blocks in the BlocksComponent
-        let updatedBlocks = setChunkBlocks(blocks, chunkPos, Array.freeze(newBlocks));
-        let updatedBlocksComponent = #BlocksComponent(updatedBlocks);
-        ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", updatedBlocksComponent);
-      };
-      case (_) {
-        Debug.print("BlocksComponent not found");
-      };
-    };
-  };
-
-  // Helper function to map noise values
-  func map(min : Float, max : Float, omin : Float, omax : Float, value : Float) : Float {
-    return min + (max - min) * ((value - omin) / (omax - omin));
-  };
-
-  // Helper function to floor a float value
-  func fastFloor(f : Float) : Int {
-    return if (f >= 0.0) Float.toInt(f) else Float.toInt(f) - 1;
-  };
-
-  // Function to get the highest solid block y-value at a given position
-  public func getHighestSolidBlockY(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Float {
-    // Convert the position to a chunk position key
-    let chunkPos = Chunks.getChunkPosition(position);
-
-    // Retrieve the block data for the chunk
-    let blocks = getBlocks(ctx, chunkPos);
-
-    // Determine the x and z indices within the chunk
+  private func findHighestSolidBlockY(blocks : [Nat16], position : Vector3.Vector3) : Float {
     let xIndex = Float.toInt(position.x) % Const.CHUNK_SIZE;
     let zIndex = Float.toInt(position.z) % Const.CHUNK_SIZE;
-
-    // Initialize the highest y-value
-    var highestY = -1; // Start with -1 to indicate no solid block found
-
-    // Iterate over the y-values in the chunk
+    var highestY = -1;
     for (y in Iter.range(0, Const.CHUNK_HEIGHT)) {
       let index = xIndex + zIndex * Const.CHUNK_SIZE + y * Const.CHUNK_SIZE * Const.CHUNK_SIZE;
       if (index < Array.size(blocks) and blocks[Int.abs(index)] != 0) {
         highestY := y;
       };
     };
-
-    // Return the highest y-value as a float, or 0 if no solid block is found
     if (highestY == -1) {
       0.0;
     } else {
@@ -325,98 +347,45 @@ module {
     };
   };
 
-  public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat16 {
-    let chunkPos = Chunks.getChunkPosition(position);
-    Debug.print("Chunk position: " # debug_show (chunkPos));
-
-    let blocks = getBlocks(ctx, chunkPos);
-
-    // Calculate local position within the chunk
+  private func getBlockTypeAtPosition(blocks : [Nat16], position : Vector3.Vector3) : Nat16 {
     let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
     let localY = position.y;
     let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
-
-    // Calculate the index within the blocks array
     let index = localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
-    Debug.print("Block index: " # debug_show (index));
-
-    // Ensure the index is within bounds
     if (index >= 0 and Float.toInt(index) < Array.size(blocks)) {
-      let blockType = blocks[Int.abs(Float.toInt(index))];
-      Debug.print("Block type: " # debug_show (blockType));
-      return blockType;
+      blocks[Int.abs(Float.toInt(index))];
     } else {
-      Debug.print("Index out of bounds: " # debug_show (index));
-      return 0; // Return a default value or handle the error as needed
+      0;
     };
   };
 
-  // Set the block type at a specific position within a chunk
-  public func setBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3, blockType : Nat16) {
-    let chunkPos = Chunks.getChunkPosition(position);
-    Debug.print("Chunk position: " # debug_show (chunkPos));
-
-    let blocks = getBlocks(ctx, chunkPos);
-    let mutable = Array.thaw<Nat16>(blocks);
-
-    // Calculate local position within the chunk
+  private func calculateBlockIndex(position : Vector3.Vector3) : Float {
     let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
     let localY = position.y;
     let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
+    localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
+  };
 
-    // Calculate the index within the blocks array
-    let index = localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
-    Debug.print("Block index: " # debug_show (index));
-
-    // Ensure the index is within bounds
-    if (index >= 0 and Float.toInt(index) < mutable.size()) {
-      mutable[Int.abs(Float.toInt(index))] := blockType;
-    } else {
-      Debug.print("Index out of bounds: " # debug_show (index));
-      return;
-    };
-
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return;
-    };
-
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-        // Find the blocks for the given chunk position
+  private func updateChangedBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3, index : Float, blockType : Nat16) {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
         let chunkIdx = Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
         switch (chunkIdx) {
           case (null) {};
           case (?i) {
-            // Convert changedBlocks to a TrieMap
             let changedChunk = TrieMap.fromEntries<Nat, Nat16>(
               blocks.changedBlocks[i].vals(),
               Nat.equal,
               Map.nhash.0,
             );
-
-            // Insert or update the blockIndex with the new blockType
             changedChunk.put(Int.abs(Float.toInt(index)), blockType);
-
-            // Convert the TrieMap back to an array of entries
             let newChangedChunk = Iter.toArray(changedChunk.entries());
-
-            // Update the changedBlocks for the chunk
             let newChangedBlocks = Array.thaw<[(Nat, Nat16)]>(blocks.changedBlocks);
             newChangedBlocks[i] := newChangedChunk;
-
             let updatedBlocksComponent = {
-              seed = blocks.seed;
-              chunkPositions = blocks.chunkPositions;
-              blockData = blocks.blockData;
-              chunkStatus = blocks.chunkStatus;
-              changedBlocks = Array.freeze(newChangedBlocks);
-              tokenRegistry = blocks.tokenRegistry;
+              blocks with changedBlocks = Array.freeze(newChangedBlocks)
             };
-
-            ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", #BlocksComponent(updatedBlocksComponent));
+            updateBlocksComponent(ctx, updatedBlocksComponent);
           };
         };
       };
@@ -426,117 +395,64 @@ module {
     };
   };
 
-  public func getTokenByBlockType(ctx : ECS.Types.Context<Components.Component>, blockType : Nat16) : ?Tokens.Token {
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return null;
-    };
-
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-
-        let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
-          blocks.tokenRegistry.vals(),
-          Nat16.equal,
-          func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
-        );
-
-        tokenRegistryMap.get(blockType);
-      };
-      case (_) {
-        Debug.print("BlocksComponent not found");
-        return null;
-      };
-    };
+  private func getTokenFromRegistry(tokenRegistry : [(Nat16, Tokens.Token)], blockType : Nat16) : ?Tokens.Token {
+    let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+      tokenRegistry.vals(),
+      Nat16.equal,
+      func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
+    );
+    tokenRegistryMap.get(blockType);
   };
 
-  public func registerToken(ctx : ECS.Types.Context<Components.Component>, token : Tokens.Token, offset : Nat8) {
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return;
-    };
-
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-
-        // Check if the token CID is already registered
-        if (Option.isSome(getTypeByTokenCid(ctx, Principal.fromText(token.cid)))) {
-          Debug.print("Token CID already registered");
-          return;
-        };
-
-        let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
-          blocks.tokenRegistry.vals(),
-          Nat16.equal,
-          func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
-        );
-
-        // Get the next highest available blockType over 1000
-        var blockType = Nat16.fromNat8(offset) * 1000 : Nat16;
-        label findHighest for (i in Iter.range(1000, 65535)) {
-          if (Option.isNull(tokenRegistryMap.get(Nat16.fromNat(i)))) {
-            blockType := Nat16.fromNat(i);
-            break findHighest;
-          };
-        };
-
-        // Add the token CID to the token registry
-        tokenRegistryMap.put(blockType, token);
-
-        // Convert the TrieMap back to an array of entries
-        let newTokenRegistry = Iter.toArray(tokenRegistryMap.entries());
-
-        let updatedBlocksComponent = {
-          seed = blocks.seed;
-          chunkPositions = blocks.chunkPositions;
-          blockData = blocks.blockData;
-          chunkStatus = blocks.chunkStatus;
-          changedBlocks = blocks.changedBlocks;
-          tokenRegistry = newTokenRegistry;
-        };
-
-        ECS.World.addComponent(ctx, entityIds[0], "BlocksComponent", #BlocksComponent(updatedBlocksComponent));
-      };
-      case (_) {
-        Debug.print("BlocksComponent not found");
+  private func findAvailableBlockType(tokenRegistry : [(Nat16, Tokens.Token)], offset : Nat8) : Nat16 {
+    var blockType = Nat16.fromNat8(offset) * 1000 : Nat16;
+    let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+      tokenRegistry.vals(),
+      Nat16.equal,
+      func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
+    );
+    label findHighest for (i in Iter.range(1000, 65535)) {
+      if (Option.isNull(tokenRegistryMap.get(Nat16.fromNat(i)))) {
+        blockType := Nat16.fromNat(i);
+        break findHighest;
       };
     };
+    blockType;
   };
 
-  public func getTypeByTokenCid(ctx : ECS.Types.Context<Components.Component>, tokenCid : Principal) : ?Nat16 {
-    let entityIds = ECS.World.getEntitiesByArchetype(ctx, ["BlocksComponent"]);
-    if (Array.size(entityIds) < 1) {
-      Debug.print("BlocksComponent not found");
-      return null;
-    };
+  private func registerTokenInRegistry(tokenRegistry : [(Nat16, Tokens.Token)], blockType : Nat16, token : Tokens.Token) : [(Nat16, Tokens.Token)] {
+    let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+      tokenRegistry.vals(),
+      Nat16.equal,
+      func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
+    );
+    tokenRegistryMap.put(blockType, token);
+    Iter.toArray(tokenRegistryMap.entries());
+  };
 
-    let blocksComponent = ECS.World.getComponent(ctx, entityIds[0], "BlocksComponent");
-    switch (blocksComponent) {
-      case (? #BlocksComponent(blocks)) {
-        // Convert tokenRegistry to a TrieMap
-        let blockTypeFirst = Array.map<(Nat16, Tokens.Token), (Text, Nat16)>(
-          blocks.tokenRegistry,
-          func(blockType : Nat16, t : Tokens.Token) : (Text, Nat16) {
-            (t.cid, blockType);
-          },
-        );
+  private func getBlockTypeByTokenCid(tokenRegistry : [(Nat16, Tokens.Token)], tokenCid : Principal) : ?Nat16 {
+    let blockTypeFirst = Array.map<(Nat16, Tokens.Token), (Text, Nat16)>(
+      tokenRegistry,
+      func(blockType : Nat16, t : Tokens.Token) : (Text, Nat16) {
+        (t.cid, blockType);
+      },
+    );
+    let tokenRegistryMap = TrieMap.fromEntries<Text, Nat16>(
+      blockTypeFirst.vals(),
+      Text.equal,
+      Text.hash,
+    );
+    tokenRegistryMap.get(Principal.toText(tokenCid));
+  };
 
-        let tokenRegistryMap = TrieMap.fromEntries<Text, Nat16>(
-          blockTypeFirst.vals(),
-          Text.equal,
-          Text.hash,
-        );
-
-        // Look up the block type by token CID
-        tokenRegistryMap.get(Principal.toText(tokenCid));
+  public func getTokenRegistry(ctx : ECS.Types.Context<Components.Component>) : Components.TokenRegistry {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        blocks.tokenRegistry;
       };
       case (_) {
         Debug.print("BlocksComponent not found");
-        return null;
+        TokenRegistry.GeneratedBlocks;
       };
     };
   };

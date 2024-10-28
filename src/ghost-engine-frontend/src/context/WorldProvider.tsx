@@ -5,14 +5,16 @@ import { useConnection } from './ConnectionProvider';
 import { match, P } from 'ts-pattern';
 import { Component, Entity, EntityId } from '../ecs/entity';
 import { ComponentConstructors, createComponentClass } from '../ecs/components';
-import { useNavigate } from 'react-router-dom';
 import { Principal } from '@dfinity/principal';
+import { TokenRegistry } from '../declarations/ghost-engine-backend/ghost-engine-backend.did';
+import { getTokenRegistry } from '../api/game';
 
 // Define the Zustand store
 interface WorldState {
   entities: Map<EntityId, Entity>;
   unitEntityId: EntityId | undefined;
   activeBlock: Principal | null;
+  tokenRegistry: TokenRegistry | undefined;
   getEntity: (entityId: EntityId) => Entity;
   addComponent: (entityId: EntityId, component: Component) => void;
   removeComponent: (entityId: EntityId, componentClass: Function) => void;
@@ -20,12 +22,14 @@ interface WorldState {
   getEntitiesByArchetype: (componentClasses: Function[]) => EntityId[];
   setUnitEntityId: (entityId: EntityId) => void;
   setActiveBlock: (blockType: Principal | null) => void;
+  setTokenRegistry: (tokenRegistry: TokenRegistry) => void;
 }
 
 const useWorldStore = create<WorldState>((set, get) => ({
   entities: new Map(),
   unitEntityId: undefined,
   activeBlock: null,
+  tokenRegistry: undefined,
   getEntity: (entityId: EntityId) => {
     const { entities } = get();
     if (!entities.has(entityId)) {
@@ -78,15 +82,35 @@ const useWorldStore = create<WorldState>((set, get) => ({
   setActiveBlock: (tokenCid: Principal | null) => {
     set({ activeBlock: tokenCid });
   },
+  setTokenRegistry: (tokenRegistry: TokenRegistry) => {
+    set({ tokenRegistry });
+  },
 }));
 
 export const useWorld = () => useWorldStore();
 
 export const WorldProvider = ({ children }: { children: ReactNode }) => {
-  const { identity } = useInternetIdentity();
+  const { clear, identity } = useInternetIdentity();
   const { updates, disconnect } = useConnection();
-  const { addComponent, removeComponent, setUnitEntityId } = useWorldStore();
-  const navigate = useNavigate();
+  const {
+    addComponent,
+    removeComponent,
+    setUnitEntityId,
+    tokenRegistry,
+    setTokenRegistry,
+  } = useWorldStore();
+
+  useEffect(() => {
+    if (!identity) {
+      return;
+    }
+
+    if (!tokenRegistry) {
+      getTokenRegistry(identity).then((tokenRegistry) => {
+        setTokenRegistry(tokenRegistry);
+      });
+    }
+  }, [identity, tokenRegistry, setTokenRegistry]);
 
   useEffect(() => {
     if (!identity) {
@@ -119,7 +143,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
               Number(action.entityId) === useWorldStore.getState().unitEntityId
             ) {
               disconnect(identity);
-              navigate('/');
+              clear();
             }
           });
         })
@@ -134,6 +158,7 @@ export const WorldProvider = ({ children }: { children: ReactNode }) => {
     removeComponent,
     disconnect,
     setUnitEntityId,
+    tokenRegistry,
   ]);
 
   return <>{children}</>;

@@ -37,7 +37,7 @@ export default function TokenList({ tokens }: { tokens: FungibleToken[] }) {
         <Accordion key={token.cid.toText()}>
           <AccordionSummary sx={{ py: 1 }}>
             <Stack direction="row" gap={1.5}>
-              <Avatar src={token.logo} sx={{ borderRadius: 'md' }}>
+              <Avatar src={token.logo} sx={{ borderRadius: 'sm' }}>
                 {token.symbol.slice(0, 1)}
               </Avatar>
               <Stack>

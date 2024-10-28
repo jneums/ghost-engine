@@ -5,7 +5,10 @@
   "ghost-engine-frontend": {
     "ic": "yjprz-siaaa-aaaai-qpkaq-cai"
   },
-  "icrc1_ledger_canister": {
+  "meme_token": {
+    "ic": "6tzm6-miaaa-aaaai-q3lha-cai"
+  },
+  "stone_ledger_canister": {
     "ic": "5hs4f-vqaaa-aaaai-qpk4a-cai"
   }
 }

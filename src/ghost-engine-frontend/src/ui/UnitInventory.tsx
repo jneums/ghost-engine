@@ -5,6 +5,7 @@ import {
   Typography,
   Box,
   AspectRatio,
+  CardCover,
 } from '@mui/joy';
 import { Send, Settings } from '@mui/icons-material';
 import { useDialog } from '../context/DialogProvider';
@@ -19,7 +20,13 @@ import { Principal } from '@dfinity/principal';
 import { fromBaseUnit } from '../utils/tokens';
 
 export default function UnitInventory() {
-  const { unitEntityId, getEntity, activeBlock, setActiveBlock } = useWorld();
+  const {
+    unitEntityId,
+    getEntity,
+    activeBlock,
+    setActiveBlock,
+    tokenRegistry,
+  } = useWorld();
   const { identity } = useInternetIdentity();
   const { openDialog } = useDialog();
   const [isLoading, setIsLoading] = React.useState(false);
@@ -62,7 +69,6 @@ export default function UnitInventory() {
       <Stack
         direction="row"
         sx={{
-          opacity: 0.8,
           overflowX: 'auto',
           gap: 1,
           p: 1,
@@ -74,22 +80,56 @@ export default function UnitInventory() {
             variant={
               activeBlock?.toText() === token.cid.toText() ? 'solid' : 'soft'
             }
-            color="primary"
+            color="success"
             invertedColors={activeBlock?.toText() === token.cid.toText()}
             size="sm"
-            sx={{ p: 0, '&:hover': { cursor: 'pointer' } }}>
+            sx={{ p: 0.5, '&:hover': { cursor: 'pointer' } }}>
             <NoTextSelect>
               <AspectRatio ratio={1} sx={{ width: '60px' }}>
-                <Typography level="body-xs">{token.symbol}</Typography>
-                <Typography
-                  level="body-xs"
+                <Stack>
+                  {token.logo && (
+                    <Box
+                      component="img"
+                      borderRadius="sm"
+                      src={token.logo}
+                      alt={token.symbol}
+                    />
+                  )}
+                </Stack>
+                <CardCover
+                  sx={{
+                    borderBottomLeftRadius: '4px',
+                    borderBottomRightRadius: '4px',
+                    background:
+                      'linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0))',
+                  }}
+                />
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
                   sx={{
                     position: 'absolute',
-                    padding: 0.5,
-                    right: 0,
-                  }}>
-                  x{Math.floor(fromBaseUnit(token.amount, token.decimals))}
-                </Typography>
+                    width: '100%',
+                  }}
+                  px={0.5}
+                  top={0}>
+                  <Typography level="body-xs" textColor="common.white">
+                    x{Math.floor(fromBaseUnit(token.amount, token.decimals))}
+                  </Typography>
+                </Stack>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  sx={{
+                    position: 'absolute',
+                    width: '100%',
+                  }}
+                  px={0.5}
+                  bottom={0}>
+                  <Typography level="body-xs" textColor="common.white">
+                    {token.symbol}
+                  </Typography>
+                </Stack>
               </AspectRatio>
             </NoTextSelect>
           </Card>

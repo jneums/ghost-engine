@@ -23,10 +23,6 @@ export default function Game() {
   const { openDialog } = useDialog();
   const { identity } = useInternetIdentity();
 
-  if (!identity) {
-    return <Navigate to="/" />;
-  }
-
   useEffect(() => {
     if (identity) {
       connect(identity);
@@ -48,6 +44,10 @@ export default function Game() {
       openDialog(<Respawn />);
     }
   }, [isUnitDead]);
+
+  if (!identity) {
+    return <Navigate to="/" />;
+  }
 
   if (isConnecting) {
     return (
@@ -103,7 +103,7 @@ export default function Game() {
       <UnitStats />
       <TargetCard />
       <LogoutButton />
-      <Stats />
+      {/* <Stats /> */}
     </>
   );
 }

@@ -6,25 +6,39 @@ import Array "mo:base/Array";
 import Nat "mo:base/Nat";
 
 module {
-  public func filterUpdatesForClient(components : Vector.Vector<ECS.Types.Update<Components.Component>>) : Vector.Vector<ECS.Types.Update<Components.Component>> {
+  public func filterUpdatesForClient(components : Vector.Vector<ECS.Types.Update<Components.Component>>, unitEntityId : ECS.Types.EntityId) : Vector.Vector<ECS.Types.Update<Components.Component>> {
     // Iterate through the units and send them the updates
     let updates = Vector.new<ECS.Types.Update<Components.Component>>();
 
     // Filter out 'Server Only' components, e.g. MoveTargetComponent
     label filterUpdates for (update in Vector.vals(components)) {
       switch (update) {
-        case (#Insert({ component })) {
+        case (#Insert({ component; entityId })) {
           switch (component) {
+            // Server only
             case (#MoveTargetComponent(_) or #BlocksComponent(_) or #UpdateChunksComponent(_) or #UpdateBlocksComponent(_)) {
               continue filterUpdates;
+            };
+            // Owner only
+            case (#UnitChunksComponent(_) or #FungibleComponent(_) or #SessionComponent(_) or #UnitViewComponent(_)) {
+              if (entityId != unitEntityId) {
+                continue filterUpdates;
+              };
             };
             case (_) {};
           };
         };
-        case (#Delete({ componentType })) {
+        case (#Delete({ componentType; entityId })) {
           switch (componentType) {
+            // Server only
             case ("MoveTargetComponent" or "UpdateChunksComponent" or "UpdateBlocksComponent") {
               continue filterUpdates;
+            };
+            // Owner only
+            case ("UnitChunksComponent" or "FungibleComponent" or "SessionComponent" or "UnitViewComponent") {
+              if (entityId != unitEntityId) {
+                continue filterUpdates;
+              };
             };
             case (_) {};
           };

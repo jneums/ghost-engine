@@ -13,12 +13,12 @@ module {
   };
 
   public let Stone = {
-    symbol = "STN";
+    symbol = "STONE";
     name = "Stone";
     cid = "5hs4f-vqaaa-aaaai-qpk4a-cai";
     amount = 100_000_000;
     decimals = 8;
-    logo = "";
+    logo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB90BDhcbKtQvTGsAAAFuSURBVDjLZZLhioMwEIS/qwmotJFWEPrCfVUhIEKaWhtrcz8ke7E3IKhMZmYn+3O73SJAjFGeoihQSjHPM6/Xi4Tz+Uzf91yvVwD6vkcVRQGAc455ngEoy5JlWeRg13V47/Heczqd8N5TVRVd16ES0RiDMYYkOI6j/F/XlaqqAER4WRbGcUTd73dxUkoJsaoqyrLkG8nAWruNGmPEGCOE9/st7977nWsOrTXLsqDatgVgGAaJnOCco65rIedC6Zyy1tI0ze5gKjIfYRxHtNaSyFq7CRhjiDHyfD53Aun7O77WmnVdOR6Pm8Dj8aBtW3EbhkGc8lnzhKlo59xfB8mprmshTtO0E8qROlM5wTn3L27awARrLW3b/pU4DANd1/0jpq38fjfGSFrn3FbiPM+7EtOM+U7ky5aLqRCCOORFaa13c6eZE+QWPp+PFJenyO88F5+micPhQAhhEwghEELgcrmIal5YvnUATdPsUv0CbIbPrWvq8PwAAAAASUVORK5CYII=";
     fee = 10_000;
   };
 

@@ -67,22 +67,21 @@ module {
     ];
   };
 
-  public func sampleClimateNoise(climate : [NoiseTypes.DoublePerlinNoise], climateType : Nat, x : Float, z : Float) : Float {
+  public func sampleClimateNoise(climate : [NoiseTypes.DoublePerlinNoise], climateType : Nat, x : Float, y : Float, z : Float) : Float {
     if (climateType == Const.Climate.PeaksAndValleys) {
-      let c = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Continentalness], x, 0.0, z);
-      let e = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Erosion], x, 0.0, z);
-      let w = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Weirdness], x, 0.0, z);
+      let c = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Continentalness], x, y, z);
+      let e = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Erosion], x, y, z);
+      let w = Noise.sampleDoublePerlinNoise(climate[Const.Climate.Weirdness], x, y, z);
       let newSamples = [c, e, -3.0 * (Float.abs(Float.abs(w) - 0.6666667) - 0.33333334), w];
       let s = Splines.evaluateSpline(newSamples, Splines.initSpline());
       let off = s + 0.015;
 
-      let y = 0 : Int64;
-      let d = 1.0 - Float.fromInt64(Int64.bitshiftLeft(y, 2)) / 128 - 83 / 160 + off;
+      let d = 1.0 - Float.fromInt64(Int64.bitshiftLeft(Float.toInt64(y), 2)) / 128 - 83 / 160 + off;
 
       return d;
     };
 
-    let p = Noise.sampleDoublePerlinNoise(climate[climateType], x, 0.0, z);
+    let p = Noise.sampleDoublePerlinNoise(climate[climateType], x, y, z);
     return p;
   };
 };
