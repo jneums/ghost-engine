@@ -1,6 +1,7 @@
 {
   "canisters": {
     "ghost-engine-backend": {
+      "dependencies": ["ghost-engine-generator"],
       "main": "src/ghost-engine-backend/main.mo",
       "type": "motoko"
     },
@@ -9,6 +10,10 @@
       "source": ["src/ghost-engine-frontend/dist"],
       "type": "assets",
       "workspace": "ghost-engine-frontend"
+    },
+    "ghost-engine-generator": {
+      "main": "src/ghost-engine-generator/main.mo",
+      "type": "motoko"
     },
     "internet_identity": {
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",

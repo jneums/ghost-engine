@@ -4,7 +4,7 @@ import Debug "mo:base/Debug";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Vector "mo:vector";
-import Chunks "../utils/Chunks";
+import Blocks "../utils/Blocks";
 
 module {
   func getUnitHasChunk(unitChunks : [Components.UnitsChunk], chunkId : Vector3.Vector3) : Bool {
@@ -22,7 +22,12 @@ module {
         let updatedChunks = Vector.new<Components.UnitsChunk>();
         for (unitChunk in unitChunks.chunks.vals()) {
           if (Vector3.equal(unitChunk.chunkId, chunkId)) {
-            Vector.add(updatedChunks, { chunkId = unitChunk.chunkId; updatedAt = Time.now() });
+            let updated = {
+              chunkId = unitChunk.chunkId;
+              priority = unitChunk.priority;
+              updatedAt = Time.now();
+            };
+            Vector.add(updatedChunks, updated);
           } else {
             Vector.add(updatedChunks, unitChunk);
           };
@@ -47,7 +52,7 @@ module {
             case (? #UnitChunksComponent(unitChunks)) {
               for ((blockPosition, value) in update.blocks.vals()) {
                 // If the block is in the chunk then set the updatedAt prop on the units "UnitChunksComponent"
-                let chunkId = Chunks.getChunkPosition(blockPosition);
+                let chunkId = Blocks.getChunkPosition(blockPosition);
                 let unitHasChunk = getUnitHasChunk(unitChunks.chunks, chunkId);
                 if (unitHasChunk) {
                   updateUnitChunkTimestamp(ctx, unitEntityId, chunkId);

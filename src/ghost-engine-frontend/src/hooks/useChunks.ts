@@ -14,6 +14,7 @@ import { CHUNK_SIZE } from '../const/terrain';
 export type FetchedChunk = {
   key: string;
   x: number;
+  y: number;
   z: number;
   data: Uint16Array | number[];
   updatedAt: number;
@@ -46,14 +47,16 @@ export default function useChunks() {
         try {
           const chunkIds = chunks.map(({ chunkId }) => ({
             x: chunkId.x,
+            y: chunkId.y,
             z: chunkId.z,
           }));
           const data = await getChunks(identity, chunkIds);
 
           if (data.length > 0) {
             const chunkData = data.map((chunk, idx) => ({
-              key: `chunk-${chunkIds[idx].x}-${chunkIds[idx].z}`,
+              key: `chunk-${chunkIds[idx].x}-${chunkIds[idx].y}-${chunkIds[idx].z}`,
               x: chunkIds[idx].x,
+              y: chunkIds[idx].y,
               z: chunkIds[idx].z,
               data: chunk,
               updatedAt: chunk.length > 0 ? Date.now() : 0,
@@ -81,6 +84,7 @@ export default function useChunks() {
       return chunks.map((chunk) => ({
         key: JSON.stringify(chunk),
         x: chunk.chunkId.x,
+        y: chunk.chunkId.y,
         z: chunk.chunkId.z,
         data: [],
         updatedAt: 0,
@@ -109,7 +113,7 @@ export default function useChunks() {
 
     const currentUnitChunk = new THREE.Vector3(
       Math.floor(transform.position.x / CHUNK_SIZE),
-      0,
+      Math.floor(transform.position.y / CHUNK_SIZE),
       Math.floor(transform.position.z / CHUNK_SIZE),
     );
 
@@ -128,8 +132,13 @@ export default function useChunks() {
           const chunksToFetch = chunks.chunks.filter(
             ({ chunkId, updatedAt }) => {
               const dx = chunkId.x - currentUnitChunk.x;
+              const dy = chunkId.y - currentUnitChunk.y;
               const dz = chunkId.z - currentUnitChunk.z;
-              const key = JSON.stringify({ x: chunkId.x, z: chunkId.z });
+              const key = JSON.stringify({
+                x: chunkId.x,
+                y: chunkId.y,
+                z: chunkId.z,
+              });
               const existingChunk = fetchedChunks[key];
 
               const isDirty =
@@ -137,7 +146,8 @@ export default function useChunks() {
                 existingChunk.updatedAt < updatedAt;
 
               return (
-                Math.max(Math.abs(dx), Math.abs(dz)) === distance && isDirty
+                Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) ===
+                  distance && isDirty
               );
             },
           );
@@ -154,7 +164,11 @@ export default function useChunks() {
 
             const newFetchedChunks: Record<string, FetchedChunk> = {};
             fetchedData.forEach((chunk) => {
-              const key = JSON.stringify({ x: chunk.x, z: chunk.z });
+              const key = JSON.stringify({
+                x: chunk.x,
+                y: chunk.y,
+                z: chunk.z,
+              });
               newFetchedChunks[key] = chunk;
             });
 

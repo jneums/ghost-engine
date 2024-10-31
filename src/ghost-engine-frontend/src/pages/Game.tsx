@@ -16,6 +16,7 @@ import UnitCard from '../ui/UnitCard';
 import UnitStats from '../ui/UnitInventory';
 import Unit from '../units/Unit';
 import Chunks from '../chunks';
+import CastBar from '../ui/CastBar';
 
 export default function Game() {
   const { connect, disconnect, isConnecting } = useConnection();
@@ -102,8 +103,9 @@ export default function Game() {
       <UnitCard />
       <UnitStats />
       <TargetCard />
+      <CastBar />
       <LogoutButton />
-      {/* <Stats /> */}
+      <Stats />
     </>
   );
 }

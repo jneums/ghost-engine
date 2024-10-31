@@ -7,75 +7,106 @@ import Components "../components";
 import Vector3 "../math/Vector3";
 import Quaternion "../math/Quaternion";
 import Const "../utils/Const";
-import Chunks "../utils/Chunks";
+import Blocks "../utils/Blocks";
+import TokenRegistry "../utils/TokenRegistry";
 
 module {
-  // Private function to check if the entity has reached the target position
-  private func hasReachedTarget(newPosition : Vector3.Vector3, targetPosition : Vector3.Vector3, epsilon : Float) : Bool {
-    Float.abs(newPosition.x - targetPosition.x) < epsilon and Float.abs(newPosition.y - targetPosition.y) < epsilon and Float.abs(newPosition.z - targetPosition.z) < epsilon
+  // Function to check if a block is valid to stand on
+  private func isBlockValid(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Bool {
+    let aboveBlock = Blocks.getBlockType(ctx, { x = position.x; y = position.y + 1.0; z = position.z });
+    let currentBlock = Blocks.getBlockType(ctx, position);
+    let belowBlock = Blocks.getBlockType(ctx, { x = position.x; y = position.y - 1.0; z = position.z });
+
+    let airWithSolidUnderneath = aboveBlock == TokenRegistry.BlockType.Air and currentBlock == TokenRegistry.BlockType.Air and belowBlock != TokenRegistry.BlockType.Air and belowBlock != TokenRegistry.BlockType.Water;
+    let waterWithSolidUnderneath = aboveBlock == TokenRegistry.BlockType.Air and currentBlock == TokenRegistry.BlockType.Water and (belowBlock == TokenRegistry.BlockType.Stone or belowBlock == TokenRegistry.BlockType.Water);
+
+    airWithSolidUnderneath or waterWithSolidUnderneath;
+  };
+
+  // Private function to check if two positions are adjacent
+  private func areAdjacent(pos1 : Vector3.Vector3, pos2 : Vector3.Vector3) : Bool {
+    let dx = Float.abs(pos1.x - pos2.x);
+    let dy = Float.abs(pos1.y - pos2.y);
+    let dz = Float.abs(pos1.z - pos2.z);
+    dx <= 5.0 and dy <= 5.0 and dz <= 5.0;
   };
 
   private func handleMovement(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId, moveTarget : Components.MoveTargetComponent, transform : Components.TransformComponent, deltaTime : Time.Time) {
     let defaultVelocity = Const.UNIT_VELOCITY;
     let deltaTimeSeconds = Float.fromInt(deltaTime) / 1_000_000_000.0; // Assuming deltaTime is in nanoseconds
-    let velocity = defaultVelocity * deltaTimeSeconds;
-    let epsilon = 0.01; // Smaller threshold value for precision
+    var remainingDistance = defaultVelocity * deltaTimeSeconds;
 
-    // Check if there are waypoints to process
-    if (moveTarget.waypoints.size() == 0) {
-      // No waypoints left, remove the component
+    // Iterate over waypoints as long as there is remaining distance to move
+    var currentPosition = transform.position;
+    var waypoints = moveTarget.waypoints;
+
+    if (waypoints.size() < 1) {
+      Debug.print("No waypoints to move to");
       ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
       return;
     };
 
-    // Get the current target waypoint
-    let targetPosition = moveTarget.waypoints[0];
-    Debug.print("\nMoving to waypoint: " # debug_show (targetPosition));
+    while (remainingDistance > 0.0 and waypoints.size() > 0) {
+      let targetPosition = waypoints[0];
 
-    let direction = {
-      x = targetPosition.x - transform.position.x;
-      y = targetPosition.y - transform.position.y;
-      z = targetPosition.z - transform.position.z;
-    };
-    let distanceToTarget = Vector3.magnitude(direction);
-    let normalizedDirection = Vector3.normalize(direction);
-
-    // Calculate potential new position
-    var potentialNewPosition = {
-      x = transform.position.x + normalizedDirection.x * velocity;
-      y = transform.position.y + normalizedDirection.y * velocity;
-      z = transform.position.z + normalizedDirection.z * velocity;
-    };
-
-    // Check if the potential new position overshoots the target
-    if (distanceToTarget <= velocity or hasReachedTarget(potentialNewPosition, targetPosition, epsilon)) {
-      // Snap to the target position
-      potentialNewPosition := targetPosition;
-      // Remove the reached waypoint
-      if (moveTarget.waypoints.size() > 0) {
-        let updatedWaypoints = Array.subArray(moveTarget.waypoints, 1, moveTarget.waypoints.size() - 1 : Nat);
-        let newMoveTarget = #MoveTargetComponent({
-          waypoints = updatedWaypoints;
-        });
-        ECS.World.addComponent(ctx, entityId, "MoveTargetComponent", newMoveTarget);
-      } else {
-        // No waypoints left, remove the component
+      // Check if the target position is adjacent to the current position
+      if (not areAdjacent(currentPosition, targetPosition)) {
+        Debug.print("Invalid movement: target position is not adjacent to current position");
         ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
+        return;
       };
+
+      // Check if the target position is a valid block
+      if (not isBlockValid(ctx, targetPosition)) {
+        Debug.print("Invalid block to stand on at position: " # debug_show (targetPosition));
+        ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
+        return;
+      };
+
+      let direction = {
+        x = targetPosition.x - currentPosition.x;
+        y = targetPosition.y - currentPosition.y;
+        z = targetPosition.z - currentPosition.z;
+      };
+      let distanceToTarget = Vector3.magnitude(direction);
+      let normalizedDirection = Vector3.normalize(direction);
+
+      if (distanceToTarget <= remainingDistance) {
+        // Move to the target position
+        currentPosition := targetPosition;
+        remainingDistance := remainingDistance - distanceToTarget;
+        // Remove the reached waypoint
+        waypoints := Array.subArray(waypoints, 1, waypoints.size() - 1 : Nat);
+      } else {
+        // Move as far as possible towards the target
+        currentPosition := {
+          x = currentPosition.x + normalizedDirection.x * remainingDistance;
+          y = currentPosition.y + normalizedDirection.y * remainingDistance;
+          z = currentPosition.z + normalizedDirection.z * remainingDistance;
+        };
+        remainingDistance := 0.0;
+      };
+      ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
     };
+
+    // Update the waypoints in the component
+    let newMoveTarget = #MoveTargetComponent({
+      waypoints = waypoints;
+    });
+    ECS.World.addComponent(ctx, entityId, "MoveTargetComponent", newMoveTarget);
 
     let newTransform = #TransformComponent({
       scale = transform.scale;
       rotation = Quaternion.zero();
-      position = potentialNewPosition;
+      position = currentPosition;
     });
 
     // Update the transform component
     ECS.World.addComponent(ctx, entityId, "TransformComponent", newTransform);
 
     // Check if the unit has crossed a chunk boundary
-    let previousChunkPos = Chunks.getChunkPosition(transform.position);
-    let currentChunkPos = Chunks.getChunkPosition(potentialNewPosition);
+    let previousChunkPos = Blocks.getChunkPosition(transform.position);
+    let currentChunkPos = Blocks.getChunkPosition(currentPosition);
 
     if (currentChunkPos != previousChunkPos) {
       // Add the UpdateUnitChunksComponent tag

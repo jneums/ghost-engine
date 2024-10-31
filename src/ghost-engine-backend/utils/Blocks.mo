@@ -12,12 +12,11 @@ import Principal "mo:base/Principal";
 import Option "mo:base/Option";
 import Nat32 "mo:base/Nat32";
 import Text "mo:base/Text";
+import Nat8 "mo:base/Nat8";
 import Map "mo:stable-hash-map/Map/Map";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Const "Const";
-import Chunks "Chunks";
-import Climate "Climate";
 import Tokens "Tokens";
 import TokenRegistry "TokenRegistry";
 
@@ -54,14 +53,14 @@ module {
     };
   };
 
-  public func deleteBlocks(ctx : ECS.Types.Context<Components.Component>, blockPos : Vector3.Vector3) {
+  public func deleteBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) {
     switch (getBlocksComponent(ctx)) {
       case (?blocks) {
-        if (Array.size(getBlocks(ctx, blockPos)) == 0) {
+        if (Array.size(getBlocks(ctx, chunkPos)) == 0) {
           Debug.print("Blocks already deleted for this chunk position");
           return;
         };
-        let updatedBlocks = clearChunk(blocks, blockPos);
+        let updatedBlocks = clearChunk(blocks, chunkPos);
         updateBlocksComponent(ctx, updatedBlocks);
       };
       case (_) {
@@ -81,37 +80,30 @@ module {
     };
   };
 
-  public func generateBlocks(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : () {
-    switch (getBlocksComponent(ctx)) {
-      case (?blocks) {
-        if (Array.size(getBlocks(ctx, chunkPos)) > 0) {
-          Debug.print("Blocks already generated for this chunk position");
-          return;
-        };
-        let newBlocks = generateChunkBlocks(blocks, chunkPos);
-        let updatedBlocks = setChunkBlocks(blocks, chunkPos, newBlocks);
-        updateBlocksComponent(ctx, updatedBlocks);
-      };
-      case (_) {
-        Debug.print("BlocksComponent not found");
-      };
-    };
+  // Function to calculate the chunk position from a Vector3 position
+  public func getChunkPosition(position : Vector3.Vector3) : Vector3.Vector3 {
+    let floatChunkSize = Float.fromInt(Const.CHUNK_SIZE);
+    Vector3.floor({
+      x = position.x / floatChunkSize;
+      y = position.y / floatChunkSize;
+      z = position.z / floatChunkSize;
+    });
   };
 
   public func getHighestSolidBlockY(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Float {
-    let chunkPos = Chunks.getChunkPosition(position);
+    let chunkPos = getChunkPosition(position);
     let blocks = getBlocks(ctx, chunkPos);
     findHighestSolidBlockY(blocks, position);
   };
 
   public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat16 {
-    let chunkPos = Chunks.getChunkPosition(position);
+    let chunkPos = getChunkPosition(position);
     let blocks = getBlocks(ctx, chunkPos);
     getBlockTypeAtPosition(blocks, position);
   };
 
   public func setBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3, blockType : Nat16) {
-    let chunkPos = Chunks.getChunkPosition(position);
+    let chunkPos = getChunkPosition(position);
     let blocks = getBlocks(ctx, chunkPos);
     let mutable = Array.thaw<Nat16>(blocks);
     let index = calculateBlockIndex(position);
@@ -216,6 +208,36 @@ module {
     };
   };
 
+  public func chunkExists(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) : Bool {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b }) != null;
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        false;
+      };
+    };
+  };
+
+  public func createEmptyChunk(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3) {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        let updatedBlocks = {
+          blocks with
+          chunkPositions = Array.append(blocks.chunkPositions, [chunkPos]);
+          blockData = Array.append(blocks.blockData, [[]]);
+          chunkStatus = Array.append(blocks.chunkStatus, [255 : Nat8]); // Lowest priority
+          changedBlocks = Array.append(blocks.changedBlocks, [[]]);
+        };
+        updateBlocksComponent(ctx, updatedBlocks);
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+      };
+    };
+  };
+
   private func clearChunk(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : Components.BlocksComponent {
     let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
     switch (index) {
@@ -254,82 +276,6 @@ module {
     };
   };
 
-  private func setChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3, blocks : [Nat16]) : Components.BlocksComponent {
-    let index = Array.indexOf(chunkPos, blocksComponent.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
-    switch (index) {
-      case (null) {
-        // Add new entry
-        {
-          seed = blocksComponent.seed;
-          chunkPositions = Array.append(blocksComponent.chunkPositions, [chunkPos]);
-          blockData = Array.append(blocksComponent.blockData, [blocks]);
-          chunkStatus = Array.append(blocksComponent.chunkStatus, [0 : Nat8]);
-          changedBlocks = Array.append(blocksComponent.changedBlocks, [[]]);
-          tokenRegistry = blocksComponent.tokenRegistry;
-        };
-      };
-      case (?i) {
-        // Update existing entry
-        var newBlockData = Array.thaw<[Nat16]>(blocksComponent.blockData);
-        newBlockData[i] := blocks;
-        {
-          seed = blocksComponent.seed;
-          chunkPositions = blocksComponent.chunkPositions;
-          blockData = Array.freeze(newBlockData);
-          chunkStatus = blocksComponent.chunkStatus;
-          changedBlocks = blocksComponent.changedBlocks;
-          tokenRegistry = blocksComponent.tokenRegistry;
-        };
-      };
-    };
-  };
-
-  private func generateChunkBlocks(blocksComponent : Components.BlocksComponent, chunkPos : Vector3.Vector3) : [Nat16] {
-    let blockCount = Const.CHUNK_SIZE * Const.CHUNK_HEIGHT * Const.CHUNK_SIZE;
-    var newBlocks = Array.init<Nat16>(blockCount, 0 : Nat16);
-    let climate = Climate.initClimateSeed(blocksComponent.seed);
-    let baseOffset = Float.fromInt(64);
-
-    Debug.print("Generating blocks for chunk at position: " # debug_show (chunkPos));
-    for (z in Iter.range(0, Const.CHUNK_SIZE - 1)) {
-      let globalZ = Float.fromInt(z + Float.toInt(chunkPos.z) * Const.CHUNK_SIZE);
-      for (x in Iter.range(0, Const.CHUNK_SIZE - 1)) {
-        let globalX = Float.fromInt(x + Float.toInt(chunkPos.x) * Const.CHUNK_SIZE);
-
-        // Sample 2D noise for continentalness and erosion
-        let continentalness = Climate.sampleClimateNoise(climate, Const.Climate.Continentalness, globalX, 0, globalZ);
-        let erosion = Climate.sampleClimateNoise(climate, Const.Climate.Erosion, globalX, 0, globalZ);
-
-        for (y in Iter.range(0, Const.CHUNK_HEIGHT - 1)) {
-          let globalY = Float.fromInt(y);
-
-          // Sample 3D noise for peaks and valleys
-          let peaksAndValleys = Climate.sampleClimateNoise(climate, Const.Climate.PeaksAndValleys, globalX, globalY, globalZ);
-
-          // Calculate height offset using peaks and valleys
-          let heightOffset = erosion * (Float.fromInt(Const.CHUNK_HEIGHT) - baseOffset) + peaksAndValleys * (Float.fromInt(Const.CHUNK_HEIGHT) - baseOffset);
-
-          // Calculate squish factor inversely related to continentalness
-          let squishFactor = continentalness;
-
-          // Calculate height bias
-          let heightBias = baseOffset + heightOffset * squishFactor;
-          let finalDensity = heightBias - globalY;
-
-          let index = y * Const.CHUNK_SIZE * Const.CHUNK_SIZE + z * Const.CHUNK_SIZE + x;
-          if (finalDensity > 0) {
-            newBlocks[index] := 1; // Solid block
-          } else if (y <= Const.SEA_LEVEL) {
-            newBlocks[index] := 2; // Water block
-          };
-        };
-      };
-    };
-
-    Debug.print("Blocks generated for chunk at position: " # debug_show (chunkPos));
-    Array.freeze(newBlocks);
-  };
-
   private func findHighestSolidBlockY(blocks : [Nat16], position : Vector3.Vector3) : Float {
     let xIndex = Float.toInt(position.x) % Const.CHUNK_SIZE;
     let zIndex = Float.toInt(position.z) % Const.CHUNK_SIZE;
@@ -348,10 +294,7 @@ module {
   };
 
   private func getBlockTypeAtPosition(blocks : [Nat16], position : Vector3.Vector3) : Nat16 {
-    let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
-    let localY = position.y;
-    let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
-    let index = localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
+    let index = calculateBlockIndex(position);
     if (index >= 0 and Float.toInt(index) < Array.size(blocks)) {
       blocks[Int.abs(Float.toInt(index))];
     } else {
@@ -361,7 +304,7 @@ module {
 
   private func calculateBlockIndex(position : Vector3.Vector3) : Float {
     let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
-    let localY = position.y;
+    let localY = (position.y % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
     let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
     localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
   };
@@ -453,6 +396,81 @@ module {
       case (_) {
         Debug.print("BlocksComponent not found");
         TokenRegistry.GeneratedBlocks;
+      };
+    };
+  };
+
+  public func getChunkToGenerate(ctx : ECS.Types.Context<Components.Component>) : ?Vector3.Vector3 {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        var highestPriorityChunk : ?Vector3.Vector3 = null;
+        var highestPriority : Nat8 = 254; // Start with the lowest possible priority
+        let chunkStatusSize = Array.size(blocks.chunkStatus);
+
+        label findHighest for (chunkIdx in Iter.range(0, chunkStatusSize - 1)) {
+          let status = blocks.chunkStatus[chunkIdx];
+          if (status >= highestPriority) {
+            continue findHighest; // Skip if the status is not higher priority
+          };
+
+          let chunkPos = blocks.chunkPositions[chunkIdx];
+          if (Array.size(blocks.blockData[chunkIdx]) == 0) {
+            highestPriority := status;
+            highestPriorityChunk := ?chunkPos;
+
+            // Early exit if we find the highest priority (0)
+            if (status == 0) {
+              break findHighest;
+            };
+          };
+        };
+
+        highestPriorityChunk;
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
+        null;
+      };
+    };
+  };
+
+  public func putGeneratedChunk(ctx : ECS.Types.Context<Components.Component>, chunkPos : Vector3.Vector3, generatedBlocks : [Nat16]) {
+    switch (getBlocksComponent(ctx)) {
+      case (?blocks) {
+        let index = Array.indexOf(chunkPos, blocks.chunkPositions, func(a : Vector3.Vector3, b : Vector3.Vector3) : Bool { a == b });
+        switch (index) {
+          case (null) {
+            // Add new entry if the chunk position is not already present
+            let updatedBlocksComponent = {
+              seed = blocks.seed;
+              chunkPositions = Array.append(blocks.chunkPositions, [chunkPos]);
+              blockData = Array.append(blocks.blockData, [generatedBlocks]);
+              chunkStatus = Array.append(blocks.chunkStatus, [255 : Nat8]); // Lowest priority
+              changedBlocks = Array.append(blocks.changedBlocks, [[]]);
+              tokenRegistry = blocks.tokenRegistry;
+            };
+            updateBlocksComponent(ctx, updatedBlocksComponent);
+          };
+          case (?i) {
+            // Update existing entry
+            var newBlockData = Array.thaw<[Nat16]>(blocks.blockData);
+            newBlockData[i] := generatedBlocks;
+            var newChunkStatus = Array.thaw<Nat8>(blocks.chunkStatus);
+            newChunkStatus[i] := 255; // Lowest priority
+            let updatedBlocksComponent = {
+              seed = blocks.seed;
+              chunkPositions = blocks.chunkPositions;
+              blockData = Array.freeze(newBlockData);
+              chunkStatus = Array.freeze(newChunkStatus);
+              changedBlocks = blocks.changedBlocks;
+              tokenRegistry = blocks.tokenRegistry;
+            };
+            updateBlocksComponent(ctx, updatedBlocksComponent);
+          };
+        };
+      };
+      case (_) {
+        Debug.print("BlocksComponent not found");
       };
     };
   };

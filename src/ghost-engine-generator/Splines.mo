@@ -1,7 +1,7 @@
 import Array "mo:base/Array";
 import Debug "mo:base/Debug";
 import Math "mo:noise/Math";
-import Const "../utils/Const";
+import Const "Const";
 
 module {
   // Define a variant type to represent either a Spline or a FixedSpline

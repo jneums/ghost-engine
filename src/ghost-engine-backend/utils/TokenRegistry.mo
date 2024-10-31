@@ -10,6 +10,7 @@ module {
     decimals = 0;
     logo = "";
     fee = 10_000;
+    density = 0;
   };
 
   public let Stone = {
@@ -20,6 +21,7 @@ module {
     decimals = 8;
     logo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB90BDhcbKtQvTGsAAAFuSURBVDjLZZLhioMwEIS/qwmotJFWEPrCfVUhIEKaWhtrcz8ke7E3IKhMZmYn+3O73SJAjFGeoihQSjHPM6/Xi4Tz+Uzf91yvVwD6vkcVRQGAc455ngEoy5JlWeRg13V47/Heczqd8N5TVRVd16ES0RiDMYYkOI6j/F/XlaqqAER4WRbGcUTd73dxUkoJsaoqyrLkG8nAWruNGmPEGCOE9/st7977nWsOrTXLsqDatgVgGAaJnOCco65rIedC6Zyy1tI0ze5gKjIfYRxHtNaSyFq7CRhjiDHyfD53Aun7O77WmnVdOR6Pm8Dj8aBtW3EbhkGc8lnzhKlo59xfB8mprmshTtO0E8qROlM5wTn3L27awARrLW3b/pU4DANd1/0jpq38fjfGSFrn3FbiPM+7EtOM+U7ky5aLqRCCOORFaa13c6eZE+QWPp+PFJenyO88F5+micPhQAhhEwghEELgcrmIal5YvnUATdPsUv0CbIbPrWvq8PwAAAAASUVORK5CYII=";
     fee = 10_000;
+    density = 25;
   };
 
   public let Water = {
@@ -30,6 +32,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 1;
   };
 
   public let Dirt = {
@@ -40,6 +43,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 15;
   };
 
   public let Bedrock = {
@@ -50,6 +54,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 100; // Assuming Bedrock is very hard to mine
   };
 
   public let Grass = {
@@ -60,6 +65,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 10;
   };
 
   public let Lava = {
@@ -70,6 +76,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 5; // Assuming Lava is fluid and less dense
   };
 
   public let Sand = {
@@ -80,6 +87,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 20;
   };
 
   public let Gravel = {
@@ -90,6 +98,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 22;
   };
 
   public let GoldOre = {
@@ -100,6 +109,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 50; // Assuming Gold Ore is dense
   };
 
   public let IronOre = {
@@ -110,6 +120,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 45;
   };
 
   public let CoalOre = {
@@ -120,6 +131,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 30;
   };
 
   public let Log = {
@@ -130,6 +142,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 15;
   };
 
   public let Leaves = {
@@ -140,6 +153,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 5;
   };
 
   public let Sandstone = {
@@ -150,6 +164,7 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 35;
   };
 
   public let DeadBush = {
@@ -160,6 +175,18 @@ module {
     decimals = 8;
     logo = "";
     fee = 10_000;
+    density = 2;
+  };
+
+  public let Energy = {
+    symbol = "NRG";
+    name = "Energy";
+    cid = "6tzm6-miaaa-aaaai-q3lha-cai";
+    amount = 100_000_000;
+    decimals = 8;
+    logo = "";
+    fee = 10_000;
+    density = 1;
   };
 
   public let GeneratedBlocks : [(Nat16, Tokens.Token)] = [
@@ -180,4 +207,23 @@ module {
     (14, Sandstone),
     (15, DeadBush),
   ];
+
+  public let BlockType = {
+    Air = 0 : Nat16;
+    Stone = 1 : Nat16;
+    Water = 2 : Nat16;
+    Dirt = 3 : Nat16;
+    Bedrock = 4 : Nat16;
+    Grass = 5 : Nat16;
+    Lava = 6 : Nat16;
+    Sand = 7 : Nat16;
+    Gravel = 8 : Nat16;
+    GoldOre = 9 : Nat16;
+    IronOre = 10 : Nat16;
+    CoalOre = 11 : Nat16;
+    Log = 12 : Nat16;
+    Leaves = 13 : Nat16;
+    Sandstone = 14 : Nat16;
+    DeadBush = 15 : Nat16;
+  };
 };

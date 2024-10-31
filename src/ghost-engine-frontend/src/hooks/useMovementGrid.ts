@@ -30,8 +30,8 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
 
       const minX = Math.min(startX, targetX);
       const maxX = Math.max(startX, targetX);
-      const minY = Math.min(startY, targetY) - 4;
-      const maxY = Math.max(startY, targetY) + 4;
+      const minY = Math.min(startY, targetY);
+      const maxY = Math.max(startY, targetY);
       const minZ = Math.min(startZ, targetZ);
       const maxZ = Math.max(startZ, targetZ);
 
@@ -43,83 +43,87 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
         Array.from({ length: gridSizeY }, () => Array(gridSizeZ).fill(null)),
       );
 
+      // Helper function to get block value from fetched chunks
+      const getBlockValue = (
+        worldX: number,
+        worldY: number,
+        worldZ: number,
+      ) => {
+        const chunkX = Math.floor(worldX / CHUNK_SIZE);
+        const chunkY = Math.floor(worldY / CHUNK_SIZE);
+        const chunkZ = Math.floor(worldZ / CHUNK_SIZE);
+
+        // Ensure local coordinates are positive
+        const localX = ((worldX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const localY = ((worldY % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const localZ = ((worldZ % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+
+        const chunk = fetchedChunks.find(
+          (chunk) =>
+            chunk.x === chunkX && chunk.y === chunkY && chunk.z === chunkZ,
+        );
+
+        if (!chunk) return undefined;
+
+        const blockIndex =
+          localY * CHUNK_SIZE * CHUNK_SIZE + localZ * CHUNK_SIZE + localX;
+
+        return chunk.data[blockIndex];
+      };
+
       // Iterate over the relevant chunks
-      Object.values(fetchedChunks).forEach(({ x, z, data }) => {
-        const chunkStartX = x * CHUNK_SIZE;
-        const chunkStartZ = z * CHUNK_SIZE;
-
-        for (let localX = 0; localX < CHUNK_SIZE; localX++) {
-          for (let localZ = 0; localZ < CHUNK_SIZE; localZ++) {
-            const worldX = chunkStartX + localX;
-            const worldZ = chunkStartZ + localZ;
-
-            // Check if the block is within the grid range
+      for (let worldX = minX; worldX <= maxX; worldX++) {
+        for (let worldY = minY; worldY <= maxY; worldY++) {
+          for (let worldZ = minZ; worldZ <= maxZ; worldZ++) {
             const gridX = worldX - minX;
+            const gridY = worldY - minY;
             const gridZ = worldZ - minZ;
 
+            const currentBlockValue = getBlockValue(worldX, worldY, worldZ);
+            const aboveBlockValue = getBlockValue(worldX, worldY + 1, worldZ);
+            const belowBlockValue = getBlockValue(worldX, worldY - 1, worldZ);
+
             if (
-              gridX >= 0 &&
-              gridX < gridSizeX &&
-              gridZ >= 0 &&
-              gridZ < gridSizeZ
+              aboveBlockValue === undefined ||
+              currentBlockValue === undefined ||
+              belowBlockValue === undefined
             ) {
-              // Iterate over each layer, centered around the unit's y-position
-              for (let layerIndex = 0; layerIndex < gridSizeY; layerIndex++) {
-                const currentY = minY + layerIndex;
-                const aboveY = currentY + 1;
-                const belowY = currentY - 1;
+              console.log('Invalid block index:', worldX, worldY, worldZ);
+              continue;
+            }
 
-                const aboveBlockIndex =
-                  aboveY * CHUNK_SIZE * CHUNK_SIZE +
-                  localZ * CHUNK_SIZE +
-                  localX;
-                const currentBlockIndex =
-                  currentY * CHUNK_SIZE * CHUNK_SIZE +
-                  localZ * CHUNK_SIZE +
-                  localX;
-                const belowBlockIndex =
-                  belowY * CHUNK_SIZE * CHUNK_SIZE +
-                  localZ * CHUNK_SIZE +
-                  localX;
+            const airWithSolidUnderneath =
+              aboveBlockValue === BlockType.Air &&
+              currentBlockValue === BlockType.Air &&
+              belowBlockValue !== BlockType.Air &&
+              belowBlockValue !== BlockType.Water;
+            const waterWithSolidUnderneath =
+              aboveBlockValue === BlockType.Air &&
+              currentBlockValue === BlockType.Water &&
+              (belowBlockValue === BlockType.Stone ||
+                belowBlockValue === BlockType.Water);
 
-                const aboveBlockValue = data[aboveBlockIndex];
-                const currentBlockValue = data[currentBlockIndex];
-                const belowBlockValue = data[belowBlockIndex];
+            const isValidPosition =
+              airWithSolidUnderneath || waterWithSolidUnderneath;
 
-                // Valid blocks to stand on:
-                // 2 Airs with Stone or Water underneath
-                // 1 Air above and Water with Stone or Water underneath (no walking on top water block)
-                const airWithSolidUnderneath =
-                  aboveBlockValue === BlockType.Air &&
-                  currentBlockValue === BlockType.Air &&
-                  belowBlockValue !== BlockType.Air &&
-                  belowBlockValue !== BlockType.Water;
-                const waterWithSolidUnderneath =
-                  aboveBlockValue === BlockType.Air &&
-                  currentBlockValue === BlockType.Water &&
-                  (belowBlockValue === BlockType.Stone ||
-                    belowBlockValue === BlockType.Water);
-
-                if (airWithSolidUnderneath || waterWithSolidUnderneath) {
-                  grid[gridX][layerIndex][gridZ] = {
-                    x: worldX,
-                    y: currentY,
-                    z: worldZ,
-                    g: 0,
-                    f: 0,
-                    h: 0,
-                    blockType: belowBlockValue,
-                    opened: false,
-                    closed: false,
-                    parent: null,
-                    neighbors: [],
-                  };
-                }
-              }
+            if (isValidPosition) {
+              grid[gridX][gridY][gridZ] = {
+                x: worldX,
+                y: worldY,
+                z: worldZ,
+                g: 0,
+                f: 0,
+                h: 0,
+                blockType: belowBlockValue,
+                opened: false,
+                closed: false,
+                parent: null,
+                neighbors: [],
+              };
             }
           }
         }
-      });
+      }
 
       initializeNeighbors(grid);
 

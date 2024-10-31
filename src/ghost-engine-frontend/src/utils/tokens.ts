@@ -1,3 +1,5 @@
+import { FungibleComponent } from '../ecs/components';
+
 /**
  * Convert a value to the base unit used for processing, given the number of decimals.
  * @param value number
@@ -18,4 +20,11 @@ export const toBaseUnit = (value: number, decimals: number): bigint => {
 export const fromBaseUnit = (value: bigint, decimals: number): number => {
   const factor = 10 ** decimals;
   return Number(value) / factor;
+};
+
+export const getByCanisterId = (
+  tokens: FungibleComponent,
+  canisterId: string,
+) => {
+  return tokens.tokens.find((token) => token.cid.toText() === canisterId);
 };

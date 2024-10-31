@@ -40,10 +40,9 @@ export default function Chunks() {
   const highlightPositionRef = useRef<THREE.Vector3 | null>(null);
   const [highlightPosition, setHighlightPosition] =
     useState<THREE.Vector3 | null>(null);
-  const [minedVoxel, setMinedVoxel] = useState<{
-    index: number;
-    chunkKey: string;
-  } | null>(null);
+  const [minedVoxels, setMinedVoxels] = useState<
+    { index: number; chunkKey: string }[]
+  >([]);
   const [placingVoxel, setPlacingVoxel] = useState<{
     index: number;
     chunkKey: string;
@@ -56,8 +55,8 @@ export default function Chunks() {
 
     // Clear mined voxel index or placing voxel index if the player is not mining or placing
     const mining = getEntity(unitEntityId)?.getComponent(MiningComponent);
-    if (!mining && minedVoxel !== null) {
-      setMinedVoxel(null);
+    if (!mining && minedVoxels.length > 0) {
+      setMinedVoxels([]);
     }
 
     const placing = getEntity(unitEntityId)?.getComponent(PlaceBlockComponent);
@@ -139,7 +138,7 @@ export default function Chunks() {
 
       const localPosition = new THREE.Vector3(
         ((targetPosition.x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
-        targetPosition.y,
+        ((targetPosition.y % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
         ((targetPosition.z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
       );
 
@@ -176,7 +175,7 @@ export default function Chunks() {
           setErrorMessage("I can't mine that!");
           return;
         }
-        setMinedVoxel({ index, chunkKey: e.object.name });
+        setMinedVoxels((prev) => [...prev, { index, chunkKey: e.object.name }]);
         mine(unitEntityId, targetPosition);
       } else {
         const fungible = unitEntity.getComponent(FungibleComponent);
@@ -243,6 +242,9 @@ export default function Chunks() {
         Math.floor(e.point.z),
       );
 
+      console.log('Start:', startPosition);
+      console.log('End:', targetPosition);
+
       const grid = createGrid(startPosition, targetPosition);
 
       if (!grid) {
@@ -273,15 +275,20 @@ export default function Chunks() {
 
   const chunks = useMemo(
     () =>
-      fetchedChunks?.map(({ key, x, z, data }) => (
+      fetchedChunks?.map(({ key, x, y, z, data }) => (
         <MemoizedChunk
           key={key}
           x={x}
+          y={y}
           z={z}
           data={data}
           textureAtlas={textureAtlas}
           highlightPosition={highlightPosition}
-          minedVoxel={minedVoxel?.chunkKey === key ? minedVoxel.index : null}
+          minedVoxels={
+            minedVoxels
+              ?.filter((voxel) => voxel.chunkKey === key)
+              .map((voxel) => voxel.index) || []
+          }
           placingVoxel={
             placingVoxel?.chunkKey === key ? placingVoxel.index : null
           }
@@ -294,7 +301,7 @@ export default function Chunks() {
       createGrid,
       textureAtlas,
       highlightPosition,
-      minedVoxel,
+      minedVoxels,
       placingVoxel,
       handleBlockAction,
       handleMove,

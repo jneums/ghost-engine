@@ -106,12 +106,15 @@ export default function useAction() {
     send(identity, {
       Mine: {
         entityId: BigInt(entityId),
-        position: position,
+        position,
       },
     });
 
     // Add the components to the ecs entity
-    const mining = new MiningComponent(position, 0, 0);
+    const existing = getEntity(entityId).getComponent(MiningComponent);
+    const positions = existing ? [...existing.positions, position] : [position];
+    const progress = existing ? existing.progress : 0;
+    const mining = new MiningComponent(positions, 0, progress);
 
     // Add the components to the ecs entity
     addComponent(entityId, mining);

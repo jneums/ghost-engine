@@ -19,7 +19,7 @@ interface ConnectionState {
   send: (identity: Identity, message: Action) => Promise<void>;
   getChunks: (
     identity: Identity,
-    chunkIds: { x: number; z: number }[],
+    chunkIds: { x: number; y: number; z: number }[],
   ) => Promise<(Uint16Array | number[])[]>;
 }
 
@@ -135,11 +135,10 @@ const useConnectionStore = create<ConnectionState>((set, get) => {
 
   const getChunks = async (
     identity: Identity,
-    chunkIds: { x: number; z: number }[],
+    chunkIds: { x: number; y: number; z: number }[],
   ) => {
     const server = createServer(identity);
-    const withY = chunkIds.map(({ x, z }) => ({ x, y: 0, z }));
-    return await server.getChunks(withY);
+    return await server.getChunks(chunkIds);
   };
 
   return {

@@ -58,9 +58,9 @@ export class CombatComponent {
 
 export class MiningComponent {
   constructor(
-    public position: THREE.Vector3,
-    public speed: number,
+    public positions: THREE.Vector3[],
     public startAt: number,
+    public progress: number,
   ) {}
 }
 
@@ -216,11 +216,13 @@ export function createComponentClass(data: Component) {
     )
     .with(
       { MiningComponent: P.select() },
-      ({ position, speed, startAt }) =>
+      ({ positions, startAt, progress }) =>
         new MiningComponent(
-          new THREE.Vector3(position.x, position.y, position.z),
-          Number(speed),
+          positions.map(
+            (position) => new THREE.Vector3(position.x, position.y, position.z),
+          ),
           Number(startAt),
+          Number(progress),
         ),
     )
     .with(

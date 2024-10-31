@@ -72,6 +72,7 @@ export default function UnitInventory() {
           overflowX: 'auto',
           gap: 1,
           p: 1,
+          opacity: 0.8,
         }}>
         {fungible?.tokens.map((token) => (
           <Card
@@ -80,7 +81,11 @@ export default function UnitInventory() {
             variant={
               activeBlock?.toText() === token.cid.toText() ? 'solid' : 'soft'
             }
-            color="success"
+            color={
+              activeBlock?.toText() === token.cid.toText()
+                ? 'success'
+                : 'neutral'
+            }
             invertedColors={activeBlock?.toText() === token.cid.toText()}
             size="sm"
             sx={{ p: 0.5, '&:hover': { cursor: 'pointer' } }}>

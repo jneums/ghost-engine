@@ -72,6 +72,7 @@ module {
       symbol = metadata.symbol;
       name = metadata.name;
       fee = metadata.fee;
+      density = 1;
     };
 
     // Register the new block type

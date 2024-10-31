@@ -69,9 +69,9 @@ module {
   };
 
   public type MiningComponent = {
-    position : Vector3.Vector3;
-    speed : Float;
+    positions : [Vector3.Vector3];
     startAt : Time.Time;
+    progress : Float;
   };
 
   public type PlaceBlockComponent = {
@@ -131,6 +131,7 @@ module {
 
   public type UnitsChunk = {
     chunkId : Vector3.Vector3;
+    priority : Nat8;
     updatedAt : Time.Time;
   };
 

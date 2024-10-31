@@ -48,6 +48,7 @@ export default function TargetCard() {
       hitpoints={hitpoints}
       top={0}
       right={0}
+      energyTokens={0}
     />
   );
 }

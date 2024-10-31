@@ -9,7 +9,7 @@ import { ErrorMessageProvider } from './context/ErrorProvider';
 
 export default function App() {
   return (
-    <CssVarsProvider defaultMode="light">
+    <CssVarsProvider defaultMode="dark">
       <CssBaseline />
       <InternetIdentityProvider
         loginOptions={{

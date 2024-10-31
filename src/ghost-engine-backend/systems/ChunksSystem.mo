@@ -4,15 +4,13 @@ import Debug "mo:base/Debug";
 import Components "../components";
 import Blocks "../utils/Blocks";
 import Array "mo:base/Array";
-import Float "mo:base/Float";
 import Map "mo:stable-hash-map/Map/Map";
 import Vector3 "../math/Vector3";
-import Const "../utils/Const";
-import Chunks "../utils/Chunks";
 
 module {
   type ChunkStatus = {
     position : Vector3.Vector3;
+    priority : Nat8;
     isActive : Bool;
   };
 
@@ -27,30 +25,7 @@ module {
 
         // Add all chunks as inactive
         for (chunkId in blocksComponent.chunkPositions.vals()) {
-          Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; isActive = false });
-        };
-
-        // Add the chunks with distance < 4 around the spawn point as active chunks
-        let spawnPoint = Chunks.getChunkPosition({
-          x = Const.SpawnPoint.position.x;
-          y = 0;
-          z = Const.SpawnPoint.position.z;
-        });
-        let chunkRange = Float.toInt(Const.DEFAULT_VIEW_RADIUS) / Const.CHUNK_SIZE;
-
-        var x : Int = -chunkRange;
-        while (x <= chunkRange) {
-          var z : Int = -chunkRange;
-          while (z <= chunkRange) {
-            let chunkPos = {
-              x = (spawnPoint.x + Float.fromInt(x));
-              y = 0.0;
-              z = (spawnPoint.z + Float.fromInt(z));
-            };
-            Map.set(chunks, Map.thash, debug_show (chunkPos), { position = chunkPos; isActive = true });
-            z += 1;
-          };
-          x += 1;
+          Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; priority = 0 : Nat8; isActive = false });
         };
 
         // Iterate over all entities with UnitChunksComponent and set as active chunks
@@ -58,38 +33,31 @@ module {
         for (unitEntityId in unitEntities.vals()) {
           switch (ECS.World.getComponent(ctx, unitEntityId, "UnitChunksComponent")) {
             case (? #UnitChunksComponent(unitChunks)) {
-              for ({ chunkId } in unitChunks.chunks.vals()) {
-                Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; isActive = true });
+              for ({ chunkId; priority } in unitChunks.chunks.vals()) {
+                Map.set(chunks, Map.thash, debug_show (chunkId), { position = chunkId; priority; isActive = true });
               };
             };
             case (_) {};
           };
         };
 
-        // Flag to track if a chunk has been processed
-        var chunkProcessed = false;
-
-        // Update chunk statuses based on active chunks
-        label processChunk for (chunkStatus in Map.vals(chunks)) {
-
+        for (chunkStatus in Map.vals(chunks)) {
           if (chunkStatus.isActive) {
-            // Generate blocks if they don't exist
+            // Check if blocks exist
             if (Array.size(Blocks.getBlocks(ctx, chunkStatus.position)) == 0) {
-              if (not chunkProcessed) {
-
-                Blocks.generateBlocks(ctx, chunkStatus.position);
-                chunkProcessed := true;
+              // Set placeholder if no blocks exist
+              if (not Blocks.chunkExists(ctx, chunkStatus.position)) {
+                Blocks.createEmptyChunk(ctx, chunkStatus.position);
               };
+              // Set the status to indicate pending generation
+              Blocks.setStatus(ctx, chunkStatus.position, chunkStatus.priority);
             };
           };
         };
 
         Debug.print("\nChunks managed");
+        ECS.World.removeComponent(ctx, entityId, "UpdateChunksComponent");
 
-        // Remove the UpdateChunksComponent only if no more chunks need processing
-        if (not chunkProcessed) {
-          ECS.World.removeComponent(ctx, entityId, "UpdateChunksComponent");
-        };
       };
       case (_) {};
     };

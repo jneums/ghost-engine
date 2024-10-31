@@ -172,6 +172,13 @@ actor {
     Blocks.getTokenRegistry(ctx);
   };
 
+  // Get chunks to be generated
+  public shared query ({ caller }) func getChunkToGenerate() : async ?Vector3.Vector3 {
+    assert (not Principal.isAnonymous(caller));
+
+    Blocks.getChunkToGenerate(ctx);
+  };
+
   // Mutations
   public shared ({ caller }) func putAction(action : Actions.Action) : async () {
     assert (not Principal.isAnonymous(caller));
@@ -179,5 +186,11 @@ actor {
     startGameLoop<system>();
     Units.updateSession(ctx, caller);
     Actions.handleAction(ctx, action);
+  };
+
+  public shared ({ caller }) func putGeneratedChunk(position : Vector3.Vector3, chunk : [Nat16]) : async () {
+    assert (not Principal.isAnonymous(caller));
+
+    Blocks.putGeneratedChunk(ctx, position, chunk);
   };
 };

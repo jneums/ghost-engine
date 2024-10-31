@@ -37,7 +37,7 @@ export default function Unit({
   const spotlightRef = useRef<THREE.SpotLight>(null);
   const lightningBeamSourceRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(2);
   const [isDragging, setIsDragging] = useState(false);
   const [rotation, setRotation] = useState({
     azimuthal: 0,
@@ -129,7 +129,7 @@ export default function Unit({
     };
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (isDragging) {
+      if (isDragging && event.button === 0) {
         setRotation((prevRotation) => ({
           azimuthal: prevRotation.azimuthal - event.movementX * 0.01,
           polar: Math.max(
@@ -234,9 +234,9 @@ export default function Unit({
 
     // Smoothly rotate the mesh to face the direction of movement
     if (meshRef.current) {
-      if (mining && mining.position) {
+      if (mining && mining.positions) {
         // Smoothly look at the mining target
-        smoothLookAt(meshRef.current, mining.position, delta);
+        smoothLookAt(meshRef.current, mining.positions[0], delta);
       } else {
         // Smoothly look at the movement target
         smoothLookAt(meshRef.current, updatedPosition, delta);
@@ -359,7 +359,7 @@ export default function Unit({
       }
     }
     if (mining) {
-      return mining.position;
+      return mining.positions[0];
     }
     return null;
   }, [combatTargetId, mining]);

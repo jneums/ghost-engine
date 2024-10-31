@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { useCallback, useMemo, useRef } from 'react';
 import { ThreeEvent, useFrame } from '@react-three/fiber';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from '../const/terrain';
+import { CHUNK_SIZE } from '../const/terrain';
 import {
   BlockType,
   TILE_SIZE,
@@ -12,21 +12,23 @@ import { FACES } from './faces';
 
 export default function Chunk({
   x,
+  y,
   z,
   data,
   textureAtlas,
   highlightPosition,
-  minedVoxel,
+  minedVoxels,
   placingVoxel,
   onBlockAction,
   onMove,
 }: {
   x: number;
+  y: number;
   z: number;
   data: Uint16Array | number[];
   textureAtlas: THREE.Texture;
   highlightPosition: THREE.Vector3 | null;
-  minedVoxel: number | null;
+  minedVoxels: number[] | null;
   placingVoxel: number | null;
   onBlockAction: (
     e: ThreeEvent<MouseEvent>,
@@ -38,6 +40,7 @@ export default function Chunk({
   const meshRef = useRef<THREE.Mesh>(null);
   const placeholderRef = useRef<THREE.Mesh>(null);
   const highlightRef = useRef<THREE.Mesh>(null);
+  const minedVoxelsGroupRef = useRef<THREE.Group>(new THREE.Group());
   const isMobile = window.innerWidth < 768;
 
   const generateVoxelGeometry = useCallback(() => {
@@ -49,7 +52,7 @@ export default function Chunk({
 
     const WATER_HEIGHT = 0.6; // Define the height for water blocks
 
-    for (let y = 0; y < CHUNK_HEIGHT; ++y) {
+    for (let y = 0; y < CHUNK_SIZE; ++y) {
       for (let z = 0; z < CHUNK_SIZE; ++z) {
         for (let x = 0; x < CHUNK_SIZE; ++x) {
           const index = x + z * CHUNK_SIZE + y * CHUNK_SIZE * CHUNK_SIZE;
@@ -64,7 +67,7 @@ export default function Chunk({
                 neighborX < 0 ||
                 neighborX >= CHUNK_SIZE ||
                 neighborY < 0 ||
-                neighborY >= CHUNK_HEIGHT ||
+                neighborY >= CHUNK_SIZE ||
                 neighborZ < 0 ||
                 neighborZ >= CHUNK_SIZE;
 
@@ -154,17 +157,42 @@ export default function Chunk({
         highlightRef.current.visible = false;
       }
 
-      const voxelIndex = placingVoxel || minedVoxel;
-      if (placeholderRef.current && voxelIndex !== null) {
-        const localX = voxelIndex % CHUNK_SIZE;
-        const localY = Math.floor(voxelIndex / (CHUNK_SIZE * CHUNK_SIZE));
+      if (minedVoxelsGroupRef.current) {
+        minedVoxelsGroupRef.current.clear(); // Clear previous indicators
+
+        if (minedVoxels) {
+          minedVoxels.forEach((voxelIndex) => {
+            const localX = voxelIndex % CHUNK_SIZE;
+            const localY = Math.floor(voxelIndex / (CHUNK_SIZE * CHUNK_SIZE));
+            const localZ = Math.floor(
+              (voxelIndex % (CHUNK_SIZE * CHUNK_SIZE)) / CHUNK_SIZE,
+            );
+
+            // Convert local position to world position
+            const worldX = localX + x * CHUNK_SIZE;
+            const worldY = localY + y * CHUNK_SIZE;
+            const worldZ = localZ + z * CHUNK_SIZE;
+
+            const voxelMesh = new THREE.Mesh(
+              new THREE.BoxGeometry(1.01, 1.01, 1.01),
+              new THREE.MeshPhongMaterial({ color: 'red' }),
+            );
+            voxelMesh.position.set(worldX + 0.5, worldY + 0.5, worldZ + 0.5);
+            minedVoxelsGroupRef.current.add(voxelMesh);
+          });
+        }
+      }
+
+      if (placeholderRef.current && placingVoxel !== null) {
+        const localX = placingVoxel % CHUNK_SIZE;
+        const localY = Math.floor(placingVoxel / (CHUNK_SIZE * CHUNK_SIZE));
         const localZ = Math.floor(
-          (voxelIndex % (CHUNK_SIZE * CHUNK_SIZE)) / CHUNK_SIZE,
+          (placingVoxel % (CHUNK_SIZE * CHUNK_SIZE)) / CHUNK_SIZE,
         );
 
         // Convert local position to world position
         const worldX = localX + x * CHUNK_SIZE;
-        const worldY = localY;
+        const worldY = localY + y * CHUNK_SIZE;
         const worldZ = localZ + z * CHUNK_SIZE;
 
         placeholderRef.current.position.set(
@@ -177,11 +205,7 @@ export default function Chunk({
         // Set color based on operation
         const material = placeholderRef.current
           .material as THREE.MeshBasicMaterial;
-        if (placingVoxel !== null) {
-          material.color.set('green'); // Color for placing
-        } else if (minedVoxel !== null) {
-          material.color.set('red'); // Color for mining
-        }
+        material.color.set('green'); // Color for placing
       } else if (placeholderRef.current) {
         placeholderRef.current.visible = false;
       }
@@ -192,7 +216,7 @@ export default function Chunk({
     return null;
   }
 
-  const chunkPosition = [x * CHUNK_SIZE, 0, z * CHUNK_SIZE] as [
+  const chunkPosition = [x * CHUNK_SIZE, y * CHUNK_SIZE, z * CHUNK_SIZE] as [
     number,
     number,
     number,
@@ -202,21 +226,21 @@ export default function Chunk({
     <>
       <mesh
         ref={meshRef}
-        name={`chunk-${x}-${z}`}
+        name={`chunk-${x}-${y}-${z}`}
         castShadow
         receiveShadow
         onClick={(e) => onBlockAction(e, data)}
         onContextMenu={onMove}
         position={chunkPosition}
-        geometry={geometry}
-        renderOrder={1}>
+        geometry={geometry}>
         <meshLambertMaterial map={textureAtlas} transparent />
       </mesh>
+      <group ref={minedVoxelsGroupRef} />
       <mesh ref={placeholderRef} visible={false}>
         <boxGeometry args={[1.01, 1.01, 1.01]} />
         <meshPhongMaterial color="black" />
       </mesh>
-      <mesh ref={highlightRef} visible={false} renderOrder={2}>
+      <mesh ref={highlightRef} visible={false}>
         <boxGeometry args={[1.01, 1.01, 1.01]} />
         <meshPhongMaterial color="darkgrey" transparent opacity={0.1} />
       </mesh>

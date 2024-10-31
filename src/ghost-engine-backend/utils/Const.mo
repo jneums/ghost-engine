@@ -5,7 +5,7 @@ module {
   // 5 minutes in nanoseconds
   public let MAX_AFK_BEFORE_DISCONNECT = 300_000_000_000;
 
-  // Chunk size
+  // Chunks
   public let CHUNK_HEIGHT = 128; // Initial maximum y-value
   public let CHUNK_SIZE = 16; // Assuming a 16x16x16 chunk size for simplicity
 
@@ -54,11 +54,5 @@ module {
       y = 50.0;
       z = 162.0;
     };
-  };
-
-  public let BlockType = {
-    Air = 0 : Nat16;
-    Stone = 1 : Nat16;
-    Water = 2 : Nat16;
   };
 };

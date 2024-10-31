@@ -8,6 +8,7 @@ import Vector3 "../math/Vector3";
 import Blocks "../utils/Blocks";
 import Tokens "../utils/Tokens";
 import Const "../utils/Const";
+import TokenRegistry "../utils/TokenRegistry";
 
 module {
   // Private function to update the player's cargo after placing a block
@@ -69,7 +70,7 @@ module {
 
                 // Make sure the block is not being placed over anything
                 let existingBlock = Blocks.getBlockType(ctx, placeBlock.position);
-                if (existingBlock != Const.BlockType.Air) {
+                if (existingBlock != TokenRegistry.BlockType.Air) {
                   Debug.print("\nBlock placement failed: " # debug_show (entityId) # " cannot place block over another block.");
                   ECS.World.removeComponent(ctx, entityId, "PlaceBlockComponent");
                   return;

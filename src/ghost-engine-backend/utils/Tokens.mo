@@ -15,6 +15,7 @@ module {
     decimals : Nat;
     logo : Text;
     fee : Nat;
+    density : Nat;
   };
 
   public let Offset = {
@@ -57,11 +58,20 @@ module {
     Float.fromInt(value) / Float.fromInt(Nat.pow(10, decimals));
   };
 
-  private func findToken(tokens : [Token], token : Token) : ?Token {
+  public func findToken(tokens : [Token], token : Token) : ?Token {
     Array.find(
       tokens,
       func(t : Token) : Bool {
         t.symbol == token.symbol and t.cid == token.cid and t.amount >= token.amount
+      },
+    );
+  };
+
+  public func getTokenByCid(tokens : [Token], cid : Text) : ?Token {
+    Array.find(
+      tokens,
+      func(t : Token) : Bool {
+        t.cid == cid;
       },
     );
   };
@@ -117,6 +127,7 @@ module {
               amount = existingToken.amount + token.amount;
               logo = token.logo;
               fee = token.fee;
+              density = token.density;
             },
           );
         };
