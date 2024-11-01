@@ -6,8 +6,8 @@ module {
   public let MAX_AFK_BEFORE_DISCONNECT = 300_000_000_000;
 
   // Chunks
-  public let CHUNK_HEIGHT = 128; // Initial maximum y-value
-  public let CHUNK_SIZE = 16; // Assuming a 16x16x16 chunk size for simplicity
+  public let CHUNK_HEIGHT = 128;
+  public let CHUNK_SIZE = 16;
 
   public let DEFAULT_VIEW_RADIUS = 64.0;
 

@@ -3,10 +3,9 @@ import { useCallback } from 'react';
 import { useWorld } from '../context/WorldProvider';
 import { FetchedChunk } from './useChunks';
 import { ClientTransformComponent } from '../ecs/components';
-import { CHUNK_SIZE } from '../const/terrain';
 import { initializeNeighbors } from '../pathfinding';
 import { Node } from '../pathfinding';
-import { BlockType } from '../const/blocks';
+import { BlockType, CHUNK_HEIGHT, CHUNK_SIZE } from '../const/blocks';
 
 export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
   const { unitEntityId, getEntity } = useWorld();
@@ -50,17 +49,15 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
         worldZ: number,
       ) => {
         const chunkX = Math.floor(worldX / CHUNK_SIZE);
-        const chunkY = Math.floor(worldY / CHUNK_SIZE);
         const chunkZ = Math.floor(worldZ / CHUNK_SIZE);
 
         // Ensure local coordinates are positive
         const localX = ((worldX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-        const localY = ((worldY % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const localY = ((worldY % CHUNK_HEIGHT) + CHUNK_HEIGHT) % CHUNK_HEIGHT;
         const localZ = ((worldZ % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
 
         const chunk = fetchedChunks.find(
-          (chunk) =>
-            chunk.x === chunkX && chunk.y === chunkY && chunk.z === chunkZ,
+          (chunk) => chunk.x === chunkX && chunk.z === chunkZ,
         );
 
         if (!chunk) return undefined;

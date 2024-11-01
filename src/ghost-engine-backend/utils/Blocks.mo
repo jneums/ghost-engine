@@ -85,15 +85,9 @@ module {
     let floatChunkSize = Float.fromInt(Const.CHUNK_SIZE);
     Vector3.floor({
       x = position.x / floatChunkSize;
-      y = position.y / floatChunkSize;
+      y = 0;
       z = position.z / floatChunkSize;
     });
-  };
-
-  public func getHighestSolidBlockY(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Float {
-    let chunkPos = getChunkPosition(position);
-    let blocks = getBlocks(ctx, chunkPos);
-    findHighestSolidBlockY(blocks, position);
   };
 
   public func getBlockType(ctx : ECS.Types.Context<Components.Component>, position : Vector3.Vector3) : Nat16 {
@@ -276,23 +270,6 @@ module {
     };
   };
 
-  private func findHighestSolidBlockY(blocks : [Nat16], position : Vector3.Vector3) : Float {
-    let xIndex = Float.toInt(position.x) % Const.CHUNK_SIZE;
-    let zIndex = Float.toInt(position.z) % Const.CHUNK_SIZE;
-    var highestY = -1;
-    for (y in Iter.range(0, Const.CHUNK_HEIGHT)) {
-      let index = xIndex + zIndex * Const.CHUNK_SIZE + y * Const.CHUNK_SIZE * Const.CHUNK_SIZE;
-      if (index < Array.size(blocks) and blocks[Int.abs(index)] != 0) {
-        highestY := y;
-      };
-    };
-    if (highestY == -1) {
-      0.0;
-    } else {
-      Float.fromInt(highestY);
-    };
-  };
-
   private func getBlockTypeAtPosition(blocks : [Nat16], position : Vector3.Vector3) : Nat16 {
     let index = calculateBlockIndex(position);
     if (index >= 0 and Float.toInt(index) < Array.size(blocks)) {
@@ -304,7 +281,7 @@ module {
 
   private func calculateBlockIndex(position : Vector3.Vector3) : Float {
     let localX = (position.x % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
-    let localY = (position.y % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
+    let localY = position.y;
     let localZ = (position.z % Float.fromInt(Const.CHUNK_SIZE) + Float.fromInt(Const.CHUNK_SIZE)) % Float.fromInt(Const.CHUNK_SIZE);
     localX + localZ * Float.fromInt(Const.CHUNK_SIZE) + localY * Float.fromInt(Const.CHUNK_SIZE) * Float.fromInt(Const.CHUNK_SIZE);
   };
@@ -404,7 +381,7 @@ module {
     switch (getBlocksComponent(ctx)) {
       case (?blocks) {
         var highestPriorityChunk : ?Vector3.Vector3 = null;
-        var highestPriority : Nat8 = 254; // Start with the lowest possible priority
+        var highestPriority : Nat8 = 255; // Start with the lowest possible priority
         let chunkStatusSize = Array.size(blocks.chunkStatus);
 
         label findHighest for (chunkIdx in Iter.range(0, chunkStatusSize - 1)) {

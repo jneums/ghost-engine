@@ -20,8 +20,16 @@ actor {
         };
         let blocks = Generate.generateChunkBlocks(position);
         await Game.putChunk(exists, blocks);
+
+        // Set timer for next block
+        let oneSecond = #seconds(1);
+        startGameLoop<system>(oneSecond);
       };
-      case (_) {};
+      case (_) {
+        // Set timer for 1 minute
+        let oneMinute = #seconds(60);
+        startGameLoop<system>(oneMinute);
+      };
     };
   };
 
@@ -36,21 +44,21 @@ actor {
     };
   };
 
-  private func startGameLoop<system>() {
-    let gameTick = #nanoseconds(1_000_000_000 / 60);
+  private func startGameLoop<system>(interval : Timer.Duration) {
     switch (gameLoopTimer) {
       case (null) {
         Debug.print("Starting game loop.");
-        gameLoopTimer := ?Timer.recurringTimer<system>(gameTick, gameLoop);
+        gameLoopTimer := ?Timer.recurringTimer<system>(interval, gameLoop);
       };
       case (?exists) {
         Timer.cancelTimer(exists);
-        gameLoopTimer := ?Timer.recurringTimer<system>(gameTick, gameLoop);
+        gameLoopTimer := ?Timer.recurringTimer<system>(interval, gameLoop);
       };
     };
   };
 
-  startGameLoop<system>();
+  let oneMinute = #seconds(60);
+  startGameLoop<system>(oneMinute);
 
   public shared ({ caller }) func stop() : async () {
     assert (not Principal.isAnonymous(caller));

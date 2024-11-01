@@ -105,7 +105,7 @@ export default function Game() {
       <TargetCard />
       <CastBar />
       <LogoutButton />
-      <Stats />
+      {/* <Stats /> */}
     </>
   );
 }

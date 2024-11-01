@@ -12,32 +12,26 @@ import Vector3 "../math/Vector3";
 
 module {
   // Generate a list of chunk IDs around the unit
-  func generateUnitChunks(unitChunkPos : Vector3.Vector3, chunkRange : Int) : [Components.UnitsChunk] {
-    let chunks = Vector.new<{ chunkId : Vector3.Vector3; priority : Nat8; updatedAt : Time.Time }>();
+  func generateChunkPositions(unitChunkPos : Vector3.Vector3, chunkRange : Int) : [Components.UnitsChunk] {
+    let chunks = Vector.new<Components.UnitsChunk>();
     var x : Int = -chunkRange;
     while (x <= chunkRange) {
-      var y : Int = 0;
-      // Ensure y is within the valid range of chunk indices
-      while (y < Const.CHUNK_HEIGHT / Const.CHUNK_SIZE) {
-        var z : Int = -chunkRange;
-        while (z <= chunkRange) {
-          // Calculate priority using distance
-          let distance = Int.abs(Float.toInt(Float.sqrt(Float.fromInt(x * x + y * y + z * z))));
-          let priority = distance;
-
-          let chunkPos = {
-            chunkId = {
-              x = (unitChunkPos.x + Float.fromInt(x));
-              y = (Float.fromInt(y)); // Ensure y is within valid range
-              z = (unitChunkPos.z + Float.fromInt(z));
-            };
-            priority = Nat8.fromNat(priority);
-            updatedAt = 0;
-          };
-          Vector.add(chunks, chunkPos);
-          z += 1;
+      var z : Int = -chunkRange;
+      while (z <= chunkRange) {
+        let newChunkPos = {
+          x = (unitChunkPos.x + Float.fromInt(x));
+          y = 0.0;
+          z = (unitChunkPos.z + Float.fromInt(z));
         };
-        y += 1;
+        let distance = Vector3.distance(unitChunkPos, newChunkPos);
+
+        let chunkPos = {
+          chunkId = newChunkPos;
+          priority = Nat8.fromNat(Int.abs(Float.toInt(distance)));
+          updatedAt = 0;
+        };
+        Vector.add(chunks, chunkPos);
+        z += 1;
       };
       x += 1;
     };
@@ -62,7 +56,7 @@ module {
         let unitChunkPos = Blocks.getChunkPosition(transform.position);
         let chunkRange = Float.toInt(unitView.viewRadius / floatChunkSize);
 
-        let newChunkPositions = generateUnitChunks(unitChunkPos, chunkRange);
+        let newChunkPositions = generateChunkPositions(unitChunkPos, chunkRange);
         let updatedChunks = #UnitChunksComponent({
           chunks = newChunkPositions;
         });
@@ -70,7 +64,7 @@ module {
         ECS.World.addComponent(ctx, entityId, "UnitChunksComponent", updatedChunks);
         ECS.World.removeComponent(ctx, entityId, "UpdateUnitChunksComponent");
 
-        // Trigger the BlocksSystem to update the blocks
+        // Trigger the BlcoksSystem to update the blocks
         let blocksEntityId = Blocks.getEntityId(ctx);
         Debug.print("Blocks entity ID: " # debug_show (blocksEntityId));
         switch (blocksEntityId) {

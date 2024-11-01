@@ -1,5 +1,5 @@
 export const CHUNK_SIZE = 16;
-export const CHUNK_HEIGHT = 384;
+export const CHUNK_HEIGHT = 128;
 
 export const TILE_SIZE = 16;
 export const TILE_TEXTURE_WITH = 256;

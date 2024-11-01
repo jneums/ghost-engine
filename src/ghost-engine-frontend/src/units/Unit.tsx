@@ -125,11 +125,13 @@ export default function Unit({
     };
 
     const handleMouseDown = (event: MouseEvent) => {
-      setIsDragging(true);
+      if (event.button === 0) {
+        setIsDragging(true);
+      }
     };
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (isDragging && event.button === 0) {
+      if (isDragging) {
         setRotation((prevRotation) => ({
           azimuthal: prevRotation.azimuthal - event.movementX * 0.01,
           polar: Math.max(
@@ -378,7 +380,7 @@ export default function Unit({
         {isUserControlled && (
           <spotLight
             ref={spotlightRef}
-            position={[0, 0.5 * UNIT_HEIGHT, 0.6 * UNIT_WIDTH]} // Slightly in front of the unit
+            position={[0, 0.6 * UNIT_HEIGHT, 0.7 * UNIT_WIDTH]} // Slightly in front of the unit
             angle={Math.PI / 2}
             penumbra={0.2}
             intensity={1}

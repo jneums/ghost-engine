@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { useCallback, useMemo, useRef } from 'react';
 import { ThreeEvent, useFrame } from '@react-three/fiber';
-import { CHUNK_SIZE } from '../const/terrain';
 import {
   BlockType,
+  CHUNK_HEIGHT,
+  CHUNK_SIZE,
   TILE_SIZE,
   TILE_TEXTURE_HEIGHT,
   TILE_TEXTURE_WITH,
@@ -12,7 +13,6 @@ import { FACES } from './faces';
 
 export default function Chunk({
   x,
-  y,
   z,
   data,
   textureAtlas,
@@ -23,7 +23,6 @@ export default function Chunk({
   onMove,
 }: {
   x: number;
-  y: number;
   z: number;
   data: Uint16Array | number[];
   textureAtlas: THREE.Texture;
@@ -52,7 +51,7 @@ export default function Chunk({
 
     const WATER_HEIGHT = 0.6; // Define the height for water blocks
 
-    for (let y = 0; y < CHUNK_SIZE; ++y) {
+    for (let y = 0; y < CHUNK_HEIGHT; ++y) {
       for (let z = 0; z < CHUNK_SIZE; ++z) {
         for (let x = 0; x < CHUNK_SIZE; ++x) {
           const index = x + z * CHUNK_SIZE + y * CHUNK_SIZE * CHUNK_SIZE;
@@ -67,7 +66,7 @@ export default function Chunk({
                 neighborX < 0 ||
                 neighborX >= CHUNK_SIZE ||
                 neighborY < 0 ||
-                neighborY >= CHUNK_SIZE ||
+                neighborY >= CHUNK_HEIGHT ||
                 neighborZ < 0 ||
                 neighborZ >= CHUNK_SIZE;
 
@@ -170,12 +169,12 @@ export default function Chunk({
 
             // Convert local position to world position
             const worldX = localX + x * CHUNK_SIZE;
-            const worldY = localY + y * CHUNK_SIZE;
+            const worldY = localY;
             const worldZ = localZ + z * CHUNK_SIZE;
 
             const voxelMesh = new THREE.Mesh(
               new THREE.BoxGeometry(1.01, 1.01, 1.01),
-              new THREE.MeshPhongMaterial({ color: 'red' }),
+              new THREE.MeshPhongMaterial({ color: 'red', opacity: 0.1 }),
             );
             voxelMesh.position.set(worldX + 0.5, worldY + 0.5, worldZ + 0.5);
             minedVoxelsGroupRef.current.add(voxelMesh);
@@ -192,7 +191,7 @@ export default function Chunk({
 
         // Convert local position to world position
         const worldX = localX + x * CHUNK_SIZE;
-        const worldY = localY + y * CHUNK_SIZE;
+        const worldY = localY;
         const worldZ = localZ + z * CHUNK_SIZE;
 
         placeholderRef.current.position.set(
@@ -216,7 +215,7 @@ export default function Chunk({
     return null;
   }
 
-  const chunkPosition = [x * CHUNK_SIZE, y * CHUNK_SIZE, z * CHUNK_SIZE] as [
+  const chunkPosition = [x * CHUNK_SIZE, 0, z * CHUNK_SIZE] as [
     number,
     number,
     number,
@@ -226,7 +225,7 @@ export default function Chunk({
     <>
       <mesh
         ref={meshRef}
-        name={`chunk-${x}-${y}-${z}`}
+        name={`chunk-${x}-${z}`}
         castShadow
         receiveShadow
         onClick={(e) => onBlockAction(e, data)}
