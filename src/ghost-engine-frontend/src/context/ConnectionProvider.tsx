@@ -60,8 +60,29 @@ const useConnectionStore = create<ConnectionState>((set, get) => {
 
     const loadState = async () => {
       const server = createServer(identity);
-      const initialUpdates = await server.getState();
-      console.log('Fetching initial updates');
+      let initialUpdates: Update[] = [];
+      let attempts = 0;
+      const maxAttempts = 5; // Maximum number of retry attempts
+      const delay = 500; // Delay in milliseconds between retries
+
+      while (initialUpdates.length === 0 && attempts < maxAttempts) {
+        console.log('Fetching initial updates');
+        initialUpdates = await server.getState();
+
+        if (initialUpdates.length === 0) {
+          console.log('No updates found, retrying...');
+          attempts += 1;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      if (initialUpdates.length === 0) {
+        console.error(
+          'Failed to fetch initial updates after multiple attempts',
+        );
+        return;
+      }
+
       set({ updates: initialUpdates });
 
       const latestTimestamp = initialUpdates.reduce((max, update) => {

@@ -70,10 +70,10 @@ module {
 
         // Block check (must be a valid block to mine)
         let block = Blocks.getBlockType(ctx, currentMiningPosition);
-        let targetToken = Blocks.getTokenByBlockType(ctx, block);
+        let targetBlock = Blocks.getTokenByBlockType(ctx, block);
         let isBlockValid = block != TokenRegistry.BlockType.Air and block != TokenRegistry.BlockType.Water; // Not air or water
-        let energyCostToken = Energy.getEnergyCostToken(ctx);
-        let energy = Energy.getCurrentPowerLevel(ctx, fungible);
+        let energyCostToken = TokenRegistry.Energy;
+        let energy = Energy.getCurrentPowerLevel(fungible);
 
         // If not in range or block is invalid or lacks required energy, stop mining
         if (not isInRange or not isBlockValid or energy == 0) {
@@ -82,9 +82,9 @@ module {
           return;
         };
 
-        let density = switch (targetToken) {
-          case (?token) {
-            token.density;
+        let density = switch (targetBlock) {
+          case (?block) {
+            block.dropInfo.token.density;
           };
           case (_) {
             0;
@@ -97,14 +97,14 @@ module {
         let progress = elapsedInSeconds * energy / Float.fromInt(density);
         if (progress >= 1.0) {
           // Remove the energy block and add the mined block to the unit's inventory
-          switch (targetToken, energyCostToken) {
-            case (?blockToken, ?energyToken) {
+          switch (targetBlock) {
+            case (?block) {
               let blockFungible = {
-                tokens = [blockToken];
+                tokens = [block.dropInfo.token];
               };
 
               // Deduct energy cost
-              let totalCost = Tokens.getTokenWithAmount(energyToken, density * BASE_MINING_COST);
+              let totalCost = Tokens.getTokenWithAmount(energyCostToken, density * BASE_MINING_COST);
               if (Tokens.hasToken(fungible.tokens, totalCost)) {
                 updateFungibles(ctx, entityId, blockFungible, totalCost);
 

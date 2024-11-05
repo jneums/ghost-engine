@@ -120,6 +120,36 @@ export default function useAction() {
     addComponent(entityId, mining);
   }
 
+  function placeBlock(
+    entityId: number,
+    position: THREE.Vector3,
+    tokenCid: Principal,
+  ) {
+    if (!identity) {
+      throw new Error('Identity not found');
+    }
+
+    console.log('Place block action');
+
+    // Notify the backend of the action
+    send(identity, {
+      PlaceBlock: {
+        entityId: BigInt(entityId),
+        position,
+        tokenCid,
+      },
+    });
+
+    // Add the components to the ecs entity
+    const existing = getEntity(entityId).getComponent(PlaceBlockComponent);
+    const positions = existing ? [...existing.positions, position] : [position];
+    const tokenCids = existing ? [...existing.tokenCids, tokenCid] : [tokenCid];
+    const progress = existing ? existing.progress : 0;
+    const placeBlock = new PlaceBlockComponent(positions, tokenCids, progress);
+
+    addComponent(entityId, placeBlock);
+  }
+
   function move(entityId: number, waypoints: THREE.Vector3[]) {
     if (!identity) {
       throw new Error('Identity not found');
@@ -133,14 +163,6 @@ export default function useAction() {
         entityId: BigInt(entityId),
         waypoints: waypoints,
       },
-    });
-
-    sleep(500).then(() => {
-      // Add the components to the ecs entity
-      const position = new MoveTargetComponent(waypoints);
-
-      // Add the components to the ecs entity
-      addComponent(entityId, position);
     });
   }
 
@@ -254,30 +276,6 @@ export default function useAction() {
 
     // Add the components to the ecs entity
     addComponent(entityId, target);
-  }
-
-  function placeBlock(
-    entityId: number,
-    position: THREE.Vector3,
-    tokenCid: Principal,
-  ) {
-    if (!identity) {
-      throw new Error('Identity not found');
-    }
-
-    console.log('Place block action');
-
-    // Notify the backend of the action
-    send(identity, {
-      PlaceBlock: {
-        entityId: BigInt(entityId),
-        position,
-        tokenCid,
-      },
-    });
-
-    const block = new PlaceBlockComponent(position, tokenCid);
-    addComponent(entityId, block);
   }
 
   return {

@@ -1,11 +1,5 @@
 import * as THREE from 'three';
-import React, {
-  useMemo,
-  useRef,
-  useState,
-  useCallback,
-  useEffect,
-} from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { ThreeEvent, useFrame, useLoader, useThree } from '@react-three/fiber';
 import Chunk from './Chunk';
 import useChunks from '../hooks/useChunks';
@@ -13,23 +7,19 @@ import useMovementGrid from '../hooks/useMovementGrid';
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
 import { DRAG_THRESHOLD } from '../const/controls';
-import {
-  BlockType,
-  CHUNK_SIZE,
-  CHUNK_HEIGHT,
-  MINING_RADIUS,
-} from '../const/blocks';
+import { BlockType, CHUNK_SIZE, MINING_RADIUS } from '../const/blocks';
 import { toBaseUnit } from '../utils/tokens';
 import useAction from '../hooks/useAction';
 import {
-  ClientTransformComponent,
   FungibleComponent,
   HealthComponent,
   MiningComponent,
   MoveTargetComponent,
   PlaceBlockComponent,
+  TransformComponent,
 } from '../ecs/components';
 import { findNodeByPosition, findPath } from '../pathfinding';
+import useVoxelUpdates from '../hooks/useVoxelUpdates';
 
 const MemoizedChunk = React.memo(Chunk);
 
@@ -50,52 +40,18 @@ export default function Chunks() {
   const highlightPositionRef = useRef<THREE.Vector3 | null>(null);
   const [highlightPosition, setHighlightPosition] =
     useState<THREE.Vector3 | null>(null);
-  const [minedVoxels, setMinedVoxels] = useState<
-    { index: number; chunkKey: string }[]
-  >([]);
-  const [placingVoxel, setPlacingVoxel] = useState<{
-    index: number;
-    chunkKey: string;
-  } | null>(null);
 
   if (!unitEntityId) {
     return null;
   }
 
   const mining = getEntity(unitEntityId)?.getComponent(MiningComponent);
-
-  useEffect(() => {
-    if (mining) {
-      setMinedVoxels(
-        mining.positions.map((position) => {
-          const chunkKey = `chunk-${Math.floor(
-            position.x / CHUNK_SIZE,
-          )}-${Math.floor(position.z / CHUNK_SIZE)}`;
-          const localPosition = new THREE.Vector3(
-            ((position.x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
-            position.y,
-            ((position.z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
-          );
-          const index =
-            localPosition.x +
-            localPosition.z * CHUNK_SIZE +
-            localPosition.y * CHUNK_SIZE * CHUNK_SIZE;
-          return { index, chunkKey };
-        }),
-      );
-    } else {
-      setMinedVoxels([]);
-    }
-  }, [mining]);
+  const placing = getEntity(unitEntityId)?.getComponent(PlaceBlockComponent);
+  const { minedVoxels, placingVoxels } = useVoxelUpdates(mining, placing);
 
   useFrame(({ camera, pointer }) => {
     if (!unitEntityId) {
       return;
-    }
-
-    const placing = getEntity(unitEntityId)?.getComponent(PlaceBlockComponent);
-    if (!placing && placingVoxel !== null) {
-      setPlacingVoxel(null);
     }
 
     raycaster.setFromCamera(pointer, camera);
@@ -186,7 +142,7 @@ export default function Chunks() {
         return;
       }
 
-      const transform = unitEntity.getComponent(ClientTransformComponent);
+      const transform = unitEntity.getComponent(TransformComponent);
       if (!transform) {
         console.error('Transform component not found');
         return;
@@ -223,7 +179,6 @@ export default function Chunks() {
           setErrorMessage('Block already exists here!');
           return;
         }
-        setPlacingVoxel({ index, chunkKey: e.object.name });
         placeBlock(unitEntityId, targetPosition, voxelId);
       }
     },
@@ -252,7 +207,7 @@ export default function Chunks() {
         return;
       }
 
-      const transform = unitEntity.getComponent(ClientTransformComponent);
+      const transform = unitEntity.getComponent(TransformComponent);
       if (!transform) {
         console.error('Transform component not found');
         return;
@@ -321,10 +276,10 @@ export default function Chunks() {
               ?.filter((voxel) => voxel.chunkKey === `chunk-${x}-${z}`)
               .map((voxel) => voxel.index) || []
           }
-          placingVoxel={
-            placingVoxel && placingVoxel?.chunkKey === `chunk-${x}-${z}`
-              ? placingVoxel.index
-              : null
+          placingVoxels={
+            placingVoxels
+              ?.filter((voxel) => voxel.chunkKey === `chunk-${x}-${z}`)
+              .map((voxel) => voxel.index) || []
           }
           onBlockAction={handleBlockAction}
           onMove={handleMove}
@@ -335,7 +290,7 @@ export default function Chunks() {
       textureAtlas,
       highlightPosition,
       minedVoxels,
-      placingVoxel,
+      placingVoxels,
       handleBlockAction,
       handleMove,
     ],

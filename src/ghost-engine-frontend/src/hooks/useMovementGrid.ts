@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { useCallback } from 'react';
 import { useWorld } from '../context/WorldProvider';
 import { FetchedChunk } from './useChunks';
-import { ClientTransformComponent } from '../ecs/components';
+import { TransformComponent } from '../ecs/components';
 import { initializeNeighbors } from '../pathfinding';
 import { Node } from '../pathfinding';
 import { BlockType, CHUNK_HEIGHT, CHUNK_SIZE } from '../const/blocks';
@@ -14,9 +14,8 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
     (startPosition: THREE.Vector3, targetPosition: THREE.Vector3) => {
       if (!unitEntityId) return null;
 
-      const transform = getEntity(unitEntityId).getComponent(
-        ClientTransformComponent,
-      );
+      const transform =
+        getEntity(unitEntityId).getComponent(TransformComponent);
       if (!transform) return null;
 
       const startX = Math.floor(startPosition.x);
@@ -97,8 +96,7 @@ export default function useMovementGrid(fetchedChunks: FetchedChunk[]) {
             const waterWithSolidUnderneath =
               aboveBlockValue === BlockType.Air &&
               currentBlockValue === BlockType.Water &&
-              (belowBlockValue === BlockType.Stone ||
-                belowBlockValue === BlockType.Water);
+              belowBlockValue !== BlockType.Air;
 
             const isValidPosition =
               airWithSolidUnderneath || waterWithSolidUnderneath;

@@ -11,13 +11,11 @@ import Hash "mo:base/Hash";
 import Principal "mo:base/Principal";
 import Option "mo:base/Option";
 import Nat32 "mo:base/Nat32";
-import Text "mo:base/Text";
 import Nat8 "mo:base/Nat8";
 import Map "mo:stable-hash-map/Map/Map";
 import Components "../components";
 import Vector3 "../math/Vector3";
 import Const "Const";
-import Tokens "Tokens";
 import TokenRegistry "TokenRegistry";
 
 module {
@@ -110,7 +108,7 @@ module {
     updateChangedBlocks(ctx, chunkPos, index, blockType);
   };
 
-  public func getTokenByBlockType(ctx : ECS.Types.Context<Components.Component>, blockType : Nat16) : ?Tokens.Token {
+  public func getTokenByBlockType(ctx : ECS.Types.Context<Components.Component>, blockType : Nat16) : ?TokenRegistry.Block {
     switch (getBlocksComponent(ctx)) {
       case (?blocks) {
         getTokenFromRegistry(blocks.tokenRegistry, blockType);
@@ -122,15 +120,15 @@ module {
     };
   };
 
-  public func registerToken(ctx : ECS.Types.Context<Components.Component>, token : Tokens.Token, offset : Nat8) {
+  public func registerToken(ctx : ECS.Types.Context<Components.Component>, block : TokenRegistry.Block, offset : Nat8) {
     switch (getBlocksComponent(ctx)) {
       case (?blocks) {
-        if (Option.isSome(getTypeByTokenCid(ctx, Principal.fromText(token.cid)))) {
+        if (Option.isSome(getTypeByTokenCid(ctx, Principal.fromText(block.dropInfo.token.cid)))) {
           Debug.print("Token CID already registered");
           return;
         };
         let blockType = findAvailableBlockType(blocks.tokenRegistry, offset);
-        let newTokenRegistry = registerTokenInRegistry(blocks.tokenRegistry, blockType, token);
+        let newTokenRegistry = registerTokenInRegistry(blocks.tokenRegistry, blockType, block);
         updateBlocksComponent(ctx, { blocks with tokenRegistry = newTokenRegistry });
       };
       case (_) {
@@ -315,8 +313,8 @@ module {
     };
   };
 
-  private func getTokenFromRegistry(tokenRegistry : [(Nat16, Tokens.Token)], blockType : Nat16) : ?Tokens.Token {
-    let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+  private func getTokenFromRegistry(tokenRegistry : Components.TokenRegistry, blockType : Nat16) : ?TokenRegistry.Block {
+    let tokenRegistryMap = TrieMap.fromEntries<Nat16, TokenRegistry.Block>(
       tokenRegistry.vals(),
       Nat16.equal,
       func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
@@ -324,9 +322,9 @@ module {
     tokenRegistryMap.get(blockType);
   };
 
-  private func findAvailableBlockType(tokenRegistry : [(Nat16, Tokens.Token)], offset : Nat8) : Nat16 {
+  private func findAvailableBlockType(tokenRegistry : Components.TokenRegistry, offset : Nat8) : Nat16 {
     var blockType = Nat16.fromNat8(offset) * 1000 : Nat16;
-    let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+    let tokenRegistryMap = TrieMap.fromEntries<Nat16, TokenRegistry.Block>(
       tokenRegistry.vals(),
       Nat16.equal,
       func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
@@ -340,8 +338,8 @@ module {
     blockType;
   };
 
-  private func registerTokenInRegistry(tokenRegistry : [(Nat16, Tokens.Token)], blockType : Nat16, token : Tokens.Token) : [(Nat16, Tokens.Token)] {
-    let tokenRegistryMap = TrieMap.fromEntries<Nat16, Tokens.Token>(
+  private func registerTokenInRegistry(tokenRegistry : Components.TokenRegistry, blockType : Nat16, token : TokenRegistry.Block) : Components.TokenRegistry {
+    let tokenRegistryMap = TrieMap.fromEntries<Nat16, TokenRegistry.Block>(
       tokenRegistry.vals(),
       Nat16.equal,
       func(a : Nat16) : Hash.Hash { Nat32.fromNat16(a) },
@@ -350,19 +348,11 @@ module {
     Iter.toArray(tokenRegistryMap.entries());
   };
 
-  private func getBlockTypeByTokenCid(tokenRegistry : [(Nat16, Tokens.Token)], tokenCid : Principal) : ?Nat16 {
-    let blockTypeFirst = Array.map<(Nat16, Tokens.Token), (Text, Nat16)>(
-      tokenRegistry,
-      func(blockType : Nat16, t : Tokens.Token) : (Text, Nat16) {
-        (t.cid, blockType);
-      },
-    );
-    let tokenRegistryMap = TrieMap.fromEntries<Text, Nat16>(
-      blockTypeFirst.vals(),
-      Text.equal,
-      Text.hash,
-    );
-    tokenRegistryMap.get(Principal.toText(tokenCid));
+  private func getBlockTypeByTokenCid(tokenRegistry : Components.TokenRegistry, tokenCid : Principal) : ?Nat16 {
+    switch (Array.find(tokenRegistry, func((blockType, block) : (Nat16, TokenRegistry.Block)) : Bool { block.dropInfo.token.cid == Principal.toText(tokenCid) })) {
+      case (?exists) { ?exists.0 };
+      case (_) { null };
+    };
   };
 
   public func getTokenRegistry(ctx : ECS.Types.Context<Components.Component>) : Components.TokenRegistry {

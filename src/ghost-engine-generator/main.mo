@@ -18,8 +18,9 @@ actor {
           y = Float.toInt(exists.y);
           z = Float.toInt(exists.z);
         };
-        let blocks = Generate.generateChunkBlocks(position);
+        let blocks = Generate.generate(position);
         await Game.putChunk(exists, blocks);
+        Debug.print("Generated chunk at " # debug_show (exists));
 
         // Set timer for next block
         let oneSecond = #seconds(1);

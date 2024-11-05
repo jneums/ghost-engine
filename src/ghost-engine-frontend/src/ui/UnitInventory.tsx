@@ -70,9 +70,8 @@ export default function UnitInventory() {
         direction="row"
         sx={{
           overflowX: 'auto',
-          gap: 1,
+          gap: 0.5,
           p: 1,
-          opacity: 0.8,
         }}>
         {fungible?.tokens.map((token) => (
           <Card

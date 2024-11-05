@@ -64,22 +64,29 @@ module {
     // Import the fungible token by getting its metadata
     let metadata = await getMetadata(importFungible);
 
-    let defaultToken = {
-      amount = Tokens.toBaseUnit(1, metadata.decimals);
-      decimals = metadata.decimals;
-      cid = Principal.toText(importFungible.tokenCid);
-      logo = metadata.logo;
-      symbol = metadata.symbol;
+    let block = {
       name = metadata.name;
-      fee = metadata.fee;
-      density = 1;
+      dropInfo = {
+        minQuantity = 1;
+        maxQuantity = 1;
+        token = {
+          amount = Tokens.toBaseUnit(1, metadata.decimals);
+          decimals = metadata.decimals;
+          cid = Principal.toText(importFungible.tokenCid);
+          logo = metadata.logo;
+          symbol = metadata.symbol;
+          name = metadata.name;
+          fee = metadata.fee;
+          density = 1;
+        };
+      };
     };
 
     // Register the new block type
-    Blocks.registerToken(ctx, defaultToken, Tokens.Offset.userCreated);
+    Blocks.registerToken(ctx, block, Tokens.Offset.userCreated);
 
     // Create the new empty token
-    let emptyToken = Tokens.getTokenWithAmount(defaultToken, 0);
+    let emptyToken = Tokens.getTokenWithAmount(block.dropInfo.token, 0);
 
     // Save the new token to the wallet
     let merged = Tokens.mergeTokens(fungible.tokens, [emptyToken]);

@@ -1,4 +1,13 @@
 {
+  "coal_ore_ledger_canister": {
+    "ic": "35ebc-lqaaa-aaaai-q3l3q-cai"
+  },
+  "dirt_ledger_canister": {
+    "ic": "6tzm6-miaaa-aaaai-q3lha-cai"
+  },
+  "energy_ledger_canister": {
+    "ic": "2zjoq-sqaaa-aaaai-q3l5q-cai"
+  },
   "ghost-engine-backend": {
     "ic": "yooxn-7qaaa-aaaai-qpkaa-cai"
   },
@@ -8,8 +17,26 @@
   "ghost-engine-generator": {
     "ic": "5yp25-kqaaa-aaaai-q3lnq-cai"
   },
-  "meme_token": {
-    "ic": "6tzm6-miaaa-aaaai-q3lha-cai"
+  "gold_ore_ledger_canister": {
+    "ic": "3tgmk-qaaaa-aaaai-q3l2q-cai"
+  },
+  "gravel_ledger_canister": {
+    "ic": "3uhk6-5yaaa-aaaai-q3l2a-cai"
+  },
+  "iron_ore_ledger_canister": {
+    "ic": "32fhw-giaaa-aaaai-q3l3a-cai"
+  },
+  "leaves_ledger_canister": {
+    "ic": "2xldy-jaaaa-aaaai-q3l4q-cai"
+  },
+  "log_ledger_canister": {
+    "ic": "2qkfm-eyaaa-aaaai-q3l4a-cai"
+  },
+  "sand_ledger_canister": {
+    "ic": "3ba3t-4qaaa-aaaai-q3lzq-cai"
+  },
+  "sandstone_ledger_canister": {
+    "ic": "26iie-7iaaa-aaaai-q3l5a-cai"
   },
   "stone_ledger_canister": {
     "ic": "5hs4f-vqaaa-aaaai-qpk4a-cai"

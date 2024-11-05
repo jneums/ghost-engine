@@ -11,31 +11,12 @@ module {
 
   public let DEFAULT_VIEW_RADIUS = 64.0;
 
-  // Environment
-  public let SEA_LEVEL = 48;
-
   // Mining
   public let MINING_RADIUS = 5.0;
   public let PLACEMENT_RADIUS = 5.0;
 
   // Unit
   public let UNIT_VELOCITY = 3.0;
-
-  // Define the Land type as a variant to represent different terrain types
-  public let Land = {
-    Continentalness = 0;
-    Erosion = 1;
-    PeaksAndValleys = 2;
-  };
-
-  public let Climate = {
-    Temperature = 0;
-    Humidity = 1;
-    Continentalness = 2;
-    Erosion = 3;
-    PeaksAndValleys = 4;
-    Weirdness = 5;
-  };
 
   public let SpawnPoint = {
     scale = {
@@ -50,9 +31,9 @@ module {
       w = 0.0;
     };
     position = {
-      x = -178.0;
-      y = 50.0;
-      z = 162.0;
+      x = 248.0;
+      y = 44.0;
+      z = 93.0;
     };
   };
 };

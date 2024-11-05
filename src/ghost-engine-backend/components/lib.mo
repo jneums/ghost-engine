@@ -75,10 +75,10 @@ module {
   };
 
   public type PlaceBlockComponent = {
-    position : Vector3.Vector3;
-    tokenCid : Principal;
+    positions : [Vector3.Vector3];
+    tokenCids : [Principal];
     startAt : Time.Time;
-    speed : Float;
+    progress : Float;
   };
 
   public type FungibleComponent = {
@@ -110,7 +110,7 @@ module {
     amount : Nat;
   };
 
-  public type TokenRegistry = [(Nat16, Tokens.Token)];
+  public type TokenRegistry = [(Nat16, TokenRegistry.Block)];
 
   public type BlocksComponent = {
     seed : Nat64; // Seed for generating terrain

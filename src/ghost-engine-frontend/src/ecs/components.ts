@@ -65,7 +65,11 @@ export class MiningComponent {
 }
 
 export class PlaceBlockComponent {
-  constructor(public position: THREE.Vector3, public tokenCid: Principal) {}
+  constructor(
+    public positions: THREE.Vector3[],
+    public tokenCids: Principal[],
+    public progress: number,
+  ) {}
 }
 
 export class ImportFungibleComponent {
@@ -312,10 +316,13 @@ export function createComponentClass(data: Component) {
     )
     .with(
       { PlaceBlockComponent: P.select() },
-      ({ position, tokenCid }) =>
+      ({ positions, tokenCids, progress }) =>
         new PlaceBlockComponent(
-          new THREE.Vector3(position.x, position.y, position.z),
-          tokenCid,
+          positions.map(
+            (position) => new THREE.Vector3(position.x, position.y, position.z),
+          ),
+          tokenCids,
+          Number(progress),
         ),
     )
     .with(

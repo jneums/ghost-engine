@@ -18,7 +18,7 @@ export default function Chunk({
   textureAtlas,
   highlightPosition,
   minedVoxels,
-  placingVoxel,
+  placingVoxels,
   onBlockAction,
   onMove,
 }: {
@@ -28,7 +28,7 @@ export default function Chunk({
   textureAtlas: THREE.Texture;
   highlightPosition: THREE.Vector3 | null;
   minedVoxels: number[] | null;
-  placingVoxel: number | null;
+  placingVoxels: number[] | null;
   onBlockAction: (
     e: ThreeEvent<MouseEvent>,
     data: Uint16Array | number[],
@@ -37,7 +37,7 @@ export default function Chunk({
 }) {
   const geomRef = useRef(new THREE.BufferGeometry());
   const meshRef = useRef<THREE.Mesh>(null);
-  const placeholderRef = useRef<THREE.Mesh>(null);
+  const placeholderGroupRef = useRef<THREE.Group>(new THREE.Group());
   const highlightRef = useRef<THREE.Mesh>(null);
   const minedVoxelsGroupRef = useRef<THREE.Group>(new THREE.Group());
   const isMobile = window.innerWidth < 768;
@@ -174,7 +174,11 @@ export default function Chunk({
 
             const voxelMesh = new THREE.Mesh(
               new THREE.BoxGeometry(1.01, 1.01, 1.01),
-              new THREE.MeshPhongMaterial({ color: 'red', opacity: 0.1 }),
+              new THREE.MeshPhongMaterial({
+                color: 'red',
+                transparent: true,
+                opacity: 0.3,
+              }),
             );
             voxelMesh.position.set(worldX + 0.5, worldY + 0.5, worldZ + 0.5);
             minedVoxelsGroupRef.current.add(voxelMesh);
@@ -182,31 +186,34 @@ export default function Chunk({
         }
       }
 
-      if (placeholderRef.current && placingVoxel !== null) {
-        const localX = placingVoxel % CHUNK_SIZE;
-        const localY = Math.floor(placingVoxel / (CHUNK_SIZE * CHUNK_SIZE));
-        const localZ = Math.floor(
-          (placingVoxel % (CHUNK_SIZE * CHUNK_SIZE)) / CHUNK_SIZE,
-        );
+      if (placeholderGroupRef.current) {
+        placeholderGroupRef.current.clear(); // Clear previous indicators
 
-        // Convert local position to world position
-        const worldX = localX + x * CHUNK_SIZE;
-        const worldY = localY;
-        const worldZ = localZ + z * CHUNK_SIZE;
+        if (placingVoxels) {
+          placingVoxels.forEach((voxelIndex) => {
+            const localX = voxelIndex % CHUNK_SIZE;
+            const localY = Math.floor(voxelIndex / (CHUNK_SIZE * CHUNK_SIZE));
+            const localZ = Math.floor(
+              (voxelIndex % (CHUNK_SIZE * CHUNK_SIZE)) / CHUNK_SIZE,
+            );
 
-        placeholderRef.current.position.set(
-          worldX + 0.5,
-          worldY + 0.5,
-          worldZ + 0.5,
-        );
-        placeholderRef.current.visible = true;
+            // Convert local position to world position
+            const worldX = localX + x * CHUNK_SIZE;
+            const worldY = localY;
+            const worldZ = localZ + z * CHUNK_SIZE;
 
-        // Set color based on operation
-        const material = placeholderRef.current
-          .material as THREE.MeshBasicMaterial;
-        material.color.set('green'); // Color for placing
-      } else if (placeholderRef.current) {
-        placeholderRef.current.visible = false;
+            const voxelMesh = new THREE.Mesh(
+              new THREE.BoxGeometry(1.01, 1.01, 1.01),
+              new THREE.MeshPhongMaterial({
+                color: 'green',
+                transparent: true,
+                opacity: 0.3,
+              }),
+            );
+            voxelMesh.position.set(worldX + 0.5, worldY + 0.5, worldZ + 0.5);
+            placeholderGroupRef.current.add(voxelMesh);
+          });
+        }
       }
     }
   });
@@ -235,10 +242,7 @@ export default function Chunk({
         <meshLambertMaterial map={textureAtlas} transparent />
       </mesh>
       <group ref={minedVoxelsGroupRef} />
-      <mesh ref={placeholderRef} visible={false}>
-        <boxGeometry args={[1.01, 1.01, 1.01]} />
-        <meshPhongMaterial color="black" />
-      </mesh>
+      <group ref={placeholderGroupRef} />
       <mesh ref={highlightRef} visible={false}>
         <boxGeometry args={[1.01, 1.01, 1.01]} />
         <meshPhongMaterial color="darkgrey" transparent opacity={0.1} />

@@ -83,19 +83,18 @@ export default function Game() {
       <Canvas
         onPointerMissed={(e) => console.log('missed: ', e)}
         onContextMenu={(e) => e.preventDefault()}
-        shadows
+        gl={{ powerPreference: 'low-power' }}
         camera={{
           position: [
             transform.position.x + 5,
             transform.position.y + 3,
             transform.position.z + 5,
           ],
-          fov: 80,
+          fov: 60,
         }}>
-        <hemisphereLight args={['white', 'slategrey', 0.2]} />
+        <hemisphereLight args={[undefined, undefined, 0.8]} />
         <directionalLight position={[100, 300, 100]} intensity={1} />
         <fog attach="fog" args={['#f0f0f0', 0, 90]} />
-        <Sky sunPosition={[100, 300, 100]} />
         <Chunks />
         <Units />
         <Unit entityId={unitEntityId} isUserControlled />

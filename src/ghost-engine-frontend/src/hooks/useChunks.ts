@@ -113,6 +113,17 @@ export default function useChunks() {
       const viewRadius = unitView.viewRadius;
       const maxDistance = Math.floor(viewRadius / CHUNK_SIZE);
 
+      // Cleanup old chunks
+      const newFetchedChunks: Record<string, FetchedChunk> = {};
+      Object.values(fetchedChunks.current).forEach((chunk) => {
+        const dx = chunk.x - currentUnitChunk.x;
+        const dz = chunk.z - currentUnitChunk.z;
+        if (Math.max(Math.abs(dx), Math.abs(dz)) <= maxDistance) {
+          newFetchedChunks[chunk.key] = chunk;
+        }
+      });
+      fetchedChunks.current = newFetchedChunks;
+
       for (let distance = 0; distance <= maxDistance; distance++) {
         const chunksToFetch = chunks.chunks.filter(({ chunkId, updatedAt }) => {
           const dx = chunkId.x - currentUnitChunk.x;
@@ -132,16 +143,10 @@ export default function useChunks() {
 
         const fetchedData = await fetchChunkData(chunksToFetch);
 
-        const newFetchedChunks: Record<string, FetchedChunk> = {};
         fetchedData.forEach((chunk) => {
           const key = JSON.stringify({ x: chunk.x, z: chunk.z });
-          newFetchedChunks[key] = chunk;
+          fetchedChunks.current[key] = chunk;
         });
-
-        fetchedChunks.current = {
-          ...fetchedChunks.current,
-          ...newFetchedChunks,
-        };
       }
     } catch (error) {
       console.error('Error fetching chunks:', error);

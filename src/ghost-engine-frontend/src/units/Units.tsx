@@ -1,14 +1,11 @@
 import { useMemo } from 'react';
-import { PrincipalComponent, TransformComponent } from '../ecs/components';
+import { TransformComponent } from '../ecs/components';
 import { useWorld } from '../context/WorldProvider';
 import Unit from './Unit';
 
 export default function OtherUnits() {
   const { unitEntityId, getEntitiesByArchetype } = useWorld();
-  const unitEntities = getEntitiesByArchetype([
-    PrincipalComponent,
-    TransformComponent,
-  ]);
+  const unitEntities = getEntitiesByArchetype([TransformComponent]);
 
   const unitComponents = useMemo(
     () =>

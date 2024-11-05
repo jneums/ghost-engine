@@ -28,7 +28,14 @@ module {
   };
 
   public func hasToken(tokens : [Token], token : Token) : Bool {
-    Option.isSome(findToken(tokens, token));
+    switch (findToken(tokens, token)) {
+      case (?exists) {
+        exists.amount >= token.amount;
+      };
+      case (_) {
+        false;
+      };
+    };
   };
 
   public func removeToken(tokens : [Token], token : Token) : [Token] {
@@ -62,7 +69,7 @@ module {
     Array.find(
       tokens,
       func(t : Token) : Bool {
-        t.symbol == token.symbol and t.cid == token.cid and t.amount >= token.amount
+        t.symbol == token.symbol and t.cid == token.cid
       },
     );
   };

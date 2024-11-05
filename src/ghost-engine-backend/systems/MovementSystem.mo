@@ -18,7 +18,7 @@ module {
     let belowBlock = Blocks.getBlockType(ctx, { x = position.x; y = position.y - 1.0; z = position.z });
 
     let airWithSolidUnderneath = aboveBlock == TokenRegistry.BlockType.Air and currentBlock == TokenRegistry.BlockType.Air and belowBlock != TokenRegistry.BlockType.Air and belowBlock != TokenRegistry.BlockType.Water;
-    let waterWithSolidUnderneath = aboveBlock == TokenRegistry.BlockType.Air and currentBlock == TokenRegistry.BlockType.Water and (belowBlock == TokenRegistry.BlockType.Stone or belowBlock == TokenRegistry.BlockType.Water);
+    let waterWithSolidUnderneath = aboveBlock == TokenRegistry.BlockType.Air and currentBlock == TokenRegistry.BlockType.Water and (belowBlock != TokenRegistry.BlockType.Air);
 
     airWithSolidUnderneath or waterWithSolidUnderneath;
   };

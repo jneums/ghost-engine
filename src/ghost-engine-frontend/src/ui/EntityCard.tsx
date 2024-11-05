@@ -1,13 +1,5 @@
 import * as THREE from 'three';
-import {
-  Badge,
-  Card,
-  Chip,
-  LinearProgress,
-  Stack,
-  StackProps,
-  Typography,
-} from '@mui/joy';
+import { Card, LinearProgress, Stack, StackProps, Typography } from '@mui/joy';
 import NoTextSelect from './NoTextSelect';
 import { Principal } from '@dfinity/principal';
 import CopyId from './CopyId';
@@ -19,18 +11,16 @@ export default function EntityCard({
   principal,
   hitpoints,
   energyTokens,
-  coords,
   ...stackProps
 }: {
   name: string;
   principal: Principal;
   hitpoints: number;
   energyTokens: number; // Total energy tokens
-  coords?: THREE.Vector3;
 } & StackProps) {
   // Calculate the current energy level
   const energyLevel = Math.floor(energyTokens);
-  const energyProgress = (energyTokens % 1) * 100;
+  const energyProgress = (energyTokens % 1) * 100 || energyLevel > 0 ? 100 : 0;
 
   const isOutOfEnergy = energyLevel === 0 && energyProgress < 1;
   const isDead = hitpoints === 0;
@@ -57,24 +47,6 @@ export default function EntityCard({
             alignItems="center"
             gap={2}>
             <Stack justifyContent="space-between" gap={1} width="100%">
-              <Stack direction="row" justifyContent="space-between">
-                <Stack direction="row" gap={1}>
-                  <Typography
-                    level="body-sm"
-                    sx={{
-                      display: '-webkit-box',
-                      WebkitBoxOrient: 'vertical',
-                      WebkitLineClamp: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                    {name}
-                  </Typography>
-                  <Chip variant="outlined" color="primary" size="sm">
-                    {Math.round(Math.sqrt(energyLevel))}x power
-                  </Chip>
-                </Stack>
-              </Stack>
               <Stack direction="row" justifyContent="space-between" gap={0.5}>
                 <Typography
                   level="body-xs"
@@ -134,7 +106,7 @@ export default function EntityCard({
                     level="body-xs"
                     textColor={isOutOfEnergy ? 'danger' : 'common.white'}
                     sx={{ fontWeight: 'md', mixBlendMode: 'difference' }}>
-                    {energyProgress.toFixed(0)}%
+                    {(energyTokens * 100).toFixed(0)}%
                   </Typography>
                 </LinearProgress>
               </Stack>

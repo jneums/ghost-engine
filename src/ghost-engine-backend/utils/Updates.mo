@@ -16,11 +16,11 @@ module {
         case (#Insert({ component; entityId })) {
           switch (component) {
             // Server only
-            case (#MoveTargetComponent(_) or #BlocksComponent(_) or #UpdateChunksComponent(_) or #UpdateBlocksComponent(_)) {
+            case (#BlocksComponent(_) or #UpdateChunksComponent(_) or #UpdateBlocksComponent(_)) {
               continue filterUpdates;
             };
             // Owner only
-            case (#UnitChunksComponent(_) or #FungibleComponent(_) or #SessionComponent(_) or #UnitViewComponent(_)) {
+            case (#MoveTargetComponent(_) or #UnitChunksComponent(_) or #SessionComponent(_) or #UnitViewComponent(_)) {
               if (entityId != unitEntityId) {
                 continue filterUpdates;
               };
@@ -31,11 +31,11 @@ module {
         case (#Delete({ componentType; entityId })) {
           switch (componentType) {
             // Server only
-            case ("MoveTargetComponent" or "UpdateChunksComponent" or "UpdateBlocksComponent") {
+            case ("UpdateChunksComponent" or "UpdateBlocksComponent") {
               continue filterUpdates;
             };
             // Owner only
-            case ("UnitChunksComponent" or "FungibleComponent" or "SessionComponent" or "UnitViewComponent") {
+            case ("MoveTargetComponent" or "UnitChunksComponent" or "SessionComponent" or "UnitViewComponent") {
               if (entityId != unitEntityId) {
                 continue filterUpdates;
               };

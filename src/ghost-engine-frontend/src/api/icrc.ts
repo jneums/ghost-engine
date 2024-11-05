@@ -87,7 +87,6 @@ export const getMetadata = async (
     agent,
     canisterId,
   });
-
   const metadata = await icrc1.metadata({});
   const parsedMetadata = metadata.map(([key, value]) => [
     key,

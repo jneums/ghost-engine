@@ -14,11 +14,37 @@ module {
 
   func handle(ctx : T.Context<Components.Component>, args : Args) {
     Debug.print("\nBegin mining: " # debug_show (args.entityId) # " block " # debug_show (args.position));
-    // Append the position to the mining component
+
+    // Append the position to the mining component or remove if it already exists
     switch (World.getComponent(ctx, args.entityId, "MiningComponent")) {
       case (? #MiningComponent(mining)) {
+        let existingIndex = Array.indexOf(
+          args.position,
+          mining.positions,
+          Vector3.equal,
+        );
+
+        let updatedPositions = switch (existingIndex) {
+          case (?index) {
+            // Remove the position if it already exists
+            let start = Array.take(mining.positions, index);
+            let endIdx = if (Array.size(mining.positions) > index + 1) {
+              Array.size(mining.positions) - 1 - index : Nat;
+            } else {
+              0;
+            };
+
+            let end = Array.take(mining.positions, -endIdx);
+            Array.append(start, end);
+          };
+          case (_) {
+            // Append the position if it does not exist
+            Array.append(mining.positions, [args.position]);
+          };
+        };
+
         let updated = #MiningComponent({
-          positions = Array.append(mining.positions, [args.position]);
+          positions = updatedPositions;
           startAt = mining.startAt;
           progress = mining.progress;
         });

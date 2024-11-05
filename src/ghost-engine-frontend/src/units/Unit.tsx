@@ -1,4 +1,6 @@
-import { ThreeEvent, useFrame, useThree } from '@react-three/fiber';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { ThreeEvent, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 import {
   MoveTargetComponent,
   TransformComponent,
@@ -7,51 +9,34 @@ import {
   HealthComponent,
   MiningComponent,
 } from '../ecs/components';
-import * as THREE from 'three';
-import { useRef, useEffect, useState, useCallback } from 'react';
 import LightningBeam from './LightningBeam';
 import { useWorld } from '../context/WorldProvider';
 import useAction from '../hooks/useAction';
 import { CAMERA_FOLLOW_DISTANCE } from '../const/camera';
 import { updatePosition, smoothLookAt } from './utils';
 import { UNIT_HEIGHT, UNIT_VELOCITY, UNIT_WIDTH } from '../const/units';
+import { Sky } from '@react-three/drei';
+import useCameraControls from '../hooks/useCameraControls';
 
 // Create a raycaster for collision detection
 const raycaster = new THREE.Raycaster();
 const cameraDirection = new THREE.Vector3();
 
-const DAMPING_FACTOR = 0.5;
-
-export default function Unit({
+const Unit = React.memo(function Unit({
   entityId,
   isUserControlled,
 }: {
   entityId: number;
   isUserControlled?: boolean;
 }) {
-  const { gl } = useThree();
   const { unitEntityId, getEntity, removeComponent } = useWorld();
   const { attack, setTarget } = useAction();
   const entity = getEntity(entityId);
+  const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const spotlightRef = useRef<THREE.SpotLight>(null);
   const lightningBeamSourceRef = useRef<THREE.Vector3>(new THREE.Vector3());
-  const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(2);
-  const [isDragging, setIsDragging] = useState(false);
-  const [rotation, setRotation] = useState({
-    azimuthal: 0,
-    polar: Math.PI / 4,
-  });
-  const [lastTouch, setLastTouch] = useState<{ x: number; y: number } | null>(
-    null,
-  );
-  const [initialPinchDistance, setInitialPinchDistance] = useState<
-    number | null
-  >(null);
-
-  const velocity = UNIT_VELOCITY; // units per second
-  const epsilon = 0.05; // Small value to prevent shaking
+  const { zoomLevel, rotation } = useCameraControls();
 
   if (!entity) return null;
 
@@ -88,7 +73,7 @@ export default function Unit({
 
       setTarget(unitEntityId, entityId);
     },
-    [unitEntityId, entityId],
+    [unitEntityId, entityId, setTarget],
   );
 
   const handleAttack = useCallback(
@@ -106,7 +91,7 @@ export default function Unit({
       setTarget(unitEntityId, entityId);
       attack(unitEntityId, entityId);
     },
-    [unitEntityId, entityId],
+    [unitEntityId, entityId, setTarget, attack],
   );
 
   useEffect(() => {
@@ -117,141 +102,29 @@ export default function Unit({
     }
   }, [combat]);
 
-  useEffect(() => {
-    const handleWheel = (event: WheelEvent) => {
-      setZoomLevel((prevZoom) =>
-        Math.max(0.5, Math.min(5, prevZoom + event.deltaY * 0.001)),
-      );
-    };
-
-    const handleMouseDown = (event: MouseEvent) => {
-      if (event.button === 0) {
-        setIsDragging(true);
-      }
-    };
-
-    const handleMouseMove = (event: MouseEvent) => {
-      if (isDragging) {
-        setRotation((prevRotation) => ({
-          azimuthal: prevRotation.azimuthal - event.movementX * 0.01,
-          polar: Math.max(
-            0.1,
-            Math.min(
-              Math.PI - 0.1,
-              prevRotation.polar - event.movementY * 0.01,
-            ),
-          ), // Invert Y-axis
-        }));
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      if (event.touches.length === 1) {
-        setIsDragging(true);
-        setLastTouch({
-          x: event.touches[0].clientX,
-          y: event.touches[0].clientY,
-        });
-      } else if (event.touches.length === 2) {
-        event.preventDefault(); // Prevent default touch behavior
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        const distance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) +
-            Math.pow(touch2.clientY - touch1.clientY, 2),
-        );
-        setInitialPinchDistance(distance);
-      }
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (isDragging && event.touches.length === 1 && lastTouch) {
-        event.preventDefault(); // Prevent default touch behavior
-        const touch = event.touches[0];
-        const deltaX = touch.clientX - lastTouch.x;
-        const deltaY = touch.clientY - lastTouch.y;
-        setRotation((prevRotation) => ({
-          azimuthal: prevRotation.azimuthal - deltaX * 0.01,
-          polar: Math.max(
-            0.1,
-            Math.min(Math.PI - 0.1, prevRotation.polar - deltaY * 0.01),
-          ), // Invert Y-axis
-        }));
-        setLastTouch({ x: touch.clientX, y: touch.clientY });
-      } else if (event.touches.length === 2 && initialPinchDistance !== null) {
-        event.preventDefault(); // Prevent default touch behavior
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        const distance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) +
-            Math.pow(touch2.clientY - touch1.clientY, 2),
-        );
-        const zoomChange = (distance - initialPinchDistance) * 0.005;
-        setZoomLevel((prevZoom) =>
-          Math.max(0.5, Math.min(5, prevZoom - zoomChange)),
-        );
-        setInitialPinchDistance(distance);
-      }
-    };
-
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      setLastTouch(null);
-      setInitialPinchDistance(null);
-    };
-
-    gl.domElement.addEventListener('wheel', handleWheel);
-    gl.domElement.addEventListener('mousedown', handleMouseDown);
-    gl.domElement.addEventListener('mousemove', handleMouseMove);
-    gl.domElement.addEventListener('mouseup', handleMouseUp);
-    gl.domElement.addEventListener('touchstart', handleTouchStart);
-    gl.domElement.addEventListener('touchmove', handleTouchMove, {
-      passive: false,
-    });
-    gl.domElement.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      gl.domElement.removeEventListener('wheel', handleWheel);
-      gl.domElement.removeEventListener('mousedown', handleMouseDown);
-      gl.domElement.removeEventListener('mousemove', handleMouseMove);
-      gl.domElement.removeEventListener('mouseup', handleMouseUp);
-      gl.domElement.removeEventListener('touchstart', handleTouchStart);
-      gl.domElement.removeEventListener('touchmove', handleTouchMove);
-      gl.domElement.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isDragging, lastTouch, initialPinchDistance, gl.domElement]);
-
   useFrame((state, delta) => {
     let updatedPosition = clientTransform.position;
     if (isUserControlled && moveTarget && moveTarget.waypoints.length > 0) {
       updatedPosition = moveTarget.waypoints[0];
-    }
-    if (!isUserControlled && serverTransform) {
+    } else if (serverTransform) {
       updatedPosition = serverTransform.position;
     }
 
     // Smoothly rotate the mesh to face the direction of movement
     if (meshRef.current) {
       if (mining && mining.positions) {
-        // Smoothly look at the mining target
         smoothLookAt(meshRef.current, mining.positions[0], delta);
       } else {
-        // Smoothly look at the movement target
         smoothLookAt(meshRef.current, updatedPosition, delta);
       }
     }
 
-    // Start moving towards the target
     updatePosition(
       clientTransform,
       updatedPosition,
       delta,
-      velocity,
-      epsilon,
+      UNIT_VELOCITY,
+      0.05,
       moveTarget,
       removeComponent,
       entityId,
@@ -270,28 +143,24 @@ export default function Unit({
       const radius = CAMERA_FOLLOW_DISTANCE * zoomLevel;
       const cameraOffset = new THREE.Vector3(
         radius * Math.sin(rotation.polar) * Math.sin(rotation.azimuthal),
-        radius * Math.cos(rotation.polar),
+        radius * Math.cos(rotation.polar) + 0.25 * UNIT_HEIGHT,
         radius * Math.sin(rotation.polar) * Math.cos(rotation.azimuthal),
       );
 
-      // Calculate the desired camera position
       const desiredCameraPosition = meshRef.current.position
         .clone()
         .add(cameraOffset);
 
-      // Set the raycaster to check for collisions
       cameraDirection
         .subVectors(desiredCameraPosition, meshRef.current.position)
         .normalize();
       raycaster.set(meshRef.current.position, cameraDirection);
 
-      // Calculate the maximum range for the raycast
-      const bufferDistance = 0.5; // Adjust this buffer as needed
+      const bufferDistance = 1.0;
       const maxRaycastDistance =
         CAMERA_FOLLOW_DISTANCE * zoomLevel + bufferDistance;
       raycaster.far = maxRaycastDistance;
 
-      // Find the closest intersection using reduce
       const closestIntersection = state.scene.children
         .filter((child) => child.name.startsWith('chunk'))
         .flatMap((child) => raycaster.intersectObject(child, true))
@@ -302,33 +171,51 @@ export default function Unit({
           return closest;
         }, null);
 
-      // Adjust the camera position to avoid clipping
-      const minDistance = 0.0; // Minimum distance from the player
       if (closestIntersection) {
         const intersectionPoint = closestIntersection.point;
-        const distanceToPlayer = intersectionPoint.distanceTo(
-          meshRef.current.position,
-        );
-        if (distanceToPlayer < minDistance) {
-          // If the intersection is too close, adjust to maintain minDistance
-          const direction = new THREE.Vector3()
-            .subVectors(intersectionPoint, meshRef.current.position)
-            .normalize();
-          const adjustedPosition = meshRef.current.position
-            .clone()
-            .add(direction.multiplyScalar(minDistance));
-          state.camera.position.lerp(adjustedPosition, DAMPING_FACTOR); // Damping factor
-        } else {
-          // Use the intersection point directly
-          state.camera.position.lerp(intersectionPoint, DAMPING_FACTOR); // Damping factor
-        }
+        const direction = new THREE.Vector3()
+          .subVectors(intersectionPoint, meshRef.current.position)
+          .normalize();
+
+        const safePosition = intersectionPoint
+          .clone()
+          .add(direction.multiplyScalar(0.1));
+
+        const adjustedPosition = meshRef.current.position
+          .clone()
+          .lerp(safePosition, 0.7);
+
+        state.camera.position.lerp(adjustedPosition, 0.8);
       } else {
         state.camera.position.copy(
           meshRef.current.position.clone().add(cameraOffset),
         );
       }
 
-      state.camera.lookAt(meshRef.current.position);
+      const lookAtPosition = meshRef.current.position.clone();
+      lookAtPosition.y += 0.5 * UNIT_HEIGHT;
+      state.camera.lookAt(lookAtPosition);
+
+      // Calculate distance and adjust opacity
+      const distance = state.camera.position.distanceTo(
+        meshRef.current.position,
+      );
+      const maxDistance = 5; // Maximum distance for full opacity
+      const minDistance = 2; // Minimum distance for full transparency
+      const opacity = THREE.MathUtils.clamp(
+        (distance - minDistance) / (maxDistance - minDistance),
+        0.0,
+        1,
+      );
+
+      if (meshRef.current.material instanceof THREE.MeshPhongMaterial) {
+        meshRef.current.material.opacity = opacity;
+        if (opacity < 0.1) {
+          meshRef.current.visible = false;
+        } else {
+          meshRef.current.visible = true;
+        }
+      }
     }
 
     if (isDead) {
@@ -337,7 +224,6 @@ export default function Unit({
       removeComponent(entityId, MoveTargetComponent);
     }
 
-    // Update spotlight direction
     if (spotlightRef.current && meshRef.current) {
       const direction = new THREE.Vector3(0, 0, 1);
       direction.applyQuaternion(meshRef.current.quaternion);
@@ -364,7 +250,7 @@ export default function Unit({
       return mining.positions[0];
     }
     return null;
-  }, [combatTargetId, mining]);
+  }, [combatTargetId, mining, getEntity]);
 
   return (
     <>
@@ -376,17 +262,13 @@ export default function Unit({
         castShadow
         receiveShadow>
         <boxGeometry args={[UNIT_WIDTH, UNIT_HEIGHT, UNIT_WIDTH]} />
-        <meshPhongMaterial color={color} />
-        {isUserControlled && (
-          <spotLight
-            ref={spotlightRef}
-            position={[0, 0.6 * UNIT_HEIGHT, 0.7 * UNIT_WIDTH]} // Slightly in front of the unit
-            angle={Math.PI / 2}
-            penumbra={0.2}
-            intensity={1}
-            castShadow
-          />
-        )}
+        <meshPhongMaterial transparent color={color} />
+        <Sky
+          distance={450000}
+          sunPosition={[0, 1, 0]}
+          inclination={0}
+          azimuth={0.25}
+        />
       </mesh>
       {(combatTargetId || mining) && (
         <LightningBeam
@@ -396,4 +278,6 @@ export default function Unit({
       )}
     </>
   );
-}
+});
+
+export default Unit;

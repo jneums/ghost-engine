@@ -41,7 +41,7 @@ export default function UnitCard() {
   const fungible = entity.getComponent(FungibleComponent);
   const energyToken = getByCanisterId(
     fungible,
-    process.env.CANISTER_ID_ENERGY!,
+    process.env.CANISTER_ID_ENERGY_LEDGER_CANISTER!,
   );
 
   const tokens = fromBaseUnit(
@@ -56,7 +56,6 @@ export default function UnitCard() {
       hitpoints={hitpoints}
       top={0}
       left={0}
-      coords={transform?.position}
       energyTokens={tokens}
     />
   );

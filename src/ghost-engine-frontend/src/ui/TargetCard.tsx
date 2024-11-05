@@ -1,4 +1,5 @@
 import {
+  FungibleComponent,
   HealthComponent,
   NameableComponent,
   PrincipalComponent,
@@ -6,6 +7,7 @@ import {
 } from '../ecs/components';
 import { useWorld } from '../context/WorldProvider';
 import EntityCard from './EntityCard';
+import { fromBaseUnit, getByCanisterId } from '../utils/tokens';
 
 export default function TargetCard() {
   const { unitEntityId, getEntity } = useWorld();
@@ -40,6 +42,16 @@ export default function TargetCard() {
     : 0;
 
   const principal = targetEntity.getComponent(PrincipalComponent);
+  const fungible = entity.getComponent(FungibleComponent);
+  const energyToken = getByCanisterId(
+    fungible,
+    process.env.CANISTER_ID_ENERGY_LEDGER_CANISTER!,
+  );
+
+  const tokens = fromBaseUnit(
+    energyToken?.amount || 0n,
+    energyToken?.decimals || 0,
+  );
 
   return (
     <EntityCard
@@ -48,7 +60,7 @@ export default function TargetCard() {
       hitpoints={hitpoints}
       top={0}
       right={0}
-      energyTokens={0}
+      energyTokens={tokens}
     />
   );
 }

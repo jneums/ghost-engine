@@ -2,6 +2,8 @@ import ECS "mo:geecs";
 import Time "mo:base/Time";
 import Components "../components";
 import Const "../utils/Const";
+import TokenRegistry "../utils/TokenRegistry";
+import Tokens "../utils/Tokens";
 
 module {
   // Private function to handle TransformComponent logic
@@ -18,7 +20,7 @@ module {
   // Private function to handle FungibleComponent logic
   private func handleFungibleComponent(ctx : ECS.Types.Context<Components.Component>, entityId : ECS.Types.EntityId) {
     let defaultFungible = {
-      tokens = [];
+      tokens = [Tokens.getTokenWithAmount(TokenRegistry.Energy, Tokens.toBaseUnit(5, TokenRegistry.Energy.decimals))];
     };
     let fungible = switch (ECS.World.getComponent(ctx, entityId, "FungibleComponent")) {
       case (? #FungibleComponent(fungible)) { fungible };
