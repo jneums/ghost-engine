@@ -40,12 +40,6 @@ module {
     var currentPosition = transform.position;
     var waypoints = moveTarget.waypoints;
 
-    if (waypoints.size() < 1) {
-      Debug.print("No waypoints to move to");
-      ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
-      return;
-    };
-
     while (remainingDistance > 0.0 and waypoints.size() > 0) {
       let targetPosition = waypoints[0];
 
@@ -86,14 +80,7 @@ module {
         };
         remainingDistance := 0.0;
       };
-      ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
     };
-
-    // Update the waypoints in the component
-    let newMoveTarget = #MoveTargetComponent({
-      waypoints = waypoints;
-    });
-    ECS.World.addComponent(ctx, entityId, "MoveTargetComponent", newMoveTarget);
 
     let newTransform = #TransformComponent({
       scale = transform.scale;
@@ -111,6 +98,17 @@ module {
     if (currentChunkPos != previousChunkPos) {
       // Add the UpdateUnitChunksComponent tag
       ECS.World.addComponent(ctx, entityId, "UpdateUnitChunksComponent", #UpdateUnitChunksComponent({}));
+    };
+
+    if (waypoints.size() > 0) {
+      // Update the waypoints in the component
+      let newMoveTarget = #MoveTargetComponent({
+        waypoints = waypoints;
+      });
+      ECS.World.addComponent(ctx, entityId, "MoveTargetComponent", newMoveTarget);
+    } else {
+      // Remove the MoveTargetComponent
+      ECS.World.removeComponent(ctx, entityId, "MoveTargetComponent");
     };
   };
 

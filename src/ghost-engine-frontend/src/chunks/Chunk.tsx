@@ -42,14 +42,34 @@ export default function Chunk({
   const minedVoxelsGroupRef = useRef<THREE.Group>(new THREE.Group());
   const isMobile = window.innerWidth < 768;
 
+  // Define materials outside of useFrame
+  const minedVoxelMaterial = useMemo(
+    () =>
+      new THREE.MeshPhongMaterial({
+        color: 'red',
+        transparent: true,
+        opacity: 0.3,
+      }),
+    [],
+  );
+
+  const placingVoxelMaterial = useMemo(
+    () =>
+      new THREE.MeshPhongMaterial({
+        color: 'green',
+        transparent: true,
+        opacity: 0.3,
+      }),
+    [],
+  );
+
   const generateVoxelGeometry = useCallback(() => {
     const positions = [];
     const normals = [];
     const indices = [];
     const uvs = [];
-    const colors = []; // Add an array for colors
 
-    const WATER_HEIGHT = 0.6; // Define the height for water blocks
+    const WATER_HEIGHT = 0.8; // Define the height for water blocks
 
     for (let y = 0; y < CHUNK_HEIGHT; ++y) {
       for (let z = 0; z < CHUNK_SIZE; ++z) {
@@ -93,9 +113,6 @@ export default function Chunk({
                   positions.push(pos[0] + x, adjustedY + y, pos[2] + z);
                   normals.push(...dir);
 
-                  // Add vertex colors (default to white)
-                  colors.push(1, 1, 1);
-
                   if (voxel > 999) {
                     uvs.push(
                       ((0 + uv[0]) * TILE_SIZE) / TILE_TEXTURE_WITH,
@@ -118,7 +135,7 @@ export default function Chunk({
       }
     }
 
-    return { positions, normals, indices, uvs, colors };
+    return { positions, normals, indices, uvs };
   }, [data]);
 
   const geometry = useMemo(() => {
@@ -174,11 +191,7 @@ export default function Chunk({
 
             const voxelMesh = new THREE.Mesh(
               new THREE.BoxGeometry(1.01, 1.01, 1.01),
-              new THREE.MeshPhongMaterial({
-                color: 'red',
-                transparent: true,
-                opacity: 0.3,
-              }),
+              minedVoxelMaterial,
             );
             voxelMesh.position.set(worldX + 0.5, worldY + 0.5, worldZ + 0.5);
             minedVoxelsGroupRef.current.add(voxelMesh);
@@ -204,11 +217,7 @@ export default function Chunk({
 
             const voxelMesh = new THREE.Mesh(
               new THREE.BoxGeometry(1.01, 1.01, 1.01),
-              new THREE.MeshPhongMaterial({
-                color: 'green',
-                transparent: true,
-                opacity: 0.3,
-              }),
+              placingVoxelMaterial,
             );
             voxelMesh.position.set(worldX + 0.5, worldY + 0.5, worldZ + 0.5);
             placeholderGroupRef.current.add(voxelMesh);
@@ -239,7 +248,7 @@ export default function Chunk({
         onContextMenu={onMove}
         position={chunkPosition}
         geometry={geometry}>
-        <meshLambertMaterial map={textureAtlas} transparent />
+        <meshPhongMaterial map={textureAtlas} transparent />
       </mesh>
       <group ref={minedVoxelsGroupRef} />
       <group ref={placeholderGroupRef} />

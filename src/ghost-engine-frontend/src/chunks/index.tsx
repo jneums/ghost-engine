@@ -1,16 +1,23 @@
 import * as THREE from 'three';
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, {
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+} from 'react';
 import { ThreeEvent, useFrame, useLoader, useThree } from '@react-three/fiber';
 import Chunk from './Chunk';
 import useChunks from '../hooks/useChunks';
 import useMovementGrid from '../hooks/useMovementGrid';
 import { useWorld } from '../context/WorldProvider';
 import { useErrorMessage } from '../context/ErrorProvider';
-import { DRAG_THRESHOLD } from '../const/controls';
+import { DRAG_THRESHOLD, MAX_PATH_LENGTH } from '../const/controls';
 import { BlockType, CHUNK_SIZE, MINING_RADIUS } from '../const/blocks';
 import { toBaseUnit } from '../utils/tokens';
 import useAction from '../hooks/useAction';
 import {
+  ClientMoveTargetComponent,
   FungibleComponent,
   HealthComponent,
   MiningComponent,
@@ -41,13 +48,31 @@ export default function Chunks() {
   const [highlightPosition, setHighlightPosition] =
     useState<THREE.Vector3 | null>(null);
 
+  const [waypoints, setWaypoints] = useState<THREE.Vector3[]>([]);
+
   if (!unitEntityId) {
     return null;
   }
 
   const mining = getEntity(unitEntityId)?.getComponent(MiningComponent);
   const placing = getEntity(unitEntityId)?.getComponent(PlaceBlockComponent);
+  const moveTarget = getEntity(unitEntityId)?.getComponent(MoveTargetComponent);
   const { minedVoxels, placingVoxels } = useVoxelUpdates(mining, placing);
+
+  useEffect(() => {
+    if (moveTarget) {
+      setWaypoints(
+        moveTarget.waypoints.map((waypoint) => {
+          const offset = waypoint.clone();
+          offset.x += 0.5;
+          offset.z += 0.5;
+          return offset;
+        }),
+      );
+    } else {
+      setWaypoints([]);
+    }
+  }, [moveTarget]);
 
   useFrame(({ camera, pointer }) => {
     if (!unitEntityId) {
@@ -220,8 +245,9 @@ export default function Chunks() {
       );
 
       const moveTarget = unitEntity.getComponent(MoveTargetComponent);
-      if (moveTarget && moveTarget.waypoints.length > 1) {
-        startPosition = moveTarget.waypoints[1];
+      if (moveTarget) {
+        setErrorMessage("I'm already moving!");
+        return;
       }
 
       const targetPosition = new THREE.Vector3(
@@ -255,7 +281,9 @@ export default function Chunks() {
         return;
       }
 
-      const waypoints = path.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+      const waypoints = path
+        .slice(0, MAX_PATH_LENGTH - 1)
+        .map(([x, y, z]) => new THREE.Vector3(x, y, z));
       move(unitEntityId, waypoints);
     },
     [move, unitEntityId, getEntity, setErrorMessage, createGrid],
@@ -296,5 +324,19 @@ export default function Chunks() {
     ],
   );
 
-  return <>{chunks}</>;
+  const waypointMeshes = useMemo(() => {
+    return waypoints.map((waypoint, index) => (
+      <mesh key={index} position={waypoint}>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshBasicMaterial color="red" />
+      </mesh>
+    ));
+  }, [waypoints]);
+
+  return (
+    <>
+      {chunks}
+      {waypointMeshes}
+    </>
+  );
 }

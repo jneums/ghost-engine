@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { Cloud, Sky, Stats } from '@react-three/drei';
 import { useEffect } from 'react';
@@ -84,6 +85,7 @@ export default function Game() {
         onPointerMissed={(e) => console.log('missed: ', e)}
         onContextMenu={(e) => e.preventDefault()}
         gl={{ powerPreference: 'low-power' }}
+        shadows
         camera={{
           position: [
             transform.position.x + 5,
@@ -92,12 +94,31 @@ export default function Game() {
           ],
           fov: 60,
         }}>
-        <hemisphereLight args={[undefined, undefined, 0.8]} />
-        <directionalLight position={[100, 300, 100]} intensity={1} />
-        <fog attach="fog" args={['#f0f0f0', 0, 90]} />
         <Chunks />
         <Units />
-        <Unit entityId={unitEntityId} isUserControlled />
+        <hemisphereLight
+          args={[
+            new THREE.Color(0xffffff).setHSL(0.6, 1, 0.6),
+            new THREE.Color(0xffffff).setHSL(0.095, 1, 0.75),
+            1,
+          ]}
+          position={[0, 50, 0]}
+        />
+        <directionalLight
+          color={new THREE.Color(0xffffff).setHSL(0.1, 1, 0.95)}
+          intensity={3}
+          position={[-30, 52.5, 30]}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-left={-50}
+          shadow-camera-right={50}
+          shadow-camera-top={50}
+          shadow-camera-bottom={-50}
+          shadow-camera-far={3500}
+          shadow-bias={-0.0001}
+        />
+        <fog attach="fog" args={['#f0f0f0', 0, 90]} />
       </Canvas>
       <UnitCard />
       <UnitStats />

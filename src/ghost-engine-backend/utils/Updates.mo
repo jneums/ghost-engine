@@ -20,7 +20,7 @@ module {
               continue filterUpdates;
             };
             // Owner only
-            case (#MoveTargetComponent(_) or #UnitChunksComponent(_) or #SessionComponent(_) or #UnitViewComponent(_)) {
+            case (#UnitChunksComponent(_) or #SessionComponent(_) or #UnitViewComponent(_)) {
               if (entityId != unitEntityId) {
                 continue filterUpdates;
               };
@@ -35,7 +35,7 @@ module {
               continue filterUpdates;
             };
             // Owner only
-            case ("MoveTargetComponent" or "UnitChunksComponent" or "SessionComponent" or "UnitViewComponent") {
+            case ("UnitChunksComponent" or "SessionComponent" or "UnitViewComponent") {
               if (entityId != unitEntityId) {
                 continue filterUpdates;
               };

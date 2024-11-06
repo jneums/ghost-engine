@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { ThreeEvent, useFrame } from '@react-three/fiber';
+import { RootState, ThreeEvent, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   MoveTargetComponent,
@@ -8,6 +8,8 @@ import {
   CombatComponent,
   HealthComponent,
   MiningComponent,
+  PlaceBlockComponent,
+  ClientMoveTargetComponent,
 } from '../ecs/components';
 import LightningBeam from './LightningBeam';
 import { useWorld } from '../context/WorldProvider';
@@ -15,40 +17,45 @@ import useAction from '../hooks/useAction';
 import { CAMERA_FOLLOW_DISTANCE } from '../const/camera';
 import { updatePosition, smoothLookAt } from './utils';
 import { UNIT_HEIGHT, UNIT_VELOCITY, UNIT_WIDTH } from '../const/units';
-import { Sky } from '@react-three/drei';
+import { Shadow, Sky } from '@react-three/drei';
 import useCameraControls from '../hooks/useCameraControls';
+import useMovementPath from '../hooks/useMovementPath';
 
-// Create a raycaster for collision detection
 const raycaster = new THREE.Raycaster();
 const cameraDirection = new THREE.Vector3();
 
 const Unit = React.memo(function Unit({
   entityId,
   isUserControlled,
+  model,
 }: {
   entityId: number;
   isUserControlled?: boolean;
+  model: THREE.Group;
 }) {
   const { unitEntityId, getEntity, removeComponent } = useWorld();
   const { attack, setTarget } = useAction();
   const entity = getEntity(entityId);
   const [combatTargetId, setCombatTargetId] = useState<number | null>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
+  const modelRef = useRef<THREE.Group | null>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const spotlightRef = useRef<THREE.SpotLight>(null);
   const lightningBeamSourceRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const { zoomLevel, rotation } = useCameraControls();
 
+  useMovementPath(entityId);
+
   if (!entity) return null;
 
   const serverTransform = entity.getComponent(TransformComponent);
-  const moveTarget = entity.getComponent(MoveTargetComponent);
+  const clientMoveTarget = entity.getComponent(ClientMoveTargetComponent);
   let clientTransform = entity.getComponent(ClientTransformComponent);
   const combat = entity.getComponent(CombatComponent);
   const mining = entity.getComponent(MiningComponent);
+  const place = entity.getComponent(PlaceBlockComponent);
   const health = entity.getComponent(HealthComponent);
 
   const isDead = health?.amount <= 0;
-  const color = isDead ? 'black' : isUserControlled ? 'blue' : 'red';
 
   if (!clientTransform && serverTransform) {
     clientTransform = new ClientTransformComponent(
@@ -61,16 +68,12 @@ const Unit = React.memo(function Unit({
 
   const handleTarget = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
-      if (unitEntityId === entityId) {
-        return;
-      }
-
+      if (unitEntityId === entityId) return;
       event.stopPropagation();
       if (!unitEntityId) {
         console.error('Player entity not found');
         return;
       }
-
       setTarget(unitEntityId, entityId);
     },
     [unitEntityId, entityId, setTarget],
@@ -78,16 +81,12 @@ const Unit = React.memo(function Unit({
 
   const handleAttack = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
-      if (unitEntityId === entityId) {
-        return;
-      }
-
+      if (unitEntityId === entityId) return;
       event.stopPropagation();
       if (!unitEntityId) {
         console.error('Player entity not found');
         return;
       }
-
       setTarget(unitEntityId, entityId);
       attack(unitEntityId, entityId);
     },
@@ -95,28 +94,37 @@ const Unit = React.memo(function Unit({
   );
 
   useEffect(() => {
-    if (combat) {
-      setCombatTargetId(combat.targetEntityId);
-    } else {
-      setCombatTargetId(null);
-    }
+    setCombatTargetId(combat?.targetEntityId || null);
   }, [combat]);
 
-  useFrame((state, delta) => {
+  useEffect(() => {
+    if (model) {
+      modelRef.current = model.clone();
+    }
+  }, [model]);
+
+  const updateModelPosition = (delta: number) => {
+    if (!modelRef.current) return;
+
     let updatedPosition = clientTransform.position;
-    if (isUserControlled && moveTarget && moveTarget.waypoints.length > 0) {
-      updatedPosition = moveTarget.waypoints[0];
-    } else if (serverTransform) {
+    if (clientMoveTarget) {
+      updatedPosition = clientMoveTarget.waypoints[0];
+    } else if (serverTransform.position != updatedPosition) {
       updatedPosition = serverTransform.position;
     }
 
-    // Smoothly rotate the mesh to face the direction of movement
-    if (meshRef.current) {
-      if (mining && mining.positions) {
-        smoothLookAt(meshRef.current, mining.positions[0], delta);
-      } else {
-        smoothLookAt(meshRef.current, updatedPosition, delta);
+    if (mining?.positions) {
+      smoothLookAt(modelRef.current, mining.positions[0], delta);
+    } else if (place?.positions) {
+      smoothLookAt(modelRef.current, place.positions[0], delta);
+    } else if (combatTargetId) {
+      const target = getEntity(combatTargetId);
+      const targetTransform = target?.getComponent(ClientTransformComponent);
+      if (targetTransform) {
+        smoothLookAt(modelRef.current, targetTransform.position, delta);
       }
+    } else {
+      smoothLookAt(modelRef.current, updatedPosition, delta);
     }
 
     updatePosition(
@@ -125,97 +133,89 @@ const Unit = React.memo(function Unit({
       delta,
       UNIT_VELOCITY,
       0.05,
-      moveTarget,
-      removeComponent,
-      entityId,
+      clientMoveTarget,
     );
 
     const unitPosition = {
       x: clientTransform.position.x + 0.5 * UNIT_WIDTH,
-      y: clientTransform.position.y + 0.5 * UNIT_HEIGHT,
+      y: clientTransform.position.y + 0.75 * UNIT_HEIGHT,
       z: clientTransform.position.z + 0.5 * UNIT_WIDTH,
     };
-    meshRef.current?.position.copy(unitPosition);
+    modelRef.current?.position.copy(unitPosition);
     lightningBeamSourceRef.current.copy(clientTransform.position);
-    lightningBeamSourceRef.current.y += 0.5 * UNIT_HEIGHT;
+    lightningBeamSourceRef.current.y += 0.6 * UNIT_HEIGHT;
+  };
 
-    if (isUserControlled && meshRef.current) {
-      const radius = CAMERA_FOLLOW_DISTANCE * zoomLevel;
-      const cameraOffset = new THREE.Vector3(
-        radius * Math.sin(rotation.polar) * Math.sin(rotation.azimuthal),
-        radius * Math.cos(rotation.polar) + 0.25 * UNIT_HEIGHT,
-        radius * Math.sin(rotation.polar) * Math.cos(rotation.azimuthal),
-      );
+  const updateCameraPosition = (state: RootState) => {
+    if (!modelRef.current) return;
 
-      const desiredCameraPosition = meshRef.current.position
-        .clone()
-        .add(cameraOffset);
+    const radius = CAMERA_FOLLOW_DISTANCE * zoomLevel;
+    const cameraOffset = new THREE.Vector3(
+      radius * Math.sin(rotation.polar) * Math.sin(rotation.azimuthal),
+      radius * Math.cos(rotation.polar),
+      radius * Math.sin(rotation.polar) * Math.cos(rotation.azimuthal),
+    );
 
-      cameraDirection
-        .subVectors(desiredCameraPosition, meshRef.current.position)
-        .normalize();
-      raycaster.set(meshRef.current.position, cameraDirection);
+    const desiredCameraPosition = modelRef.current.position
+      .clone()
+      .add(cameraOffset);
 
-      const bufferDistance = 1.0;
-      const maxRaycastDistance =
-        CAMERA_FOLLOW_DISTANCE * zoomLevel + bufferDistance;
-      raycaster.far = maxRaycastDistance;
+    cameraDirection
+      .subVectors(desiredCameraPosition, modelRef.current.position)
+      .normalize();
+    raycaster.set(modelRef.current.position, cameraDirection);
 
-      const closestIntersection = state.scene.children
-        .filter((child) => child.name.startsWith('chunk'))
-        .flatMap((child) => raycaster.intersectObject(child, true))
-        .reduce<THREE.Intersection | null>((closest, intersect) => {
-          if (!closest || intersect.distance < closest.distance) {
-            return intersect;
-          }
-          return closest;
-        }, null);
+    const bufferDistance = 1.0;
+    const maxRaycastDistance =
+      CAMERA_FOLLOW_DISTANCE * zoomLevel + bufferDistance;
+    raycaster.far = maxRaycastDistance;
 
-      if (closestIntersection) {
-        const intersectionPoint = closestIntersection.point;
-        const direction = new THREE.Vector3()
-          .subVectors(intersectionPoint, meshRef.current.position)
-          .normalize();
-
-        const safePosition = intersectionPoint
-          .clone()
-          .add(direction.multiplyScalar(0.1));
-
-        const adjustedPosition = meshRef.current.position
-          .clone()
-          .lerp(safePosition, 0.7);
-
-        state.camera.position.lerp(adjustedPosition, 0.8);
-      } else {
-        state.camera.position.copy(
-          meshRef.current.position.clone().add(cameraOffset),
-        );
-      }
-
-      const lookAtPosition = meshRef.current.position.clone();
-      lookAtPosition.y += 0.5 * UNIT_HEIGHT;
-      state.camera.lookAt(lookAtPosition);
-
-      // Calculate distance and adjust opacity
-      const distance = state.camera.position.distanceTo(
-        meshRef.current.position,
-      );
-      const maxDistance = 5; // Maximum distance for full opacity
-      const minDistance = 2; // Minimum distance for full transparency
-      const opacity = THREE.MathUtils.clamp(
-        (distance - minDistance) / (maxDistance - minDistance),
-        0.0,
-        1,
-      );
-
-      if (meshRef.current.material instanceof THREE.MeshPhongMaterial) {
-        meshRef.current.material.opacity = opacity;
-        if (opacity < 0.1) {
-          meshRef.current.visible = false;
-        } else {
-          meshRef.current.visible = true;
+    const closestIntersection = state.scene.children
+      .filter((child) => child.name.startsWith('chunk'))
+      .flatMap((child) => raycaster.intersectObject(child, true))
+      .reduce<THREE.Intersection | null>((closest, intersect) => {
+        if (!closest || intersect.distance < closest.distance) {
+          return intersect;
         }
-      }
+        return closest;
+      }, null);
+
+    if (closestIntersection) {
+      const intersectionPoint = closestIntersection.point;
+      const direction = new THREE.Vector3()
+        .subVectors(intersectionPoint, modelRef.current.position)
+        .normalize();
+
+      const safePosition = intersectionPoint
+        .clone()
+        .add(direction.multiplyScalar(0.1));
+
+      const adjustedPosition = modelRef.current.position
+        .clone()
+        .lerp(safePosition, 0.7);
+
+      state.camera.position.lerp(adjustedPosition, 0.8);
+    } else {
+      state.camera.position.copy(
+        modelRef.current.position.clone().add(cameraOffset),
+      );
+    }
+
+    state.camera.lookAt(modelRef.current.position.clone());
+  };
+
+  useFrame((state, delta) => {
+    if (!modelRef.current) return;
+
+    updateModelPosition(delta);
+
+    const distance = state.camera.position.distanceTo(
+      modelRef.current.position,
+    );
+    modelRef.current.visible = distance >= 2;
+
+    if (isUserControlled) {
+      updateCameraPosition(state);
     }
 
     if (isDead) {
@@ -224,11 +224,11 @@ const Unit = React.memo(function Unit({
       removeComponent(entityId, MoveTargetComponent);
     }
 
-    if (spotlightRef.current && meshRef.current) {
+    if (spotlightRef.current) {
       const direction = new THREE.Vector3(0, 0, 1);
-      direction.applyQuaternion(meshRef.current.quaternion);
+      direction.applyQuaternion(modelRef.current.quaternion);
       spotlightRef.current.target.position.copy(
-        meshRef.current.position.clone().add(direction),
+        modelRef.current.position.clone().add(direction),
       );
       spotlightRef.current.target.updateMatrixWorld();
     }
@@ -237,39 +237,47 @@ const Unit = React.memo(function Unit({
   const getTargetPosition = useCallback(() => {
     if (combatTargetId) {
       const target = getEntity(combatTargetId);
-      if (target) {
-        const targetTransform = target.getComponent(ClientTransformComponent);
-        if (targetTransform) {
-          return targetTransform.position;
-        }
-        const targetServerTransform = target.getComponent(TransformComponent);
-        return targetServerTransform?.position ?? null;
+      const targetTransform = target?.getComponent(ClientTransformComponent);
+      if (targetTransform) {
+        const position = targetTransform.position.clone();
+        position.y += 0.6 * UNIT_HEIGHT;
+        return position;
       }
+      const targetServerTransform = target?.getComponent(TransformComponent);
+      const position = targetServerTransform?.position.clone();
+      if (position) {
+        position.y += 0.6 * UNIT_HEIGHT;
+        return position;
+      }
+      return targetServerTransform?.position;
     }
-    if (mining) {
-      return mining.positions[0];
-    }
-    return null;
+    return mining?.positions[0] || null;
   }, [combatTargetId, mining, getEntity]);
+
+  if (!modelRef.current) return null;
 
   return (
     <>
-      <mesh
-        name={`unit-${entityId}`}
-        ref={meshRef}
-        onClick={handleTarget}
-        onContextMenu={handleAttack}
-        castShadow
-        receiveShadow>
-        <boxGeometry args={[UNIT_WIDTH, UNIT_HEIGHT, UNIT_WIDTH]} />
-        <meshPhongMaterial transparent color={color} />
+      <group ref={groupRef}>
+        <primitive
+          scale={[0.5, 0.5, 0.5]}
+          object={modelRef.current}
+          castShadow
+          onClick={handleTarget}
+          onContextMenu={handleAttack}>
+          <Shadow
+            colorStop={0.5}
+            position={[0, -1.5 * UNIT_HEIGHT + 0.01, 0]}
+            fog
+          />
+        </primitive>
         <Sky
           distance={450000}
-          sunPosition={[0, 1, 0]}
+          sunPosition={[-30, 52.5, 30]}
           inclination={0}
           azimuth={0.25}
         />
-      </mesh>
+      </group>
       {(combatTargetId || mining) && (
         <LightningBeam
           start={lightningBeamSourceRef.current}

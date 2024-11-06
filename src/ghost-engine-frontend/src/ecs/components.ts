@@ -19,6 +19,10 @@ export class MoveTargetComponent {
   constructor(public waypoints: THREE.Vector3[]) {}
 }
 
+export class ClientMoveTargetComponent {
+  constructor(public waypoints: THREE.Vector3[]) {}
+}
+
 export class VelocityComponent {
   constructor(public velocity: THREE.Vector3) {}
 }
@@ -336,6 +340,7 @@ export function createComponentClass(data: Component) {
 export const ComponentConstructors: Record<string, Function> = {
   PrincipalComponent: PrincipalComponent,
   MoveTargetComponent: MoveTargetComponent,
+  ClientMoveTargetComponent: ClientMoveTargetComponent,
   VelocityComponent: VelocityComponent,
   TransformComponent: TransformComponent,
   ConnectComponent: ConnectComponent,

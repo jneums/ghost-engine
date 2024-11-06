@@ -8,8 +8,6 @@ export function updatePosition(
   velocity: number,
   epsilon: number,
   moveTarget: MoveTargetComponent | undefined,
-  removeComponent: (entityId: number, component: any) => void,
-  entityId: number,
 ) {
   if (!targetPosition) return;
   const direction = new THREE.Vector3();
@@ -43,9 +41,6 @@ export function updatePosition(
     // Remove the waypoint if it has been reached
     if (moveTarget) {
       moveTarget.waypoints.shift();
-      if (moveTarget.waypoints.length === 0) {
-        removeComponent(entityId, MoveTargetComponent);
-      }
     }
   }
 }
@@ -75,7 +70,7 @@ export function updateCamera(
 }
 
 export function smoothLookAt(
-  mesh: THREE.Mesh,
+  object: THREE.Object3D,
   targetPosition: THREE.Vector3,
   delta: number,
 ) {
@@ -88,7 +83,7 @@ export function smoothLookAt(
   // Calculate the direction to look at, ignoring the Y-axis
   const lookDirection = new THREE.Vector3().subVectors(
     targetWithOffset,
-    mesh.position,
+    object.position,
   );
   lookDirection.y = 0; // Ignore vertical differences
 
@@ -103,6 +98,6 @@ export function smoothLookAt(
     );
 
     // Smoothly interpolate the current rotation towards the target rotation
-    mesh.quaternion.slerp(targetQuaternion, delta * 10); // Adjust the factor for smoothness
+    object.quaternion.slerp(targetQuaternion, delta * 10); // Adjust the factor for smoothness
   }
 }

@@ -164,6 +164,11 @@ export default function useAction() {
         waypoints: waypoints,
       },
     });
+
+    const position = new MoveTargetComponent(waypoints);
+
+    // Add the components to the ecs entity
+    addComponent(entityId, position);
   }
 
   function redeem(entityId: number, tokenCid: Principal, amount: bigint) {
